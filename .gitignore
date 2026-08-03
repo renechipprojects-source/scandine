@@ -3,3 +3,9 @@ dist/
 .env
 .env.local
 .vscode/
+package-lock.json
+**/.output/
+**/.wrangler/
+**/node_modules/
+.env
+**/.env

@@ -60,3 +60,10 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+package-lock.json
+.output/
+.wrangler/
+node_modules/
+dist/
+.env
