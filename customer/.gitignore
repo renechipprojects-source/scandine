@@ -6,13 +6,28 @@ node_modules/
 dist/
 **/dist/
 dist-ssr/
+
 .output/
 **/.output/
+
+.nitro/
+**/.nitro/
+
 .vinxi/
 .tanstack/
 **/.tanstack/
-.nitro/
-**/.nitro/
+
+# Vercel
+.vercel/
+
+# Cloudflare / Wrangler
+.wrangler/
+.dev.vars
+
+# Restaurant Frontend Build
+restaurant/frontend/.output/
+restaurant/frontend/.nitro/
+restaurant/frontend/.wrangler/
 
 # Logs
 logs/
@@ -26,22 +41,22 @@ lerna-debug.log*
 # Environment & Secrets
 .env
 .env.local
+.env.production
+.env.development
 .env.*.local
 *.local
-
-# Cloudflare / Wrangler
-.wrangler/
-.dev.vars
 
 # Editor directories and system files
 .vscode/*
 !.vscode/extensions.json
+.vscode/
 .idea/
+
 .DS_Store
+Thumbs.db
+
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-.vscode/
-
