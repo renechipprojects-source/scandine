@@ -30,7 +30,7 @@ interface StoredTableQr {
 const DEFAULT_PRESET_TABLES: StoredTableQr[] = Array.from({ length: 6 }, (_, i) => ({
   id: `table-${i + 1}`,
   name: `Table ${i + 1}`,
-  url: `/menu/${i + 1}`,
+  url: `https://scandine-ln2f.vercel.app/customer-registration?table=${i + 1}`,
   createdAt: new Date().toISOString(),
 }));
 
@@ -48,10 +48,9 @@ function AdminQrPageRedesigned() {
     if (typeof window !== "undefined") {
       try {
         const envCustomerUrl = (import.meta.env.VITE_CUSTOMER_APP_URL || "").trim();
-        if (!envCustomerUrl || envCustomerUrl.includes("your-customer-app")) {
-          setIsEnvMissing(true);
-          const fallbackOrigin = window.location.origin;
-          setCustomerAppUrl(fallbackOrigin);
+        if (!envCustomerUrl || envCustomerUrl.includes("your-customer-app") || envCustomerUrl.includes("localhost:3000")) {
+          setIsEnvMissing(false);
+          setCustomerAppUrl("https://scandine-ln2f.vercel.app");
         } else {
           setIsEnvMissing(false);
           setCustomerAppUrl(envCustomerUrl.replace(/\/+$/, ""));
@@ -74,13 +73,13 @@ function AdminQrPageRedesigned() {
 
   const getTableUrl = (rawName: string) => {
     const envCustomerUrl = (import.meta.env.VITE_CUSTOMER_APP_URL || "").trim();
-    const cleanHost = (envCustomerUrl && !envCustomerUrl.includes("your-customer-app"))
+    const cleanHost = (envCustomerUrl && !envCustomerUrl.includes("your-customer-app") && !envCustomerUrl.includes("localhost:3000"))
       ? envCustomerUrl.replace(/\/+$/, "")
-      : (typeof window !== "undefined" ? window.location.origin : "");
+      : "https://scandine-ln2f.vercel.app";
 
     const rawDigits = rawName.replace(/\D/g, "");
     const tableNum = rawDigits || "1";
-    return `${cleanHost}/menu/${tableNum}`;
+    return `${cleanHost}/customer-registration?table=${tableNum}`;
   };
 
   const getQrImageUrl = (url: string) => {
@@ -88,11 +87,6 @@ function AdminQrPageRedesigned() {
   };
 
   const checkEnvOrNotify = (): boolean => {
-    const envCustomerUrl = (import.meta.env.VITE_CUSTOMER_APP_URL || "").trim();
-    if (!envCustomerUrl || envCustomerUrl.includes("your-customer-app")) {
-      toast.error("VITE_CUSTOMER_APP_URL is not configured in .env file! Please set VITE_CUSTOMER_APP_URL in your environment variables.", { duration: 6000 });
-      return false;
-    }
     return true;
   };
 
@@ -149,9 +143,6 @@ function AdminQrPageRedesigned() {
   };
 
   const handleTestScan = (url: string, name: string) => {
-    if (!checkEnvOrNotify() && (!url || url.includes("localhost"))) {
-      toast.error("VITE_CUSTOMER_APP_URL environment variable is missing.");
-    }
     window.open(url, "_blank");
     toast.success(`Opening Customer App for ${name}!`);
   };
