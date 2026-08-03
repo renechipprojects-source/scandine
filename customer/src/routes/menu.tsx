@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Search, ChevronRight, Flame } from "lucide-react";
 import { motion } from "framer-motion";
@@ -144,20 +144,18 @@ function Menu() {
     });
   }, [cat, q, itemList]);
 
-  // If customer is not registered for this scanned table, show Customer Registration Page first
-  if (!customer) {
-    return (
-      <CustomerRegistration
-        tableNumber={tableNumber}
-        onSuccess={() => {
-          // Registration complete, state update triggers re-render of menu
-        }}
-      />
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <>
+      <Outlet />
+      {!customer ? (
+        <CustomerRegistration
+          tableNumber={tableNumber}
+          onSuccess={() => {
+            // Registration complete
+          }}
+        />
+      ) : (
+        <div className="min-h-screen bg-background pb-32">
       <CustomerNav />
 
       {/* Sticky Search Header Bar */}
@@ -275,5 +273,8 @@ function Menu() {
         )}
       </div>
     </div>
+      )}
+    </>
   );
 }
+
