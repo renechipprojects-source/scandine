@@ -30,7 +30,7 @@ interface StoredTableQr {
 const DEFAULT_PRESET_TABLES: StoredTableQr[] = Array.from({ length: 6 }, (_, i) => ({
   id: `table-${i + 1}`,
   name: `Table ${i + 1}`,
-  url: `https://scandine-ln2f.vercel.app/customer-registration?table=${i + 1}`,
+  url: `https://scandine-ln2f.vercel.app/menu/${i + 1}`,
   createdAt: new Date().toISOString(),
 }));
 
@@ -79,7 +79,7 @@ function AdminQrPageRedesigned() {
 
     const rawDigits = rawName.replace(/\D/g, "");
     const tableNum = rawDigits || "1";
-    return `${cleanHost}/customer-registration?table=${tableNum}`;
+    return `${cleanHost}/menu/${tableNum}`;
   };
 
   const getQrImageUrl = (url: string) => {

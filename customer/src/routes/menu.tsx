@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Search, ChevronRight, Flame } from "lucide-react";
 import { motion } from "framer-motion";
@@ -78,6 +78,7 @@ function normalizeCategory(catStr?: string, catId?: string): "Breakfast" | "Lunc
 }
 
 function Menu() {
+  const navigate = useNavigate();
   const [cat, setCat] = useState("Breakfast");
   const [q, setQ] = useState("");
   const [itemList, setItemList] = useState<FoodItem[]>([]);
@@ -151,7 +152,7 @@ function Menu() {
         <CustomerRegistration
           tableNumber={tableNumber}
           onSuccess={() => {
-            // Registration complete
+            navigate({ to: "/", replace: true });
           }}
         />
       ) : (
