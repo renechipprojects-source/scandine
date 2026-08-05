@@ -334,7 +334,7 @@ export function ServiceRequestsSection() {
         </Button>
       </CardHeader>
 
-      <CardContent className="p-4">
+      <CardContent className="p-4 max-h-[320px] overflow-y-auto pr-2">
         {requests.length === 0 ? (
           <div className="rounded-xl border border-dashed p-6 text-center text-xs text-muted-foreground bg-background/50">
             <ConciergeBell className="mx-auto h-6 w-6 text-muted-foreground/50 mb-1" />

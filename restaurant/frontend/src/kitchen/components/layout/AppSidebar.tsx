@@ -20,7 +20,7 @@ type NavItem = {
 
 const nav: { label: string; items: NavItem[] }[] = [
   {
-    label: "Orders",
+    label: "Kitchen",
     items: [
       {
         title: "Orders", icon: ShoppingBag, children: [
@@ -29,14 +29,8 @@ const nav: { label: string; items: NavItem[] }[] = [
         ],
       },
       {
-        title: "Kitchen Display", icon: ChefHat, children: [
-          { title: "KDS", url: "/kitchen/kds" },
-        ],
-      },
-      {
         title: "Menu", icon: UtensilsCrossed, children: [
           { title: "Food Items", url: "/kitchen/menu/items" },
-          { title: "Add Item", url: "/kitchen/menu/add" },
         ],
       },
     ],

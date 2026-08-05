@@ -310,23 +310,54 @@ function LiveOrdersPage() {
     }
   };
 
+  const nowMs = Date.now();
+  const activeOrders = allOrders.filter((o) => ["pending", "accepted", "preparing", "ready"].includes(o.status));
+  const activePreps = allOrders.filter((o) => o.status === "preparing" || o.status === "accepted");
+  const avgPrepMinutes = activePreps.length > 0
+    ? Math.round(
+        activePreps.reduce((acc, o) => acc + (o.prep_time_minutes || 15), 0) / activePreps.length
+      )
+    : 0;
+
+  const longestWaitMinutes = allOrders.length > 0
+    ? Math.max(
+        ...allOrders.map((o) => {
+          const createdMs = new Date(o.order_time || (o as any).created_at || nowMs).getTime();
+          return isNaN(createdMs) ? 0 : Math.max(0, Math.floor((nowMs - createdMs) / (1000 * 60)));
+        })
+      )
+    : 0;
+
+  const priorityCount = allOrders.filter((o) => o.status === "pending").length;
+
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Live orders"
-        description="Real-time board of active orders with automatic preparation timer countdowns."
         icon={<Radio className="h-5 w-5" />}
-        actions={
-          <Button variant="outline" size="sm">
-            <Bell className="mr-2 h-4 w-4" />
-            Sound alerts
-          </Button>
-        }
       />
+
+      {/* 4 Summary KPI Cards Moved from KDS to Live Orders */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { label: "Active orders", value: activeOrders.length, icon: <Utensils className="h-4 w-4" />, tone: "text-primary" },
+          { label: "Avg prep time", value: `${avgPrepMinutes} min`, icon: <Timer className="h-4 w-4" />, tone: "text-info" },
+          { label: "Longest wait", value: `${longestWaitMinutes} min`, icon: <Clock className="h-4 w-4" />, tone: "text-warning" },
+          { label: "Priority", value: priorityCount, icon: <Bell className="h-4 w-4" />, tone: "text-destructive" },
+        ].map((s) => (
+          <Card key={s.label} className="p-4">
+            <div className="flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
+              {s.label}
+              <span className={s.tone}>{s.icon}</span>
+            </div>
+            <div className={`mt-1 font-display text-2xl font-bold ${s.tone}`}>{s.value}</div>
+          </Card>
+        ))}
+      </div>
 
       <ServiceRequestsSection />
 
-      <div className="mb-5 flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[220px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -354,18 +385,19 @@ function LiveOrdersPage() {
         </Tabs>
       </div>
 
+      {/* Live Order Kanban Lanes with Independent Column Scrollbars */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
         {lanes.map((lane) => {
           const laneOrders = displayOrders.filter((o) => o.status === lane.key);
           return (
-            <div key={lane.key} className={`min-w-0 rounded-2xl border-t-4 bg-card p-3 shadow-sm ${lane.tone}`}>
-              <div className="mb-3 flex items-center justify-between px-1">
+            <div key={lane.key} className={`min-w-0 rounded-2xl border-t-4 bg-card p-3 shadow-sm ${lane.tone} flex flex-col`}>
+              <div className="mb-3 flex items-center justify-between px-1 shrink-0">
                 <div className="flex items-center gap-2">
                   <span className="font-display text-sm font-bold">{lane.label}</span>
                   <span className="grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1.5 text-[10px] font-semibold">{laneOrders.length}</span>
                 </div>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-[580px] overflow-y-auto pr-1">
                 {laneOrders.length === 0 && (
                   <div className="rounded-xl border border-dashed py-8 text-center text-xs text-muted-foreground">No orders</div>
                 )}

@@ -106,10 +106,9 @@ function OrderHistoryPage() {
   };
 
   return (
-    <div>
+    <div className="w-full space-y-5">
       <PageHeader
         title="Order history"
-        description="Complete archive of past orders with advanced filtering."
         icon={<History className="h-5 w-5" />}
         actions={
           <Button variant="outline" size="sm" onClick={handleExportCSV}>
@@ -119,7 +118,7 @@ function OrderHistoryPage() {
         }
       />
 
-      <Card className="p-4">
+      <Card className="w-full p-4 border shadow-xs overflow-hidden">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

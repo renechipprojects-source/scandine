@@ -52,7 +52,18 @@ export function TopBar() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             {mockNotif.slice(0, 5).map((n) => (
-              <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-0.5 py-2.5">
+              <DropdownMenuItem
+                key={n.id}
+                className="flex flex-col items-start gap-0.5 py-2.5 cursor-pointer"
+                onClick={() => {
+                  const t = n.title.toLowerCase();
+                  if (t.includes("order")) navigate({ to: "/kitchen/orders/live" });
+                  else if (t.includes("food") || t.includes("item")) navigate({ to: "/kitchen/menu/items" });
+                  else if (t.includes("payment") || t.includes("paid")) navigate({ to: "/kitchen/orders/history" });
+                  else if (t.includes("employee")) navigate({ to: "/admin/employees" });
+                  else navigate({ to: "/kitchen/notifications" });
+                }}
+              >
                 <div className="flex w-full items-center justify-between">
                   <span className="text-sm font-medium">{n.title}</span>
                   {!n.read && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
@@ -61,6 +72,13 @@ export function TopBar() {
                 <span className="text-[10px] text-muted-foreground">{n.time}</span>
               </DropdownMenuItem>
             ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-center text-xs font-semibold text-primary justify-center cursor-pointer"
+              onClick={() => navigate({ to: "/kitchen/notifications" })}
+            >
+              View All Notifications
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

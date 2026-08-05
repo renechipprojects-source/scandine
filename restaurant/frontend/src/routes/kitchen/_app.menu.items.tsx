@@ -1,21 +1,24 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/kitchen/components/layout/PageHeader";
 import { Card, CardContent } from "@/kitchen/components/ui/card";
 import { Button } from "@/kitchen/components/ui/button";
 import { Input } from "@/kitchen/components/ui/input";
 import { Switch } from "@/kitchen/components/ui/switch";
 import { Badge } from "@/kitchen/components/ui/badge";
+import { Textarea } from "@/kitchen/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/kitchen/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/kitchen/components/ui/table";
-import { UtensilsCrossed, Plus, Search, Trash2, Clock, LayoutGrid, List } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/kitchen/components/ui/dialog";
+import { UtensilsCrossed, Plus, Search, Trash2, Clock, LayoutGrid, List, Loader2, Image as ImageIcon, Upload, X } from "lucide-react";
 import { foodItems as mockFoodItems, restaurantInfo } from "@/kitchen/lib/mock-data";
 import { useState, useCallback } from "react";
 import { useSupabaseTable, type MenuItem } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/kitchen/_app/menu/items")({
-  head: () => ({ meta: [{ title: "Food Items — Kitchen" }, { name: "description", content: "Manage menu items availability." }] }),
+  head: () => ({ meta: [{ title: "Food Items — Kitchen" }, { name: "description", content: "Manage kitchen menu dishes, categories, and live availability." }] }),
   component: KitchenItemsPage,
 });
 
@@ -28,7 +31,7 @@ const mapCategory = (cat?: string): string => {
 };
 
 function KitchenItemsPage() {
-  const { data: dbMenuItems, updateItem, deleteItem, fetchData } = useSupabaseTable<MenuItem>("sd_menu_items", []);
+  const { data: dbMenuItems, addItem, updateItem, deleteItem, fetchData } = useSupabaseTable<MenuItem>("sd_menu_items", []);
 
   const handleRealtime = useCallback(() => {
     fetchData();
@@ -39,6 +42,93 @@ function KitchenItemsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+
+  // Popup Modal Add Item Form State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("Lunch");
+  const [price, setPrice] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [available, setAvailable] = useState(true);
+  const [prepTime, setPrepTime] = useState("15");
+  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; category?: string; price?: string; description?: string; image?: string }>({});
+
+  const resetForm = () => {
+    setName("");
+    setCategory("Lunch");
+    setPrice("");
+    setDescription("");
+    setImageUrl("");
+    setAvailable(true);
+    setPrepTime("15");
+    setErrors({});
+  };
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const url = await uploadToCloudinary(file);
+      if (url) {
+        setImageUrl(url);
+        if (errors.image) setErrors((prev) => ({ ...prev, image: undefined }));
+        toast.success("Image uploaded successfully!");
+      }
+    } catch (err: any) {
+      console.error("Image upload failed:", err);
+      toast.error(err.message || "Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCreateFoodItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Required Field Validation
+    const newErrors: typeof errors = {};
+    if (!name.trim()) newErrors.name = "Food Name is required";
+    if (!category.trim()) newErrors.category = "Category is required";
+    if (!price.trim() || isNaN(Number(price)) || Number(price) <= 0) newErrors.price = "Valid Price is required";
+    if (!description.trim()) newErrors.description = "Description is required";
+    if (!imageUrl.trim()) newErrors.image = "Image is required";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error("Please fill in all required fields accurately.");
+      return;
+    }
+    setErrors({});
+    setSubmitting(true);
+
+    try {
+      const newItem: Partial<MenuItem> = {
+        name: name.trim(),
+        category: category,
+        price: Number(price),
+        description: description.trim(),
+        image_url: imageUrl.trim(),
+        available: available,
+        status: available ? "Available" : "Unavailable",
+        prep_time_minutes: parseInt(prepTime, 10) || 15,
+      };
+
+      await addItem(newItem);
+      toast.success(`Food item "${name.trim()}" added to menu! 🍽️`);
+      resetForm();
+      setIsAddModalOpen(false);
+    } catch (err: any) {
+      console.error("Failed to create food item:", err);
+      toast.error(err.message || "Failed to add food item to menu.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const itemsList = dbMenuItems;
 
@@ -82,18 +172,172 @@ function KitchenItemsPage() {
   };
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Food items"
-        description="Manage kitchen menu dishes, categories, and live availability."
         icon={<UtensilsCrossed className="h-5 w-5" />}
         actions={
-          <Button asChild size="sm">
-            <Link to="/kitchen/menu/add">
-              <Plus className="mr-2 h-4 w-4" />
-              Add new item
-            </Link>
-          </Button>
+          <Dialog open={isAddModalOpen} onOpenChange={(open) => {
+            setIsAddModalOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1.5">
+                <Plus className="h-4 w-4" /> Add new item
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto pr-2 sm:pr-4">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                  <UtensilsCrossed className="h-5 w-5 text-primary" /> Add New Food Item
+                </DialogTitle>
+              </DialogHeader>
+
+              <form onSubmit={handleCreateFoodItem} className="space-y-4 mt-2">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground">Food Name *</label>
+                  <Input
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+                    }}
+                    placeholder="e.g. Truffle Mushroom Pasta"
+                    className={`mt-1 ${errors.name ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                  />
+                  {errors.name && <p className="mt-1 text-[11px] text-destructive font-medium">{errors.name}</p>}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground">Category *</label>
+                    <Select value={category} onValueChange={(val) => {
+                      setCategory(val);
+                      if (errors.category) setErrors((prev) => ({ ...prev, category: undefined }));
+                    }}>
+                      <SelectTrigger className={`mt-1 ${errors.category ? "border-destructive" : ""}`}>
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Breakfast">Breakfast</SelectItem>
+                        <SelectItem value="Lunch">Lunch</SelectItem>
+                        <SelectItem value="Dinner">Dinner</SelectItem>
+                        <SelectItem value="Starters">Starters</SelectItem>
+                        <SelectItem value="Desserts">Desserts</SelectItem>
+                        <SelectItem value="Drinks">Drinks</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.category && <p className="mt-1 text-[11px] text-destructive font-medium">{errors.category}</p>}
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground">Price (₹) *</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={price}
+                      onChange={(e) => {
+                        setPrice(e.target.value);
+                        if (errors.price) setErrors((prev) => ({ ...prev, price: undefined }));
+                      }}
+                      placeholder="e.g. 450"
+                      className={`mt-1 ${errors.price ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                    />
+                    {errors.price && <p className="mt-1 text-[11px] text-destructive font-medium">{errors.price}</p>}
+                  </div>
+                </div>
+
+                {/* Image Upload & Uniform Aspect Ratio Preview Section */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-muted-foreground">Food Image *</label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={imageUrl}
+                      onChange={(e) => {
+                        setImageUrl(e.target.value);
+                        if (errors.image) setErrors((prev) => ({ ...prev, image: undefined }));
+                      }}
+                      placeholder="Paste Image URL or upload below…"
+                      className={`flex-1 text-xs ${errors.image ? "border-destructive" : ""}`}
+                    />
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-2 text-xs font-semibold hover:bg-muted transition">
+                      {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                      Upload
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageFileChange} disabled={uploading} />
+                    </label>
+                  </div>
+                  {errors.image && <p className="text-[11px] text-destructive font-medium">{errors.image}</p>}
+
+                  {/* Uniform Aspect Ratio Preview Box */}
+                  {imageUrl ? (
+                    <div className="relative mt-2 overflow-hidden rounded-lg border bg-muted/30">
+                      <img
+                        src={imageUrl}
+                        alt="Food Preview"
+                        className="h-36 w-full object-cover rounded-md"
+                        onError={() => toast.error("Failed to load image preview")}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setImageUrl("")}
+                        className="absolute top-2 right-2 rounded-full bg-background/80 p-1 text-foreground hover:bg-destructive hover:text-white transition"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex h-28 w-full flex-col items-center justify-center rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 text-muted-foreground">
+                      <ImageIcon className="h-6 w-6 mb-1 text-muted-foreground/50" />
+                      <span className="text-xs">No image selected (Preview area)</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground">Description *</label>
+                  <Textarea
+                    value={description}
+                    onChange={(e) => {
+                      setDescription(e.target.value);
+                      if (errors.description) setErrors((prev) => ({ ...prev, description: undefined }));
+                    }}
+                    placeholder="Brief description of ingredients & preparation…"
+                    rows={2}
+                    className={`mt-1 text-xs ${errors.description ? "border-destructive" : ""}`}
+                  />
+                  {errors.description && <p className="mt-1 text-[11px] text-destructive font-medium">{errors.description}</p>}
+                </div>
+
+                <div className="flex items-center justify-between border-t pt-3">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={available} onCheckedChange={setAvailable} id="availability-switch" />
+                    <label htmlFor="availability-switch" className="text-xs font-semibold text-foreground cursor-pointer">
+                      Available for Ordering
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">Prep time:</span>
+                    <Input
+                      type="number"
+                      value={prepTime}
+                      onChange={(e) => setPrepTime(e.target.value)}
+                      className="w-16 h-8 text-xs font-mono"
+                    />
+                    <span className="text-xs text-muted-foreground">min</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 border-t pt-3 mt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={submitting || uploading} className="gap-2">
+                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Food Item"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         }
       />
 

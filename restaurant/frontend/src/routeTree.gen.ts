@@ -24,6 +24,7 @@ import { Route as AdminAppOrdersRouteImport } from './routes/admin/_app.orders'
 import { Route as AdminAppQrRouteImport } from './routes/admin/_app.qr'
 import { Route as AdminMenuTableRouteImport } from './routes/admin/menu.$table'
 import { Route as KitchenAppKdsRouteImport } from './routes/kitchen/_app.kds'
+import { Route as KitchenAppNotificationsRouteImport } from './routes/kitchen/_app.notifications'
 import { Route as ReceptionAppCustomersRouteImport } from './routes/reception/_app.customers'
 import { Route as ReceptionAppDashboardRouteImport } from './routes/reception/_app.dashboard'
 import { Route as AdminAppBillingInvoicesRouteImport } from './routes/admin/_app.billing.invoices'
@@ -114,6 +115,11 @@ const AdminMenuTableRoute = AdminMenuTableRouteImport.update({
 const KitchenAppKdsRoute = KitchenAppKdsRouteImport.update({
   id: '/kds',
   path: '/kds',
+  getParentRoute: () => KitchenAppRoute,
+} as any)
+const KitchenAppNotificationsRoute = KitchenAppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => KitchenAppRoute,
 } as any)
 const ReceptionAppCustomersRoute = ReceptionAppCustomersRouteImport.update({
@@ -220,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/admin/qr': typeof AdminAppQrRoute
   '/admin/menu/$table': typeof AdminMenuTableRoute
   '/kitchen/kds': typeof KitchenAppKdsRoute
+  '/kitchen/notifications': typeof KitchenAppNotificationsRoute
   '/reception/customers': typeof ReceptionAppCustomersRoute
   '/reception/dashboard': typeof ReceptionAppDashboardRoute
   '/admin/billing/invoices': typeof AdminAppBillingInvoicesRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByTo {
   '/admin/qr': typeof AdminAppQrRoute
   '/admin/menu/$table': typeof AdminMenuTableRoute
   '/kitchen/kds': typeof KitchenAppKdsRoute
+  '/kitchen/notifications': typeof KitchenAppNotificationsRoute
   '/reception/customers': typeof ReceptionAppCustomersRoute
   '/reception/dashboard': typeof ReceptionAppDashboardRoute
   '/admin/billing/invoices': typeof AdminAppBillingInvoicesRoute
@@ -284,6 +292,7 @@ export interface FileRoutesById {
   '/admin/_app/qr': typeof AdminAppQrRoute
   '/admin/menu/$table': typeof AdminMenuTableRoute
   '/kitchen/_app/kds': typeof KitchenAppKdsRoute
+  '/kitchen/_app/notifications': typeof KitchenAppNotificationsRoute
   '/reception/_app/customers': typeof ReceptionAppCustomersRoute
   '/reception/_app/dashboard': typeof ReceptionAppDashboardRoute
   '/admin/_app/billing/invoices': typeof AdminAppBillingInvoicesRoute
@@ -319,6 +328,7 @@ export interface FileRouteTypes {
     | '/admin/qr'
     | '/admin/menu/$table'
     | '/kitchen/kds'
+    | '/kitchen/notifications'
     | '/reception/customers'
     | '/reception/dashboard'
     | '/admin/billing/invoices'
@@ -349,6 +359,7 @@ export interface FileRouteTypes {
     | '/admin/qr'
     | '/admin/menu/$table'
     | '/kitchen/kds'
+    | '/kitchen/notifications'
     | '/reception/customers'
     | '/reception/dashboard'
     | '/admin/billing/invoices'
@@ -382,6 +393,7 @@ export interface FileRouteTypes {
     | '/admin/_app/qr'
     | '/admin/menu/$table'
     | '/kitchen/_app/kds'
+    | '/kitchen/_app/notifications'
     | '/reception/_app/customers'
     | '/reception/_app/dashboard'
     | '/admin/_app/billing/invoices'
@@ -517,6 +529,13 @@ declare module '@tanstack/react-router' {
       path: '/kds'
       fullPath: '/kitchen/kds'
       preLoaderRoute: typeof KitchenAppKdsRouteImport
+      parentRoute: typeof KitchenAppRoute
+    }
+    '/kitchen/_app/notifications': {
+      id: '/kitchen/_app/notifications'
+      path: '/notifications'
+      fullPath: '/kitchen/notifications'
+      preLoaderRoute: typeof KitchenAppNotificationsRouteImport
       parentRoute: typeof KitchenAppRoute
     }
     '/reception/_app/customers': {
@@ -668,6 +687,7 @@ const AdminAppRouteWithChildren = AdminAppRoute._addFileChildren(
 
 interface KitchenAppRouteChildren {
   KitchenAppKdsRoute: typeof KitchenAppKdsRoute
+  KitchenAppNotificationsRoute: typeof KitchenAppNotificationsRoute
   KitchenAppMenuAddRoute: typeof KitchenAppMenuAddRoute
   KitchenAppMenuItemsRoute: typeof KitchenAppMenuItemsRoute
   KitchenAppOrdersHistoryRoute: typeof KitchenAppOrdersHistoryRoute
@@ -676,6 +696,7 @@ interface KitchenAppRouteChildren {
 
 const KitchenAppRouteChildren: KitchenAppRouteChildren = {
   KitchenAppKdsRoute: KitchenAppKdsRoute,
+  KitchenAppNotificationsRoute: KitchenAppNotificationsRoute,
   KitchenAppMenuAddRoute: KitchenAppMenuAddRoute,
   KitchenAppMenuItemsRoute: KitchenAppMenuItemsRoute,
   KitchenAppOrdersHistoryRoute: KitchenAppOrdersHistoryRoute,

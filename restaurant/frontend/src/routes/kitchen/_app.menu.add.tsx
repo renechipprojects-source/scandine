@@ -1,22 +1,10 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { PageHeader } from "@/kitchen/components/layout/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/kitchen/components/ui/card";
-import { Button } from "@/kitchen/components/ui/button";
-import { Input } from "@/kitchen/components/ui/input";
-import { Label } from "@/kitchen/components/ui/label";
-import { Textarea } from "@/kitchen/components/ui/textarea";
-import { Switch } from "@/kitchen/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/kitchen/components/ui/select";
-import { PlusSquare, Upload, Image as ImageIcon, X, Loader2 } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { foodItems as mockFoodItems } from "@/kitchen/lib/mock-data";
-import { useSupabaseTable, type MenuItem } from "@/hooks/useSupabaseData";
-import { uploadToCloudinary } from "@/lib/cloudinary";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/kitchen/_app/menu/add")({
-  head: () => ({ meta: [{ title: "Add Menu Item — Kitchen" }, { name: "description", content: "Add a new dish to the kitchen menu." }] }),
-  component: KitchenAddItemPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/kitchen/menu/items" });
+  },
+  component: () => null,
 });
 
 function KitchenAddItemPage() {
