@@ -237,13 +237,25 @@ function LiveOrdersPage() {
     const acceptedAtISO = new Date(nowMs).toISOString();
     const estimatedReadyISO = new Date(estimatedReadyMs).toISOString();
 
+    const primaryId = order.id || order.order_id;
+    const secondaryId = order.order_id;
+
     try {
-      await updateItem(order.id, {
+      await updateItem(primaryId, {
         status: "accepted",
         accepted_at: acceptedAtISO,
         prep_time_minutes: maxPrepMinutes,
         estimated_ready_at: estimatedReadyISO,
       });
+
+      if (secondaryId && secondaryId !== primaryId) {
+        await updateItem(secondaryId, {
+          status: "accepted",
+          accepted_at: acceptedAtISO,
+          prep_time_minutes: maxPrepMinutes,
+          estimated_ready_at: estimatedReadyISO,
+        });
+      }
 
       toast.success(`Order ${order.order_id || order.id} accepted! 👨‍🍳`);
 
@@ -267,7 +279,12 @@ function LiveOrdersPage() {
   const handleAutoReady = async (order: Order) => {
     if (order.status !== "preparing" && order.status !== "accepted") return;
     try {
-      await updateItem(order.id, { status: "ready" });
+      const primaryId = order.id || order.order_id;
+      await updateItem(primaryId, { status: "ready" });
+      if (order.order_id && order.order_id !== primaryId) {
+        await updateItem(order.order_id, { status: "ready" });
+      }
+
       toast.success(`🚀 Order ${order.order_id || order.id} preparation timer completed! Marked as Ready.`);
 
       window.dispatchEvent(
@@ -304,7 +321,12 @@ function LiveOrdersPage() {
 
     if (nextStatus !== order.status) {
       try {
-        await updateItem(order.id, { status: nextStatus });
+        const primaryId = order.id || order.order_id;
+        await updateItem(primaryId, { status: nextStatus });
+        if (order.order_id && order.order_id !== primaryId) {
+          await updateItem(order.order_id, { status: nextStatus });
+        }
+
         toast.success(toastMessage);
 
         window.dispatchEvent(

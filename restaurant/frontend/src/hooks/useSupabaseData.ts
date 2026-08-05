@@ -381,14 +381,16 @@ export function useSupabaseTable<T extends { id: string }>(
   // UPDATE
   const updateItem = async (id: string, updates: Partial<T>) => {
     updateLocalData((prev) => {
-      const exists = prev.some((item) => item.id === id);
+      const exists = prev.some((item: any) => item.id === id || item.order_id === id);
       if (!exists && initialData.length > 0) {
-        const fromInitial = initialData.find((item) => item.id === id);
+        const fromInitial = initialData.find((item: any) => item.id === id || item.order_id === id);
         if (fromInitial) {
           return [{ ...fromInitial, ...updates }, ...prev];
         }
       }
-      return prev.map((item) => (item.id === id ? { ...item, ...updates } : item));
+      return prev.map((item: any) =>
+        item.id === id || item.order_id === id ? { ...item, ...updates } : item
+      );
     });
 
     if (isSupabaseConfigured) {
@@ -406,19 +408,19 @@ export function useSupabaseTable<T extends { id: string }>(
           if (payload.item !== undefined) dbOrderPayload.item = payload.item;
           if (payload.customer !== undefined) dbOrderPayload.customer = payload.customer;
 
-          // 1. Try matching by id column
-          let res = await supabase.from(tableName).update(dbOrderPayload).eq("id", id);
-          if (res.error || (res as any).count === 0) {
-            // 2. Try matching by order_id column
-            let res2 = await supabase.from(tableName).update(dbOrderPayload).eq("order_id", id);
+          // 1. Try matching by id column with .select() to verify updated rows
+          let res = await supabase.from(tableName).update(dbOrderPayload).eq("id", id).select();
+          if (res.error || !res.data || res.data.length === 0) {
+            // 2. Fallback: match by order_id column with .select()
+            let res2 = await supabase.from(tableName).update(dbOrderPayload).eq("order_id", id).select();
             updateErr = res2.error;
           } else {
             updateErr = res.error;
           }
         } else if (tableName === "invoices") {
-          let res = await supabase.from(tableName).update(payload).eq("id", id);
-          if (res.error) {
-            let res2 = await supabase.from(tableName).update(payload).eq("invoice", id);
+          let res = await supabase.from(tableName).update(payload).eq("id", id).select();
+          if (res.error || !res.data || res.data.length === 0) {
+            let res2 = await supabase.from(tableName).update(payload).eq("invoice", id).select();
             updateErr = res2.error;
           } else {
             updateErr = res.error;
