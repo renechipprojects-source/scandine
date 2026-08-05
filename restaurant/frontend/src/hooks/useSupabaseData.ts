@@ -386,37 +386,45 @@ export function useSupabaseTable<T extends { id: string }>(
     if (isSupabaseConfigured) {
       try {
         const payload = cleanPayloadForSupabase(tableName, updates as unknown as Record<string, unknown>);
-        let query = supabase.from(tableName).update(payload);
-        if (tableName === "invoices") {
-          query = query.or(`id.eq.${id},invoice.eq.${id}`);
-        } else if (tableName === "sd_orders") {
-          query = query.or(`id.eq.${id},order_id.eq.${id}`);
-        } else {
-          query = query.eq("id", id);
-        }
-        let { error: updateErr } = await query;
 
-        if (updateErr && (updateErr.code === "42703" || updateErr.message.toLowerCase().includes("column"))) {
-          const fallbackPayload = { ...payload };
-          delete fallbackPayload.paid_at;
-          delete fallbackPayload.transaction_id;
-          let retryQuery = supabase.from(tableName).update(fallbackPayload);
-          if (tableName === "invoices") {
-            retryQuery = retryQuery.or(`id.eq.${id},invoice.eq.${id}`);
-          } else if (tableName === "sd_orders") {
-            retryQuery = retryQuery.or(`id.eq.${id},order_id.eq.${id}`);
+        let updateErr: any = null;
+
+        if (tableName === "sd_orders") {
+          // Clean payload containing only valid Postgres DB columns
+          const dbOrderPayload: Record<string, any> = {};
+          if (payload.status !== undefined) dbOrderPayload.status = payload.status;
+          if (payload.payment !== undefined) dbOrderPayload.payment = payload.payment;
+          if (payload.total !== undefined) dbOrderPayload.total = payload.total;
+          if (payload.item !== undefined) dbOrderPayload.item = payload.item;
+          if (payload.customer !== undefined) dbOrderPayload.customer = payload.customer;
+
+          // 1. Try matching by id column
+          let res = await supabase.from(tableName).update(dbOrderPayload).eq("id", id);
+          if (res.error || (res as any).count === 0) {
+            // 2. Try matching by order_id column
+            let res2 = await supabase.from(tableName).update(dbOrderPayload).eq("order_id", id);
+            updateErr = res2.error;
           } else {
-            retryQuery = retryQuery.eq("id", id);
+            updateErr = res.error;
           }
-          const { error: retryErr } = await retryQuery;
-          updateErr = retryErr;
+        } else if (tableName === "invoices") {
+          let res = await supabase.from(tableName).update(payload).eq("id", id);
+          if (res.error) {
+            let res2 = await supabase.from(tableName).update(payload).eq("invoice", id);
+            updateErr = res2.error;
+          } else {
+            updateErr = res.error;
+          }
+        } else {
+          let res = await supabase.from(tableName).update(payload).eq("id", id);
+          updateErr = res.error;
         }
 
         if (updateErr) {
-          console.error(`[Supabase Update Error on ${tableName}]:`, updateErr.message);
+          console.warn(`[Supabase Update Notice on ${tableName}]:`, updateErr.message);
         }
       } catch (err) {
-        console.error(`Supabase update exception for ${tableName}:`, err);
+        console.warn(`Supabase update notice for ${tableName}:`, err);
       }
     }
   };
