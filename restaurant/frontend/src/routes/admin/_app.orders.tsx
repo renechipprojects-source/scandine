@@ -71,15 +71,14 @@ export function OrdersPage() {
   }, [displayOrders, activeOrders, completedOrders, activeTab, searchQuery]);
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 flex flex-col h-[calc(100vh-5rem)]">
       <PageHeader
         title="Orders & Kitchen Fulfillment"
-        description="Monitor active orders and review completed transactions in real time."
         icon={<ShoppingBag className="h-5 w-5" />}
       />
 
       {/* Real-time Order Summary Badges */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 w-full">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 w-full shrink-0">
         <Card className="p-4 bg-card/60 backdrop-blur">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Orders</div>
           <div className="mt-1 font-display text-2xl font-bold">{displayOrders.length}</div>
@@ -107,9 +106,9 @@ export function OrdersPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="all" value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full">
+      <Tabs defaultValue="all" value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full flex-1 flex flex-col min-h-0">
         {/* Full-width Sticky Header Container for Search Bar & Tabs */}
-        <div className="sticky top-16 z-20 w-full py-3 bg-background/95 backdrop-blur-md border-b shadow-xs flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-1">
+        <div className="w-full py-3 bg-background/95 backdrop-blur-md border-b shadow-xs flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-1 shrink-0">
           <TabsList className="grid w-full grid-cols-3 sm:w-auto">
             <TabsTrigger value="all" className="gap-2 text-xs">
               All Orders ({displayOrders.length})
@@ -133,12 +132,12 @@ export function OrdersPage() {
           </div>
         </div>
 
-        {/* Tab 1: All Orders Table — Full Width */}
-        <TabsContent value="all" className="mt-4 w-full">
-          <Card className="w-full p-2 sm:p-4 overflow-hidden border">
-            <div className="w-full overflow-x-auto">
-              <Table className="w-full min-w-[750px]">
-                <TableHeader>
+        {/* Tab 1: All Orders Table — Full Width with Independent Scroll */}
+        <TabsContent value="all" className="mt-4 w-full flex-1 min-h-0">
+          <Card className="w-full h-full p-2 sm:p-4 border flex flex-col">
+            <div className="w-full flex-1 overflow-x-auto overflow-y-auto">
+              <Table className="w-full min-w-[850px]">
+                <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow className="bg-muted/40">
                     <TableHead>Order ID</TableHead>
                     <TableHead>Customer</TableHead>
@@ -146,7 +145,8 @@ export function OrdersPage() {
                     <TableHead>Items</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Payment</TableHead>
+                    <TableHead>Payment Status</TableHead>
+                    <TableHead>Payment Method</TableHead>
                     <TableHead>Time</TableHead>
                     <TableHead className="w-16"></TableHead>
                   </TableRow>
@@ -154,7 +154,7 @@ export function OrdersPage() {
                 <TableBody>
                   {filteredOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                         No live orders found.
                       </TableCell>
                     </TableRow>
@@ -168,6 +168,11 @@ export function OrdersPage() {
                         <TableCell className="text-right font-semibold">{restaurantInfo.currency}{Number(o.total).toFixed(2)}</TableCell>
                         <TableCell><StatusBadge status={o.status} /></TableCell>
                         <TableCell><StatusBadge status={o.payment} /></TableCell>
+                        <TableCell>
+                          <span className="rounded-md bg-muted/80 px-2 py-0.5 text-xs font-semibold">
+                            {(o as any).payment_method || (o as any).method || (o.payment === "paid" ? "UPI" : "Cash")}
+                          </span>
+                        </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{o.order_time ? new Date(o.order_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}</TableCell>
                         <TableCell>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedOrder(o as Order)}>
@@ -183,12 +188,12 @@ export function OrdersPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab 2: Active Orders Table — Full Width */}
-        <TabsContent value="active" className="mt-4 w-full">
-          <Card className="w-full p-2 sm:p-4 overflow-hidden border">
-            <div className="w-full overflow-x-auto">
-              <Table className="w-full min-w-[700px]">
-                <TableHeader>
+        {/* Tab 2: Active Orders Table — Full Width with Independent Scroll */}
+        <TabsContent value="active" className="mt-4 w-full flex-1 min-h-0">
+          <Card className="w-full h-full p-2 sm:p-4 border flex flex-col">
+            <div className="w-full flex-1 overflow-x-auto overflow-y-auto">
+              <Table className="w-full min-w-[850px]">
+                <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow className="bg-muted/40">
                     <TableHead>Order ID</TableHead>
                     <TableHead>Customer</TableHead>
@@ -196,6 +201,8 @@ export function OrdersPage() {
                     <TableHead>Items</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Payment Status</TableHead>
+                    <TableHead>Payment Method</TableHead>
                     <TableHead>Time</TableHead>
                     <TableHead className="w-16"></TableHead>
                   </TableRow>
@@ -203,7 +210,7 @@ export function OrdersPage() {
                 <TableBody>
                   {filteredOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                         No active orders currently in queue.
                       </TableCell>
                     </TableRow>
@@ -216,6 +223,12 @@ export function OrdersPage() {
                         <TableCell className="text-sm text-muted-foreground">{Array.isArray(o.item) ? o.item.length : 1} items</TableCell>
                         <TableCell className="text-right font-semibold">{restaurantInfo.currency}{Number(o.total).toFixed(2)}</TableCell>
                         <TableCell><StatusBadge status={o.status} /></TableCell>
+                        <TableCell><StatusBadge status={o.payment} /></TableCell>
+                        <TableCell>
+                          <span className="rounded-md bg-muted/80 px-2 py-0.5 text-xs font-semibold">
+                            {(o as any).payment_method || (o as any).method || (o.payment === "paid" ? "UPI" : "Cash")}
+                          </span>
+                        </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{o.order_time ? new Date(o.order_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}</TableCell>
                         <TableCell>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedOrder(o as Order)}>
@@ -232,7 +245,7 @@ export function OrdersPage() {
         </TabsContent>
 
         {/* Tab 3: Completed Orders Cards Grid — Full Width */}
-        <TabsContent value="completed" className="mt-4 w-full space-y-4">
+        <TabsContent value="completed" className="mt-4 w-full flex-1 min-h-0 overflow-y-auto space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 font-display text-lg font-bold">
               <CheckCircle2 className="h-5 w-5 text-emerald-500" />

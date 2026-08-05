@@ -105,24 +105,16 @@ function PaymentsPage() {
     .filter((p) => p.method?.toLowerCase() === "cash")
     .reduce((s, p) => s + (Number(p.amount) || 0), 0);
 
-  const gpayTotal = paidTransactions
+  const upiTotal = paidTransactions
     .filter((p) => {
       const m = p.method?.toLowerCase() || "";
       return m.includes("gpay") || m.includes("upi") || m.includes("qr") || m.includes("online") || m.includes("wallet");
     })
     .reduce((s, p) => s + (Number(p.amount) || 0), 0);
 
-  const cardTotal = paidTransactions
-    .filter((p) => {
-      const m = p.method?.toLowerCase() || "";
-      return m.includes("card") || m.includes("credit") || m.includes("debit");
-    })
-    .reduce((s, p) => s + (Number(p.amount) || 0), 0);
-
   const methodBreakdown = [
     { method: "Cash", amount: cashTotal, icon: Banknote },
-    { method: "GPay", amount: gpayTotal, icon: Smartphone },
-    { method: "Card", amount: cardTotal, icon: CreditCard },
+    { method: "UPI", amount: upiTotal, icon: Smartphone },
   ];
 
   const totalGrossSales = paidTransactions.reduce((s, p) => s + (Number(p.amount) || 0), 0);
@@ -137,27 +129,6 @@ function PaymentsPage() {
       (p.status && p.status.toLowerCase().includes(q))
     );
   });
-
-  const handleMarkAsPaid = async (p: PaymentTransaction) => {
-    try {
-      const nowStr = new Date().toISOString();
-      await updatePayment(p.id, { status: "Paid", date: nowStr });
-
-      const matchingInv = dbInvoices.find((i) => i.id === p.invoiceId || i.invoice === p.invoiceId || i.id === p.id);
-      if (matchingInv) {
-        await updateInvoice(matchingInv.id, { status: "Paid", date: nowStr });
-      }
-
-      await fetchPayments();
-      await fetchInvoices();
-      await fetchOrders();
-
-      toast.success(`Payment transaction ${p.id} marked as Paid!`);
-    } catch (err) {
-      console.error("Failed to mark payment as paid:", err);
-      toast.error("Failed to update payment status.");
-    }
-  };
 
   const handleExportCSV = () => {
     if (filtered.length === 0) {
@@ -178,10 +149,10 @@ function PaymentsPage() {
   };
 
   return (
-    <div>
+    <div className="w-full space-y-6 flex flex-col h-[calc(100vh-5rem)]">
       <PageHeader
         title="Payments"
-        description="Track every transaction across Cash, GPay and Cards."
+        description="Track every transaction across Cash and UPI."
         icon={<CreditCard className="h-5 w-5" />}
         actions={
           <Button variant="outline" size="sm" onClick={handleExportCSV}>
@@ -191,7 +162,7 @@ function PaymentsPage() {
         }
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mb-2 grid grid-cols-1 gap-3 sm:grid-cols-2 shrink-0 w-full">
         {methodBreakdown.map((m) => (
           <Card key={m.method} className="p-4">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
@@ -205,15 +176,15 @@ function PaymentsPage() {
         ))}
       </div>
 
-      <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 shrink-0 w-full">
         <Card className="p-5 lg:col-span-2">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <div className="font-display text-base font-semibold">Payment Methods Distribution</div>
-              <div className="text-xs text-muted-foreground">Distribution across Cash, GPay, and Cards</div>
+              <div className="text-xs text-muted-foreground">Distribution across Cash and UPI</div>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={180}>
             <BarChart data={methodBreakdown}>
               <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.008 60)" vertical={false} />
               <XAxis dataKey="method" fontSize={11} tickLine={false} axisLine={false} />
@@ -245,8 +216,9 @@ function PaymentsPage() {
         </Card>
       </div>
 
-      <Card className="p-4">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+      {/* Full Width Payment List with Independent Scroll */}
+      <Card className="w-full flex-1 min-h-0 p-4 border flex flex-col">
+        <div className="mb-4 flex flex-wrap items-center gap-2 shrink-0">
           <div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -257,9 +229,9 @@ function PaymentsPage() {
             />
           </div>
         </div>
-        <div className="-mx-4 overflow-x-auto">
-          <Table>
-            <TableHeader>
+        <div className="w-full flex-1 overflow-x-auto overflow-y-auto">
+          <Table className="w-full">
+            <TableHeader className="sticky top-0 z-10 bg-card">
               <TableRow className="bg-muted/40">
                 <TableHead>Transaction / Txn ID</TableHead>
                 <TableHead>Invoice</TableHead>
@@ -268,19 +240,17 @@ function PaymentsPage() {
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     No payment transactions found in database.
                   </TableCell>
                 </TableRow>
               ) : (
                 filtered.map((p) => {
-                  const isPaid = p.status?.toLowerCase() === "paid";
                   return (
                     <TableRow key={p.id} className="hover:bg-muted/40">
                       <TableCell className="font-mono text-xs font-semibold">{p.transaction_id || p.id}</TableCell>
@@ -292,17 +262,6 @@ function PaymentsPage() {
                       </TableCell>
                       <TableCell className="text-right font-semibold">{formatINR(Number(p.amount) || 0)}</TableCell>
                       <TableCell><StatusBadge status={p.status} /></TableCell>
-                      <TableCell className="text-right">
-                        {!isPaid && (
-                          <Button
-                            size="sm"
-                            className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-                            onClick={() => handleMarkAsPaid(p)}
-                          >
-                            <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Mark as Paid
-                          </Button>
-                        )}
-                      </TableCell>
                     </TableRow>
                   );
                 })

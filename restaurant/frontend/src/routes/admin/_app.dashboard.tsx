@@ -139,8 +139,7 @@ function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Realtime Executive Dashboard"
-        description={`${restaurantInfo.branch} · Live Supabase telemetry and real-time operations.`}
+        title="Admin Dashboard"
         icon={<Sparkles className="h-5 w-5" />}
         actions={
           <Button variant="outline" size="sm" onClick={handleExport}>

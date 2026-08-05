@@ -205,18 +205,31 @@ function KdsPage() {
     }
   };
 
+  const nowMs = Date.now();
+  const activePreps = kitchenOrders.filter((o) => o.status === "preparing" || o.status === "accepted");
+  const avgPrepMinutes = activePreps.length > 0
+    ? Math.round(
+        activePreps.reduce((acc, o) => {
+          const prep = o.prep_time_minutes || calculateOrderPrepTime(o.item, dbMenuItems);
+          return acc + prep;
+        }, 0) / activePreps.length
+      )
+    : 0;
+
+  const longestWaitMinutes = kitchenOrders.length > 0
+    ? Math.max(
+        ...kitchenOrders.map((o) => {
+          const createdMs = new Date(o.order_time || (o as any).created_at || nowMs).getTime();
+          return isNaN(createdMs) ? 0 : Math.max(0, Math.floor((nowMs - createdMs) / (1000 * 60)));
+        })
+      )
+    : 0;
+
   return (
     <div>
       <PageHeader
         title="Kitchen display"
-        description="Live cooking queue with automatic preparation timers and priority flags."
         icon={<ChefHat className="h-5 w-5" />}
-        actions={
-          <>
-            <Button variant="outline" size="sm">Full screen</Button>
-            <Button variant="outline" size="sm">Sound on</Button>
-          </>
-        }
       />
 
       <ServiceRequestsSection />
@@ -224,8 +237,8 @@ function KdsPage() {
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: "Active orders", value: kitchenOrders.length, icon: <ChefHat className="h-4 w-4" />, tone: "text-primary" },
-          { label: "Avg prep time", value: "14 min", icon: <Timer className="h-4 w-4" />, tone: "text-info" },
-          { label: "Longest wait", value: "22 min", icon: <Clock className="h-4 w-4" />, tone: "text-warning" },
+          { label: "Avg prep time", value: `${avgPrepMinutes} min`, icon: <Timer className="h-4 w-4" />, tone: "text-info" },
+          { label: "Longest wait", value: `${longestWaitMinutes} min`, icon: <Clock className="h-4 w-4" />, tone: "text-warning" },
           { label: "New orders", value: kitchenOrders.filter(o => o.status === "pending").length, icon: <Flame className="h-4 w-4" />, tone: "text-destructive" },
         ].map((s) => (
           <Card key={s.label} className="p-4">

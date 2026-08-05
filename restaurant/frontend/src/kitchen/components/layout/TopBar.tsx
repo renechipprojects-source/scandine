@@ -35,20 +35,7 @@ export function TopBar() {
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur-md md:px-6">
       <SidebarTrigger className="-ml-1" />
 
-      <div className="hidden min-w-0 items-center gap-1.5 text-sm text-muted-foreground md:flex">
-        {crumbs.length === 0 ? (
-          <span className="text-foreground">Home</span>
-        ) : (
-          crumbs.map((c, i) => (
-            <span key={c + i} className="flex items-center gap-1.5">
-              {i > 0 && <span>/</span>}
-              <span className={i === crumbs.length - 1 ? "font-medium capitalize text-foreground" : "capitalize"}>
-                {c.replace(/-/g, " ")}
-              </span>
-            </span>
-          ))
-        )}
-      </div>
+
 
       <div className="ml-auto flex items-center gap-2">
         <DropdownMenu>

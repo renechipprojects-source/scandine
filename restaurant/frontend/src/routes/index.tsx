@@ -11,6 +11,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+
 export const Route = createFileRoute("/")({
   ssr: false,
   component: LoginPage,
@@ -37,25 +39,85 @@ function LoginPage() {
     setError(null);
     setLoading(true);
 
-    const entry = CREDENTIALS[email.trim().toLowerCase()];
-    if (!entry || entry.password !== password) {
-      setError("Invalid email or password.");
-      setLoading(false);
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 1. Check preset admin/reception/kitchen credentials
+    const entry = CREDENTIALS[cleanEmail];
+    if (entry && entry.password === password) {
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(
+            "savora.auth",
+            JSON.stringify({ email: cleanEmail, redirect: entry.redirect })
+          );
+        }
+      } catch {}
+      navigate({ to: entry.redirect });
       return;
     }
 
-    try {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(
-          "savora.auth",
-          JSON.stringify({ email: email.trim().toLowerCase(), redirect: entry.redirect })
-        );
-      }
-    } catch {
-      // storage unavailable — ignore
-    }
+    // 2. Authenticate dynamic employee credentials via Supabase
+    if (isSupabaseConfigured) {
+      try {
+        const { data: emp, error: empErr } = await supabase
+          .from("sd_employees")
+          .select("*")
+          .eq("email", cleanEmail)
+          .single();
 
-    navigate({ to: entry.redirect });
+        if (empErr || !emp) {
+          setError("Invalid email or password.");
+          setLoading(false);
+          return;
+        }
+
+        if (emp.status === "disabled" || emp.status === "inactive") {
+          setError("Your employee account has been disabled or removed.");
+          setLoading(false);
+          return;
+        }
+
+        let authSuccess = emp.password_plain === password;
+        if (!authSuccess) {
+          const { error: authErr } = await supabase.auth.signInWithPassword({
+            email: cleanEmail,
+            password: password,
+          });
+          if (!authErr) authSuccess = true;
+        }
+
+        if (!authSuccess) {
+          setError("Invalid email or password.");
+          setLoading(false);
+          return;
+        }
+
+        let redirect: `/${Role}` = "/admin";
+        if (emp.role === "receptionist") {
+          redirect = "/reception";
+        } else if (emp.role === "kitchen_staff") {
+          redirect = "/kitchen";
+        }
+
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(
+            "savora.auth",
+            JSON.stringify({ email: cleanEmail, redirect })
+          );
+        }
+
+        navigate({ to: redirect });
+        return;
+      } catch (err: any) {
+        console.error("Login authentication exception:", err);
+        setError("Authentication error. Please check your credentials.");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setError("Invalid email or password.");
+      setLoading(false);
+    }
   };
 
   return (

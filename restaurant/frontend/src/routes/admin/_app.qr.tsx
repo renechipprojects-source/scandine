@@ -160,7 +160,6 @@ function AdminQrPageRedesigned() {
       <div className="print:hidden">
         <PageHeader
           title="Table QR Code Generator"
-          description="Generate customer QR codes for table ordering using VITE_CUSTOMER_APP_URL."
           icon={<QrCode className="h-5 w-5" />}
         />
 
@@ -192,13 +191,15 @@ function AdminQrPageRedesigned() {
                 className="h-12 text-base px-4 font-semibold"
               />
             </div>
-            <Button
-              type="submit"
-              size="lg"
-              className="h-12 px-8 bg-amber-600 hover:bg-amber-700 text-white font-bold gap-2 shadow-md"
-            >
-              <QrCode className="h-5 w-5" /> Generate QR Code
-            </Button>
+            {tableInput.trim().length > 0 && (
+              <Button
+                type="submit"
+                size="lg"
+                className="h-12 px-8 bg-amber-600 hover:bg-amber-700 text-white font-bold gap-2 shadow-md animate-in fade-in zoom-in-95 duration-150"
+              >
+                <QrCode className="h-5 w-5" /> Generate QR Code
+              </Button>
+            )}
           </form>
         </Card>
 
