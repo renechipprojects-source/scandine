@@ -389,6 +389,8 @@ export function useSupabaseTable<T extends { id: string }>(
         let query = supabase.from(tableName).update(payload);
         if (tableName === "invoices") {
           query = query.or(`id.eq.${id},invoice.eq.${id}`);
+        } else if (tableName === "sd_orders") {
+          query = query.or(`id.eq.${id},order_id.eq.${id}`);
         } else {
           query = query.eq("id", id);
         }
@@ -401,6 +403,8 @@ export function useSupabaseTable<T extends { id: string }>(
           let retryQuery = supabase.from(tableName).update(fallbackPayload);
           if (tableName === "invoices") {
             retryQuery = retryQuery.or(`id.eq.${id},invoice.eq.${id}`);
+          } else if (tableName === "sd_orders") {
+            retryQuery = retryQuery.or(`id.eq.${id},order_id.eq.${id}`);
           } else {
             retryQuery = retryQuery.eq("id", id);
           }

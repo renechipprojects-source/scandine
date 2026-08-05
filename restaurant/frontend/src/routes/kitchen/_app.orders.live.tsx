@@ -125,14 +125,24 @@ function OrderLiveCardItem({
           </Button>
         )}
 
-        {(order.status === "accepted" || order.status === "preparing") && (
+        {order.status === "accepted" && (
+          <Button
+            size="sm"
+            className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs"
+            onClick={() => onAdvance(order)}
+          >
+            <Timer className="mr-1 h-3.5 w-3.5" /> Start Preparing
+          </Button>
+        )}
+
+        {order.status === "preparing" && (
           <Button
             size="sm"
             variant="outline"
             className="w-full h-8 text-xs border-primary/40 text-primary hover:bg-primary/10"
             onClick={() => onAdvance(order)}
           >
-            Mark Ready Early <ArrowRight className="ml-1 h-3.5 w-3.5" />
+            Mark Ready <ArrowRight className="ml-1 h-3.5 w-3.5" />
           </Button>
         )}
 
@@ -229,20 +239,20 @@ function LiveOrdersPage() {
 
     try {
       await updateItem(order.id, {
-        status: "preparing",
+        status: "accepted",
         accepted_at: acceptedAtISO,
         prep_time_minutes: maxPrepMinutes,
         estimated_ready_at: estimatedReadyISO,
       });
 
-      toast.success(`Order ${order.order_id || order.id} accepted! Timer started (${maxPrepMinutes} min) 👨‍🍳`);
+      toast.success(`Order ${order.order_id || order.id} accepted! 👨‍🍳`);
 
       window.dispatchEvent(
         new CustomEvent("order-status-changed", {
           detail: {
             orderId: order.order_id || order.id,
             tableNumber: order.table_number,
-            status: "preparing",
+            status: "accepted",
             estimatedReadyAt: estimatedReadyISO,
             prepTimeMinutes: maxPrepMinutes,
           },
@@ -281,7 +291,10 @@ function LiveOrdersPage() {
     if (order.status === "pending") {
       await handleAcceptOrder(order);
       return;
-    } else if (order.status === "accepted" || order.status === "preparing") {
+    } else if (order.status === "accepted") {
+      nextStatus = "preparing";
+      toastMessage = `Order ${order.order_id || order.id} is now preparing! 🍳`;
+    } else if (order.status === "preparing") {
       nextStatus = "ready";
       toastMessage = `Order ${order.order_id || order.id} marked Ready! 🚀`;
     } else if (order.status === "ready") {
