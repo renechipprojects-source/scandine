@@ -207,10 +207,16 @@ function PaymentsPage() {
         </Card>
       </div>
 
-      {/* Full Width Payment List with Independent Scroll */}
-      <Card className="w-full p-4 border overflow-hidden">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[220px] flex-1">
+      {/* Full Width Payment List with Dedicated Independent Scrollbar */}
+      <Card className="w-full p-4 border shadow-sm">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <h3 className="font-display text-base font-bold">Payment Transactions</h3>
+            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+              {filtered.length} records
+            </span>
+          </div>
+          <div className="relative min-w-[240px] max-w-sm flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search transaction ID, invoice, or method…"
@@ -220,42 +226,46 @@ function PaymentsPage() {
             />
           </div>
         </div>
-        <div className="w-full max-h-[600px] overflow-x-auto overflow-y-auto">
+
+        {/* Dedicated Scroll Container for Payment Table */}
+        <div className="w-full rounded-lg border border-border bg-card max-h-[420px] overflow-y-auto overflow-x-auto scrollbar-thin">
           <Table className="w-full min-w-[700px]">
-            <TableHeader className="sticky top-0 z-10 bg-card shadow-xs">
-              <TableRow className="bg-muted/40">
-                <TableHead>Transaction / Txn ID</TableHead>
-                <TableHead>Invoice</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Method</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Status</TableHead>
+            <TableHeader className="sticky top-0 z-20 bg-muted/90 backdrop-blur-md shadow-xs border-b">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="font-semibold text-foreground">Transaction / Txn ID</TableHead>
+                <TableHead className="font-semibold text-foreground">Invoice</TableHead>
+                <TableHead className="font-semibold text-foreground">Customer</TableHead>
+                <TableHead className="font-semibold text-foreground">Method</TableHead>
+                <TableHead className="font-semibold text-foreground">Date</TableHead>
+                <TableHead className="text-right font-semibold text-foreground">Amount</TableHead>
+                <TableHead className="font-semibold text-foreground">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
                     No payment transactions found in database.
                   </TableCell>
                 </TableRow>
               ) : (
                 filtered.map((p) => {
                   return (
-                    <TableRow key={p.id} className="hover:bg-muted/40">
+                    <TableRow key={p.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell className="font-mono text-xs font-semibold">
                         {p.transaction_id || p.id}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{p.invoiceId}</TableCell>
-                      <TableCell className="font-medium">{p.customer}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{p.invoiceId}</TableCell>
+                      <TableCell className="font-medium text-foreground">{p.customer}</TableCell>
                       <TableCell>
-                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium">{p.method}</span>
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium border border-border/50">
+                          {p.method}
+                        </span>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {p.date ? (isNaN(Date.parse(p.date)) ? p.date : new Date(p.date).toLocaleDateString()) : "Today"}
                       </TableCell>
-                      <TableCell className="text-right font-semibold">
+                      <TableCell className="text-right font-bold text-foreground">
                         {formatINR(Number(p.amount) || 0)}
                       </TableCell>
                       <TableCell>
