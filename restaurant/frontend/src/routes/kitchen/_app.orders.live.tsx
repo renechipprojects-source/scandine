@@ -172,8 +172,20 @@ function OrderLiveCardItem({
   );
 }
 
+const initialOrdersList: Order[] = mockOrdersRaw.map((m) => ({
+  id: m.id,
+  order_id: m.id,
+  customer: m.customer,
+  table_number: typeof m.table === "string" ? parseInt(m.table.replace(/\D/g, ""), 10) || 1 : (m.table as number),
+  item: m.items as Order["item"],
+  total: m.total,
+  status: (m.status === "served" ? "ready" : m.status) as Order["status"],
+  payment: m.payment as Order["payment"],
+  order_time: m.placedAt,
+}));
+
 function LiveOrdersPage() {
-  const { data: dbOrders, updateItem, fetchData } = useSupabaseTable<Order>("sd_orders");
+  const { data: dbOrders, updateItem, fetchData } = useSupabaseTable<Order>("sd_orders", initialOrdersList);
   const { data: dbMenuItems } = useSupabaseTable<MenuItem>("sd_menu_items");
   const [searchQuery, setSearchQuery] = useState("");
   const [channelFilter, setChannelFilter] = useState("all");
@@ -185,20 +197,8 @@ function LiveOrdersPage() {
 
   useRealtimeTable("sd_orders", handleRealtimePayload);
 
-  // Mapped display orders fallback
-  const allOrders: Order[] = dbOrders.length > 0
-    ? dbOrders
-    : mockOrdersRaw.map((m) => ({
-        id: m.id,
-        order_id: m.id,
-        customer: m.customer,
-        table_number: typeof m.table === "string" ? parseInt(m.table.replace(/\D/g, ""), 10) || 1 : (m.table as number),
-        item: m.items as Order["item"],
-        total: m.total,
-        status: (m.status === "served" ? "ready" : m.status) as Order["status"],
-        payment: m.payment as Order["payment"],
-        order_time: m.placedAt,
-      }));
+  // Mapped display orders from unified data source
+  const allOrders: Order[] = dbOrders;
 
   // Filter orders by search, channel, time
   const displayOrders = allOrders.filter((o) => {

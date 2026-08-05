@@ -293,7 +293,15 @@ export function useSupabaseTable<T extends { id: string }>(
           }
         }
       } else if (rows) {
-        updateLocalData(normalizeFetchedRows(tableName, rows as T[]));
+        if (rows.length > 0) {
+          const fetched = normalizeFetchedRows(tableName, rows as T[]);
+          updateLocalData((prev) => {
+            const map = new Map<string, T>();
+            prev.forEach((item) => map.set(item.id, item));
+            fetched.forEach((item) => map.set(item.id, item));
+            return Array.from(map.values());
+          });
+        }
       }
 
     } catch (err) {
