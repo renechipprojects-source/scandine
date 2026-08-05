@@ -145,7 +145,7 @@ function PaymentsPage() {
   };
 
   return (
-    <div className="w-full space-y-6 flex flex-col h-[calc(100vh-5rem)]">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Payments"
         description="Track every transaction across Cash and UPI."
@@ -153,7 +153,7 @@ function PaymentsPage() {
         actions={<Button variant="outline" size="sm" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Export</Button>}
       />
 
-      <div className="mb-2 grid grid-cols-1 gap-3 sm:grid-cols-2 shrink-0 w-full">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 w-full">
         {methodBreakdown.map((m) => (
           <Card key={m.method} className="p-4">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
@@ -167,7 +167,7 @@ function PaymentsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 shrink-0 w-full">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 w-full">
         <Card className="p-5 lg:col-span-2">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -208,8 +208,8 @@ function PaymentsPage() {
       </div>
 
       {/* Full Width Payment List with Independent Scroll */}
-      <Card className="w-full flex-1 min-h-0 p-4 border flex flex-col">
-        <div className="mb-4 flex flex-wrap items-center gap-2 shrink-0">
+      <Card className="w-full p-4 border overflow-hidden">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -220,9 +220,9 @@ function PaymentsPage() {
             />
           </div>
         </div>
-        <div className="w-full flex-1 overflow-x-auto overflow-y-auto">
-          <Table className="w-full">
-            <TableHeader className="sticky top-0 z-10 bg-card">
+        <div className="w-full max-h-[600px] overflow-x-auto overflow-y-auto">
+          <Table className="w-full min-w-[700px]">
+            <TableHeader className="sticky top-0 z-10 bg-card shadow-xs">
               <TableRow className="bg-muted/40">
                 <TableHead>Transaction / Txn ID</TableHead>
                 <TableHead>Invoice</TableHead>

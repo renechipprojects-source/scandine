@@ -71,14 +71,14 @@ export function OrdersPage() {
   }, [displayOrders, activeOrders, completedOrders, activeTab, searchQuery]);
 
   return (
-    <div className="w-full space-y-6 flex flex-col h-[calc(100vh-5rem)]">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Orders & Kitchen Fulfillment"
         icon={<ShoppingBag className="h-5 w-5" />}
       />
 
       {/* Real-time Order Summary Badges */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 w-full shrink-0">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 w-full">
         <Card className="p-4 bg-card/60 backdrop-blur">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Orders</div>
           <div className="mt-1 font-display text-2xl font-bold">{displayOrders.length}</div>
@@ -106,9 +106,9 @@ export function OrdersPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="all" value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full flex-1 flex flex-col min-h-0">
+      <Tabs defaultValue="all" value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full space-y-4">
         {/* Full-width Sticky Header Container for Search Bar & Tabs */}
-        <div className="w-full py-3 bg-background/95 backdrop-blur-md border-b shadow-xs flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-1 shrink-0">
+        <div className="w-full py-3 bg-background/95 backdrop-blur-md border-b shadow-xs flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-1">
           <TabsList className="grid w-full grid-cols-3 sm:w-auto">
             <TabsTrigger value="all" className="gap-2 text-xs">
               All Orders ({displayOrders.length})
@@ -133,9 +133,9 @@ export function OrdersPage() {
         </div>
 
         {/* Tab 1: All Orders Table — Full Width with Independent Scroll */}
-        <TabsContent value="all" className="mt-4 w-full flex-1 min-h-0">
-          <Card className="w-full h-full p-2 sm:p-4 border flex flex-col">
-            <div className="w-full flex-1 overflow-x-auto overflow-y-auto">
+        <TabsContent value="all" className="mt-4 w-full">
+          <Card className="w-full p-2 sm:p-4 border overflow-hidden">
+            <div className="w-full max-h-[600px] overflow-x-auto overflow-y-auto">
               <Table className="w-full min-w-[850px]">
                 <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow className="bg-muted/40">
@@ -189,9 +189,9 @@ export function OrdersPage() {
         </TabsContent>
 
         {/* Tab 2: Active Orders Table — Full Width with Independent Scroll */}
-        <TabsContent value="active" className="mt-4 w-full flex-1 min-h-0">
-          <Card className="w-full h-full p-2 sm:p-4 border flex flex-col">
-            <div className="w-full flex-1 overflow-x-auto overflow-y-auto">
+        <TabsContent value="active" className="mt-4 w-full">
+          <Card className="w-full p-2 sm:p-4 border overflow-hidden">
+            <div className="w-full max-h-[600px] overflow-x-auto overflow-y-auto">
               <Table className="w-full min-w-[850px]">
                 <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow className="bg-muted/40">

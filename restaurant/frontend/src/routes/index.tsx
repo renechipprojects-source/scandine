@@ -56,14 +56,14 @@ function LoginPage() {
       return;
     }
 
-    // 2. Authenticate dynamic employee credentials via Supabase
+    // 2. Authenticate dynamic employee credentials via Supabase (Optimized Query)
     if (isSupabaseConfigured) {
       try {
         const { data: emp, error: empErr } = await supabase
           .from("sd_employees")
-          .select("*")
+          .select("id, email, role, status, password_plain")
           .eq("email", cleanEmail)
-          .single();
+          .maybeSingle();
 
         if (empErr || !emp) {
           setError("Invalid email or password.");
@@ -78,7 +78,7 @@ function LoginPage() {
         }
 
         let authSuccess = emp.password_plain === password;
-        if (!authSuccess) {
+        if (!authSuccess && password) {
           const { error: authErr } = await supabase.auth.signInWithPassword({
             email: cleanEmail,
             password: password,

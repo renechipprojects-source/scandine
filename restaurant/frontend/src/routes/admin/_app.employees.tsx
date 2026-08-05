@@ -17,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/admin/components/ui/alert-dialog";
-import { UserCog, Plus, Search, Mail, Phone, Trash2, Loader2, AlertCircle, ShieldCheck, Key, RefreshCw, Copy, Check, Eye, EyeOff } from "lucide-react";
+import { UserCog, Plus, Search, Mail, Phone, Trash2, Loader2, AlertCircle, ShieldCheck, Key, RefreshCw, Copy, Check, Eye, EyeOff, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect, useCallback } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -73,6 +73,17 @@ export function EmployeesPage() {
   const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string; role?: string; password?: string }>({});
   const [submitting, setSubmitting] = useState(false);
 
+  // Edit staff modal state
+  const [staffToEdit, setStaffToEdit] = useState<Employee | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editRole, setEditRole] = useState<Employee["role"]>("receptionist");
+  const [editAddress, setEditAddress] = useState("");
+  const [editStatus, setEditStatus] = useState<string>("active");
+  const [editPassword, setEditPassword] = useState("");
+  const [editUpdating, setEditUpdating] = useState(false);
+
   // Delete confirmation state
   const [staffToDelete, setStaffToDelete] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -83,6 +94,19 @@ export function EmployeesPage() {
       setPassword(generateSecurePassword());
     }
   }, [isOpen, password]);
+
+  // Pre-fill edit modal form when employee is selected
+  useEffect(() => {
+    if (staffToEdit) {
+      setEditName(staffToEdit.name || "");
+      setEditEmail(staffToEdit.email || "");
+      setEditPhone(staffToEdit.phone || "");
+      setEditRole(staffToEdit.role || "receptionist");
+      setEditAddress(staffToEdit.address || "");
+      setEditStatus((staffToEdit as any).status || "active");
+      setEditPassword((staffToEdit as any).password_plain || "");
+    }
+  }, [staffToEdit]);
 
   // Fetch employees directly from Supabase DB
   const fetchEmployees = useCallback(async () => {
@@ -237,6 +261,51 @@ export function EmployeesPage() {
     }
   };
 
+  // Handle Edit Staff Update with Supabase Database Synchronization
+  const handleUpdateStaff = async (ev: React.FormEvent) => {
+    ev.preventDefault();
+    if (!staffToEdit) return;
+
+    if (!editName.trim() || !editEmail.trim() || !editPhone.trim()) {
+      toast.error("Please enter required staff details.");
+      return;
+    }
+
+    setEditUpdating(true);
+    try {
+      const updatedRecord = {
+        name: editName.trim(),
+        email: editEmail.trim().toLowerCase(),
+        phone: editPhone.trim(),
+        role: editRole,
+        address: editAddress.trim(),
+        status: editStatus,
+        password_plain: editPassword ? editPassword.trim() : (staffToEdit as any).password_plain,
+      };
+
+      const { data: updated, error: updateErr } = await supabase
+        .from("sd_employees")
+        .update(updatedRecord)
+        .eq("id", staffToEdit.id)
+        .select()
+        .single();
+
+      if (updateErr) {
+        console.error("Supabase employee update error:", updateErr);
+        toast.error(updateErr.message || "Failed to update employee details in database.");
+      } else {
+        toast.success(`Employee "${updated?.name || editName}" updated successfully in Supabase!`);
+        setStaffToEdit(null);
+        await fetchEmployees();
+      }
+    } catch (err: any) {
+      console.error("Exception updating employee:", err);
+      toast.error(err.message || "An unexpected error occurred while updating staff details.");
+    } finally {
+      setEditUpdating(false);
+    }
+  };
+
   // Handle Delete Staff with Database Confirmation & Auth Access Revocation
   const handleConfirmDelete = async () => {
     if (!staffToDelete) return;
@@ -277,7 +346,7 @@ export function EmployeesPage() {
                 <Plus className="h-4 w-4" /> Add staff
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto pr-2 sm:pr-4">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 text-lg font-bold">
                   <ShieldCheck className="h-5 w-5 text-primary" /> Add New Login Credentials
@@ -493,20 +562,32 @@ export function EmployeesPage() {
                         {e.role.replace("_", " ")}
                       </div>
                       <div className="mt-1">
-                        <StatusBadge status="ready" />
+                        <StatusBadge status={(e as any).status === "disabled" || (e as any).status === "inactive" ? "pending" : "ready"} />
                       </div>
                     </div>
 
-                    {/* Delete Trigger Button */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition"
-                      onClick={() => setStaffToDelete(e)}
-                      title="Remove Staff Member"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {/* Edit Trigger Button */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:bg-primary/10 hover:text-primary transition"
+                        onClick={() => setStaffToEdit(e)}
+                        title="Edit Staff Details"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      {/* Delete Trigger Button */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition"
+                        onClick={() => setStaffToDelete(e)}
+                        title="Remove Staff Member"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="mt-4 space-y-1.5 text-xs text-muted-foreground border-t pt-3">
@@ -525,6 +606,104 @@ export function EmployeesPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Edit Employee Dialog with Supabase Synchronization */}
+      <Dialog open={!!staffToEdit} onOpenChange={(open) => !open && setStaffToEdit(null)}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto pr-2 sm:pr-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+              <Pencil className="h-5 w-5 text-primary" /> Edit Employee Details
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleUpdateStaff} className="space-y-3.5 mt-2">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Full Name *</label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="e.g. Carlos Gomez"
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Email Address *</label>
+              <Input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="e.g. carlos@scandine.co"
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Phone Number *</label>
+              <Input
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                placeholder="e.g. +1 415 555 0105"
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Role *</label>
+              <select
+                value={editRole}
+                onChange={(e) => setEditRole(e.target.value as Employee["role"])}
+                className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="receptionist">Receptionist</option>
+                <option value="kitchen_staff">Kitchen Staff</option>
+                <option value="waiter">Waiter</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Status *</label>
+              <select
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value)}
+                className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Disabled / Inactive</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Password</label>
+              <Input
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+                placeholder="Update password (optional)"
+                className="mt-1 font-mono text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Address / Branch</label>
+              <Input
+                value={editAddress}
+                onChange={(e) => setEditAddress(e.target.value)}
+                placeholder="e.g. Main Branch, San Francisco"
+                className="mt-1"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 border-t pt-3 mt-4">
+              <Button type="button" variant="outline" onClick={() => setStaffToEdit(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={editUpdating} className="gap-2">
+                {editUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation AlertDialog */}
       <AlertDialog open={!!staffToDelete} onOpenChange={(open) => !open && setStaffToDelete(null)}>
