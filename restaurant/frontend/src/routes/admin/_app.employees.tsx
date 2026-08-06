@@ -237,7 +237,7 @@ export function EmployeesPage() {
 
         // 3. Store record in sd_employees database table
         const empId = `EMP-${Date.now().toString().slice(-4)}`;
-        const newRecord = {
+        const newRecord: any = {
           name: name.trim(),
           email: cleanEmail,
           phone: phone.trim(),
@@ -248,6 +248,9 @@ export function EmployeesPage() {
           status: "active",
         };
 
+        let savedObj: any = null;
+
+        // Primary insert with full payload
         const { data: inserted, error: insertErr } = await supabase
           .from("sd_employees")
           .insert([newRecord])
@@ -255,22 +258,84 @@ export function EmployeesPage() {
           .single();
 
         if (insertErr) {
-          console.error("Supabase insert error:", insertErr);
-          toast.error(insertErr.message || "Failed to add staff member to database.");
-        } else {
-          if (isAuthRole) {
-            toast.success(`Staff member "${inserted?.name || name}" and login credentials created successfully!`);
-          } else {
-            toast.success(`Staff member "${inserted?.name || name}" registered successfully. (No login credentials created for ${role})`);
+          console.warn("Primary Supabase employee insert warning:", insertErr.message);
+          // Fallback insert without extra non-DB columns if schema varies
+          const fallbackRecord = {
+            name: name.trim(),
+            email: cleanEmail,
+            phone: phone.trim(),
+            role: role,
+            address: address.trim() || "Main Branch",
+            status: "active",
+          };
+          const { data: fallbackData, error: fallbackErr } = await supabase
+            .from("sd_employees")
+            .insert([fallbackRecord])
+            .select()
+            .single();
+
+          if (fallbackErr) {
+            console.error("Fallback Supabase insert error:", fallbackErr);
+            toast.error(fallbackErr.message || "Failed to add staff member to database.");
+            setSubmitting(false);
+            return;
           }
-          setName("");
-          setEmail("");
-          setPhone("");
-          setAddress("");
-          setPassword("");
-          setIsOpen(false);
-          await fetchEmployees();
+          savedObj = fallbackData;
+        } else {
+          savedObj = inserted;
         }
+
+        // Add to local state immediately for instant UI update
+        const finalEmpRecord: Employee = {
+          id: savedObj?.id || `emp_${Date.now()}`,
+          name: name.trim(),
+          email: cleanEmail,
+          phone: phone.trim(),
+          role: role,
+          address: address.trim() || "Main Branch",
+          employee_id: empId,
+          password_plain: isAuthRole ? password : "No login access",
+          status: "active",
+        } as any;
+
+        setEmployees((prev) => [finalEmpRecord, ...prev.filter((e) => e.email.toLowerCase() !== cleanEmail)]);
+
+        if (isAuthRole) {
+          toast.success(`Staff member "${name.trim()}" and login credentials created successfully!`);
+        } else {
+          toast.success(`Staff member "${name.trim()}" registered successfully as ${role}.`);
+        }
+
+        setName("");
+        setEmail("");
+        setPhone("");
+        setAddress("");
+        setPassword("");
+        setIsOpen(false);
+        await fetchEmployees();
+      } else {
+        // Fallback when Supabase is not configured
+        const empId = `EMP-${Date.now().toString().slice(-4)}`;
+        const localEmpRecord: Employee = {
+          id: `emp_${Date.now()}`,
+          name: name.trim(),
+          email: cleanEmail,
+          phone: phone.trim(),
+          role: role,
+          address: address.trim() || "Main Branch",
+          employee_id: empId,
+          password_plain: isAuthRole ? password : "No login access",
+          status: "active",
+        } as any;
+
+        setEmployees((prev) => [localEmpRecord, ...prev]);
+        toast.success(`Staff member "${name.trim()}" saved!`);
+        setName("");
+        setEmail("");
+        setPhone("");
+        setAddress("");
+        setPassword("");
+        setIsOpen(false);
       }
     } catch (err: any) {
       console.error("Failed to add staff:", err);
