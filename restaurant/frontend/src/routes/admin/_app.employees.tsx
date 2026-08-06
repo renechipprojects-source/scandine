@@ -88,8 +88,8 @@ export function EmployeesPage() {
   const [staffToDelete, setStaffToDelete] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Check if currently selected role requires login authentication
-  const isAuthRoleSelected = role === "receptionist" || role === "kitchen_staff" || (role as string) === "chef";
+  // Check if currently selected role requires login authentication (Receptionist & Kitchen Staff only)
+  const isAuthRoleSelected = role === "receptionist" || role === "kitchen_staff";
 
   // Auto-generate password ONCE when modal opens for an auth role (without overwriting user edits)
   useEffect(() => {
@@ -185,7 +185,7 @@ export function EmployeesPage() {
     if (!phone.trim()) newErrors.phone = "Phone Number is required";
     if (!role) newErrors.role = "Role is required";
 
-    const isAuthRole = role === "receptionist" || role === "kitchen_staff" || (role as string) === "chef";
+    const isAuthRole = role === "receptionist" || role === "kitchen_staff";
     if (isAuthRole && (!password.trim() || password.length < 6)) {
       newErrors.password = "Password must be at least 6 characters";
     }
@@ -504,6 +504,7 @@ export function EmployeesPage() {
                   >
                     <option value="receptionist">Receptionist</option>
                     <option value="kitchen_staff">Kitchen Staff</option>
+                    <option value="chef">Chef</option>
                     <option value="waiter">Waiter</option>
                   </select>
                   {errors.role && <p className="mt-1 text-[11px] text-destructive font-medium">{errors.role}</p>}
@@ -754,6 +755,7 @@ export function EmployeesPage() {
               >
                 <option value="receptionist">Receptionist</option>
                 <option value="kitchen_staff">Kitchen Staff</option>
+                <option value="chef">Chef</option>
                 <option value="waiter">Waiter</option>
               </select>
             </div>
