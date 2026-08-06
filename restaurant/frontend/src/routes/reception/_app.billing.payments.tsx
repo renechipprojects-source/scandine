@@ -216,10 +216,10 @@ function PaymentsPage() {
           </div>
         </div>
 
-        {/* Dedicated Scroll Container for Payment Table */}
-        <div className="w-full rounded-lg border border-border bg-card max-h-[420px] overflow-y-auto overflow-x-auto scrollbar-thin relative">
+        {/* Payment Table with Sticky Header and UI-level Page Scrolling */}
+        <div className="w-full rounded-lg border border-border bg-card overflow-x-auto relative">
           <Table className="w-full min-w-[700px]">
-            <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-md shadow-sm border-b">
+            <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-md shadow-sm border-b [&_th]:sticky [&_th]:top-0 [&_th]:bg-muted/95 [&_th]:z-30">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Transaction / Txn ID</TableHead>
                 <TableHead className="font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Invoice</TableHead>
