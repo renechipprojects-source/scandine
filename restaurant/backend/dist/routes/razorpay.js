@@ -4,8 +4,8 @@ import crypto from "crypto";
 const router = Router();
 // Lazy initialization of Razorpay instance
 const getRazorpayInstance = () => {
-    const key_id = process.env.RAZORPAY_KEY_ID || "rzp_test_placeholder";
-    const key_secret = process.env.RAZORPAY_KEY_SECRET || "razorpay_secret_placeholder";
+    const key_id = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TI7XNrxQP5GRTJ";
+    const key_secret = process.env.RAZORPAY_KEY_SECRET || "rPL5yd7n2hbvb6sEfxColuPl";
     return new Razorpay({ key_id, key_secret });
 };
 // Create Razorpay Order endpoint
@@ -13,7 +13,7 @@ router.post("/create-order", async (req, res) => {
     try {
         const { amount, currency = "INR", receipt } = req.body;
         if (!amount || typeof amount !== "number") {
-            return res.status(400).json({ error: "Invalid or missing amount (must be integer in paise)" });
+            return res.status(400).json({ error: "Invalid or missing amount" });
         }
         const razorpay = getRazorpayInstance();
         const options = {
@@ -27,7 +27,7 @@ router.post("/create-order", async (req, res) => {
             order_id: order.id,
             amount: order.amount,
             currency: order.currency,
-            key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_placeholder",
+            key_id: process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TI7XNrxQP5GRTJ",
         });
     }
     catch (err) {
@@ -41,7 +41,7 @@ router.post("/create-order", async (req, res) => {
 router.post("/verify", (req, res) => {
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-        const secret = process.env.RAZORPAY_KEY_SECRET || "razorpay_secret_placeholder";
+        const secret = process.env.RAZORPAY_KEY_SECRET || "rPL5yd7n2hbvb6sEfxColuPl";
         if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
             return res.status(400).json({ error: "Missing required payment verification fields" });
         }
