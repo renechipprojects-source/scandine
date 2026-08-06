@@ -217,16 +217,16 @@ function PaymentsPage() {
         </div>
 
         {/* Dedicated Scroll Container for Payment Table */}
-        <div className="w-full rounded-lg border border-border bg-card max-h-[420px] overflow-y-auto overflow-x-auto scrollbar-thin">
+        <div className="w-full rounded-lg border border-border bg-card max-h-[420px] overflow-y-auto overflow-x-auto scrollbar-thin relative">
           <Table className="w-full min-w-[700px]">
-            <TableHeader className="sticky top-0 z-20 bg-muted/90 backdrop-blur-md shadow-xs border-b">
+            <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-md shadow-sm border-b">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="font-semibold text-foreground">Transaction / Txn ID</TableHead>
-                <TableHead className="font-semibold text-foreground">Invoice</TableHead>
-                <TableHead className="font-semibold text-foreground">Customer</TableHead>
-                <TableHead className="font-semibold text-foreground">Method</TableHead>
-                <TableHead className="font-semibold text-foreground">Date</TableHead>
-                <TableHead className="text-right font-semibold text-foreground">Amount</TableHead>
+                <TableHead className="font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Transaction / Txn ID</TableHead>
+                <TableHead className="font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Invoice</TableHead>
+                <TableHead className="font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Customer</TableHead>
+                <TableHead className="font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Method</TableHead>
+                <TableHead className="font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Date</TableHead>
+                <TableHead className="text-right font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Amount</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

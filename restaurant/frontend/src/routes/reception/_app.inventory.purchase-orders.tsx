@@ -59,12 +59,22 @@ function POPage() {
   const [isSubmittingPO, setIsSubmittingPO] = useState(false);
   const [activeTab, setActiveTab] = useState("purchase-orders");
 
+  // Helper to normalize Payment Terms to standard ERP procurement values
+  const formatPaymentTerms = (val?: string) => {
+    if (!val) return "Prepaid";
+    const lower = val.toLowerCase();
+    if (lower.includes("delivery") || lower.includes("pod") || lower.includes("cod") || lower.includes("cash on delivery")) {
+      return "Pay on Delivery (POD)";
+    }
+    return "Prepaid";
+  };
+
   // New PO form state
   const [poSupplier, setPoSupplier] = useState("");
   const [entryType, setEntryType] = useState("Direct Restock");
   const [itemsCount, setItemsCount] = useState("5");
   const [totalAmount, setTotalAmount] = useState("4500");
-  const [poStatus, setPoStatus] = useState<PurchaseOrderRecord["status"]>("pending");
+  const [poTerms, setPoTerms] = useState<string>("Prepaid");
 
   // New Supplier form state
   const [supName, setSupName] = useState("");
@@ -241,7 +251,7 @@ function POPage() {
         items: Number(itemsCount),
         total: Number(totalAmount),
         date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-        status: poStatus,
+        status: poTerms,
       };
 
       console.log("[Supabase PO Insert Request]:", payload);
@@ -262,6 +272,7 @@ function POPage() {
       setItemsCount("5");
       setTotalAmount("4500");
       setEntryType("Direct Restock");
+      setPoTerms("Prepaid");
       setIsCreatePOOpen(false);
     } catch (err: any) {
       console.error("Exception in handleCreatePO:", err);
@@ -476,15 +487,12 @@ function POPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <Label>Payment Method / Status *</Label>
-                    <Select value={poStatus} onValueChange={(v) => setPoStatus(v as PurchaseOrderRecord["status"])}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Label htmlFor="po-terms">Payment Terms *</Label>
+                    <Select value={poTerms} onValueChange={setPoTerms}>
+                      <SelectTrigger id="po-terms" className="w-full"><SelectValue placeholder="Select Payment Terms" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Prepaid">Prepaid</SelectItem>
-                        <SelectItem value="Pay on Delivery">Pay on Delivery</SelectItem>
-                        <SelectItem value="Cash">Cash</SelectItem>
-                        <SelectItem value="UPI">UPI</SelectItem>
-                        <SelectItem value="Card">Card</SelectItem>
+                        <SelectItem value="Pay on Delivery (POD)">Pay on Delivery (POD)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -551,7 +559,7 @@ function POPage() {
                     <TableHead>Entry Type</TableHead>
                     <TableHead className="text-right">Item SKU Counts</TableHead>
                     <TableHead className="text-right">Total Amount ₹</TableHead>
-                    <TableHead>Payment Method</TableHead>
+                    <TableHead>Payment Terms</TableHead>
                     <TableHead>Created Date</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
@@ -583,8 +591,8 @@ function POPage() {
                           {restaurantInfo.currency}{Number(p.total).toFixed(2)}
                         </TableCell>
                         <TableCell>
-                          <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-semibold border">
-                            {p.status || "Prepaid"}
+                          <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-semibold border">
+                            {formatPaymentTerms(p.status)}
                           </span>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{formatDate(p.created_at || p.date)}</TableCell>
@@ -697,7 +705,7 @@ function POPage() {
               <DialogTitle className="flex items-center justify-between text-base font-bold">
                 <span>Purchase Order {selectedPO.id}</span>
                 <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-semibold border">
-                  {selectedPO.status || "Prepaid"}
+                  {formatPaymentTerms(selectedPO.status)}
                 </span>
               </DialogTitle>
             </DialogHeader>
@@ -725,8 +733,8 @@ function POPage() {
                   <div className="font-semibold">{selectedPO.items} SKUs</div>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground">Payment Information</span>
-                  <div className="font-semibold text-xs text-emerald-600 mt-0.5">{selectedPO.status || "Prepaid"}</div>
+                  <span className="text-xs text-muted-foreground">Payment Terms</span>
+                  <div className="font-semibold text-xs text-emerald-600 mt-0.5">{formatPaymentTerms(selectedPO.status)}</div>
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground">Notes</span>

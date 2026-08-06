@@ -232,14 +232,9 @@ function ReceptionInvoicesPage() {
         description={`${invoicesList.length} invoices · ${formatINR(totalBilled)} total billed`}
         icon={<Receipt className="h-5 w-5" />}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportCSV}>
-              <Download className="mr-2 h-4 w-4" /> Export
-            </Button>
-            <Button size="sm" onClick={() => setIsCreateInvoiceOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Create Invoice
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" /> Export
+          </Button>
         }
       />
 
