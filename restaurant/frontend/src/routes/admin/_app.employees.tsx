@@ -91,12 +91,16 @@ export function EmployeesPage() {
   // Check if currently selected role requires login authentication
   const isAuthRoleSelected = role === "receptionist" || role === "kitchen_staff" || (role as string) === "chef";
 
-  // Auto-generate password when modal opens or role changes to an auth role
+  // Auto-generate password ONCE when modal opens for an auth role (without overwriting user edits)
   useEffect(() => {
-    if (isOpen && isAuthRoleSelected && !password) {
-      setPassword(generateSecurePassword());
+    if (isOpen && isAuthRoleSelected) {
+      if (!password) {
+        setPassword(generateSecurePassword());
+      }
+    } else if (!isOpen) {
+      setPassword("");
     }
-  }, [isOpen, isAuthRoleSelected, password]);
+  }, [isOpen, isAuthRoleSelected]);
 
   // Pre-fill edit modal form when employee is selected
   useEffect(() => {
