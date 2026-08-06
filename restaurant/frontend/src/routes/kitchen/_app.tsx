@@ -2,12 +2,13 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { SidebarProvider, SidebarInset } from "@/kitchen/components/ui/sidebar";
 import { AppSidebar } from "@/kitchen/components/layout/AppSidebar";
 import { TopBar } from "@/kitchen/components/layout/TopBar";
-import { hasRole } from "@/lib/auth";
+import { verifySessionActive } from "@/lib/auth";
 
 export const Route = createFileRoute("/kitchen/_app")({
   ssr: false,
-  beforeLoad: () => {
-    if (!hasRole("kitchen")) throw redirect({ to: "/" });
+  beforeLoad: async () => {
+    const valid = await verifySessionActive("kitchen");
+    if (!valid) throw redirect({ to: "/" });
   },
   component: AppLayout,
 });

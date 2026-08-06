@@ -56,7 +56,7 @@ function LoginPage() {
       return;
     }
 
-    // 2. Authenticate dynamic employee credentials via Supabase (Optimized Query)
+    // 2. Authenticate dynamic employee credentials via Supabase
     if (isSupabaseConfigured) {
       try {
         const { data: emp, error: empErr } = await supabase
@@ -65,18 +65,36 @@ function LoginPage() {
           .eq("email", cleanEmail)
           .maybeSingle();
 
+        // Check 1: Employee record exists in database
         if (empErr || !emp) {
           setError("Invalid email or password.");
           setLoading(false);
           return;
         }
 
-        if (emp.status === "disabled" || emp.status === "inactive") {
-          setError("Your employee account has been disabled or removed.");
+        // Check 2: Employee status must be Active
+        const normalizedStatus = (emp.status || "").toLowerCase();
+        if (normalizedStatus !== "active") {
+          setError("Invalid email or password.");
           setLoading(false);
           return;
         }
 
+        // Check 3: Role access restriction (Only Receptionist & Kitchen Staff / Chef / Admin allowed)
+        const normalizedRole = (emp.role || "").toLowerCase();
+        const isAllowedRole =
+          normalizedRole === "receptionist" ||
+          normalizedRole === "kitchen_staff" ||
+          normalizedRole === "chef" ||
+          normalizedRole === "admin";
+
+        if (!isAllowedRole) {
+          setError("Invalid email or password.");
+          setLoading(false);
+          return;
+        }
+
+        // Check 4: Password authentication via Supabase Auth or stored credential
         let authSuccess = emp.password_plain === password;
         if (!authSuccess && password) {
           const { error: authErr } = await supabase.auth.signInWithPassword({
@@ -93,9 +111,9 @@ function LoginPage() {
         }
 
         let redirect: `/${Role}` = "/admin";
-        if (emp.role === "receptionist") {
+        if (normalizedRole === "receptionist") {
           redirect = "/reception";
-        } else if (emp.role === "kitchen_staff") {
+        } else if (normalizedRole === "kitchen_staff" || normalizedRole === "chef") {
           redirect = "/kitchen";
         }
 
@@ -110,7 +128,7 @@ function LoginPage() {
         return;
       } catch (err: any) {
         console.error("Login authentication exception:", err);
-        setError("Authentication error. Please check your credentials.");
+        setError("Invalid email or password.");
       } finally {
         setLoading(false);
       }

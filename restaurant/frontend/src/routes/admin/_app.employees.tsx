@@ -201,23 +201,27 @@ export function EmployeesPage() {
           return;
         }
 
-        // 2. Create actual Supabase Auth Credentials
-        const { data: authData, error: authErr } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password: password,
-          options: {
-            data: {
-              name: name.trim(),
-              role: role,
-            },
-          },
-        });
+        // 2. Conditionally Create Supabase Auth Credentials ONLY for Receptionist and Kitchen Staff
+        const isAuthRole = role === "receptionist" || role === "kitchen_staff" || (role as string) === "chef";
 
-        if (authErr && !authErr.message.includes("already registered")) {
-          console.error("Supabase Auth Error:", authErr);
-          toast.error(`Authentication creation failed: ${authErr.message}`);
-          setSubmitting(false);
-          return;
+        if (isAuthRole) {
+          const { error: authErr } = await supabase.auth.signUp({
+            email: cleanEmail,
+            password: password,
+            options: {
+              data: {
+                name: name.trim(),
+                role: role,
+              },
+            },
+          });
+
+          if (authErr && !authErr.message.includes("already registered")) {
+            console.error("Supabase Auth Error:", authErr);
+            toast.error(`Authentication creation failed: ${authErr.message}`);
+            setSubmitting(false);
+            return;
+          }
         }
 
         // 3. Store record in sd_employees database table
@@ -229,7 +233,7 @@ export function EmployeesPage() {
           role: role,
           address: address.trim() || "Main Branch",
           employee_id: empId,
-          password_plain: password,
+          password_plain: isAuthRole ? password : "No login access",
           status: "active",
         };
 
@@ -243,7 +247,11 @@ export function EmployeesPage() {
           console.error("Supabase insert error:", insertErr);
           toast.error(insertErr.message || "Failed to add staff member to database.");
         } else {
-          toast.success(`Staff member "${inserted?.name || name}" and login credentials created successfully!`);
+          if (isAuthRole) {
+            toast.success(`Staff member "${inserted?.name || name}" and login credentials created successfully!`);
+          } else {
+            toast.success(`Staff member "${inserted?.name || name}" registered successfully. (No login credentials created for ${role})`);
+          }
           setName("");
           setEmail("");
           setPhone("");

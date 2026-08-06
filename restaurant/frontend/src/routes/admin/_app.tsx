@@ -2,12 +2,13 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { SidebarProvider, SidebarInset } from "@/admin/components/ui/sidebar";
 import { AppSidebar } from "@/admin/components/layout/AppSidebar";
 import { TopBar } from "@/admin/components/layout/TopBar";
-import { hasRole } from "@/lib/auth";
+import { verifySessionActive } from "@/lib/auth";
 
 export const Route = createFileRoute("/admin/_app")({
   ssr: false,
-  beforeLoad: () => {
-    if (!hasRole("admin")) throw redirect({ to: "/" });
+  beforeLoad: async () => {
+    const valid = await verifySessionActive("admin");
+    if (!valid) throw redirect({ to: "/" });
   },
   component: AppLayout,
 });

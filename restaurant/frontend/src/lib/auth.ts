@@ -45,6 +45,51 @@ export function hasRole(role: Role): boolean {
   return session?.redirect === `/${role}`;
 }
 
+export async function verifySessionActive(role: Role): Promise<boolean> {
+  const session = getSession();
+  if (!session || session.redirect !== `/${role}`) {
+    return false;
+  }
+  // Allow system admin/preset credentials
+  if (session.email.endsWith("@restaurant.com")) {
+    return true;
+  }
+  if (isSupabaseConfigured) {
+    try {
+      const { data: emp, error } = await supabase
+        .from("sd_employees")
+        .select("status, role")
+        .eq("email", session.email.toLowerCase())
+        .maybeSingle();
+
+      if (error || !emp) {
+        await signOut();
+        return false;
+      }
+      const status = (emp.status || "").toLowerCase();
+      if (status !== "active") {
+        await signOut();
+        return false;
+      }
+      const normalizedRole = (emp.role || "").toLowerCase();
+      const isAllowed =
+        normalizedRole === "receptionist" ||
+        normalizedRole === "kitchen_staff" ||
+        normalizedRole === "chef" ||
+        normalizedRole === "admin";
+
+      if (!isAllowed) {
+        await signOut();
+        return false;
+      }
+    } catch {
+      await signOut();
+      return false;
+    }
+  }
+  return true;
+}
+
 export function saveSession(session: Session, remember: boolean = true): void {
   if (typeof window === "undefined") return;
   const store = remember ? window.localStorage : window.sessionStorage;
