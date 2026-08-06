@@ -152,7 +152,6 @@ function PaymentsPage() {
     <div className="w-full space-y-6">
       <PageHeader
         title="Payments"
-        description="Track every transaction across Cash and UPI."
         icon={<CreditCard className="h-5 w-5" />}
         actions={
           <Button variant="outline" size="sm" onClick={handleExportCSV}>
@@ -176,45 +175,26 @@ function PaymentsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 w-full">
-        <Card className="p-5 lg:col-span-2">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <div className="font-display text-base font-semibold">Payment Methods Distribution</div>
-              <div className="text-xs text-muted-foreground">Distribution across Cash and UPI</div>
-            </div>
+      <Card className="p-5 w-full">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <div className="font-display text-base font-semibold">Payment Methods Distribution</div>
+            <div className="text-xs text-muted-foreground">Distribution across Cash and UPI</div>
           </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={methodBreakdown}>
-              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.008 60)" vertical={false} />
-              <XAxis dataKey="method" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis fontSize={11} tickLine={false} axisLine={false} />
-              <Tooltip
-                formatter={(val: any) => [formatINR(Number(val)), "Amount"]}
-                contentStyle={{ borderRadius: 12, border: "1px solid oklch(0.92 0.008 60)", fontSize: 12 }}
-              />
-              <Bar dataKey="amount" fill="oklch(0.68 0.19 40)" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-        <Card className="p-5">
-          <div className="font-display text-base font-semibold">Settlement Summary</div>
-          <div className="mt-3 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Gross Sales</span>
-              <span className="font-semibold">{formatINR(totalGrossSales)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Processing Fees</span>
-              <span className="text-destructive">−₹0</span>
-            </div>
-            <div className="flex justify-between border-t pt-3 font-display text-lg font-bold">
-              <span>Net Payout</span>
-              <span className="text-primary">{formatINR(totalGrossSales)}</span>
-            </div>
-          </div>
-        </Card>
-      </div>
+        </div>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={methodBreakdown}>
+            <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.008 60)" vertical={false} />
+            <XAxis dataKey="method" fontSize={11} tickLine={false} axisLine={false} />
+            <YAxis fontSize={11} tickLine={false} axisLine={false} />
+            <Tooltip
+              formatter={(val: any) => [formatINR(Number(val)), "Amount"]}
+              contentStyle={{ borderRadius: 12, border: "1px solid oklch(0.92 0.008 60)", fontSize: 12 }}
+            />
+            <Bar dataKey="amount" fill="oklch(0.68 0.19 40)" radius={[8, 8, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </Card>
 
       {/* Full Width Payment List with Dedicated Independent Scrollbar */}
       <Card className="w-full p-4 border shadow-sm">
@@ -247,13 +227,12 @@ function PaymentsPage() {
                 <TableHead className="font-semibold text-foreground">Method</TableHead>
                 <TableHead className="font-semibold text-foreground">Date</TableHead>
                 <TableHead className="text-right font-semibold text-foreground">Amount</TableHead>
-                <TableHead className="font-semibold text-foreground">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
                     No payment transactions found in database.
                   </TableCell>
                 </TableRow>
@@ -273,7 +252,6 @@ function PaymentsPage() {
                         {p.date ? (isNaN(Date.parse(p.date)) ? p.date : new Date(p.date).toLocaleDateString()) : "Today"}
                       </TableCell>
                       <TableCell className="text-right font-bold text-foreground">{formatINR(Number(p.amount) || 0)}</TableCell>
-                      <TableCell><StatusBadge status={p.status} /></TableCell>
                     </TableRow>
                   );
                 })

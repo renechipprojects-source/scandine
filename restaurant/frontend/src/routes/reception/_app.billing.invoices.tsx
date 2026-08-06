@@ -243,13 +243,12 @@ function ReceptionInvoicesPage() {
         }
       />
 
-      {/* 4 Summary Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* 3 Summary Cards */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[
           { label: "Paid Revenue", value: formatINR(paidTotal), tone: "text-emerald-600 dark:text-emerald-400" },
           { label: "Pending / Unpaid", value: formatINR(unpaidTotal), tone: "text-amber-600 dark:text-amber-400" },
           { label: "Total Invoices", value: `${invoicesList.length}`, tone: "text-foreground" },
-          { label: "Average Invoice", value: formatINR(avgInvoice), tone: "text-primary" },
         ].map((s) => (
           <Card key={s.label} className="p-4">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">{s.label}</div>
@@ -258,8 +257,8 @@ function ReceptionInvoicesPage() {
         ))}
       </div>
 
-      {/* Search & Actions Bar */}
-      <Card className="p-4">
+      {/* Search & Table Card */}
+      <Card className="w-full p-4 border shadow-xs overflow-hidden">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -270,15 +269,12 @@ function ReceptionInvoicesPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button variant="outline" size="sm" onClick={() => setIsSplitBillOpen(true)}>
-            <Split className="mr-2 h-4 w-4" /> Split bill
-          </Button>
         </div>
 
-        {/* Invoice Table */}
-        <div className="-mx-4 overflow-x-auto">
-          <Table>
-            <TableHeader>
+        {/* Invoice Table with Dedicated Scrollbar */}
+        <div className="w-full max-h-[420px] overflow-y-auto overflow-x-auto border rounded-lg scrollbar-thin">
+          <Table className="w-full">
+            <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-md">
               <TableRow className="bg-muted/40">
                 <TableHead>Invoice Number</TableHead>
                 <TableHead>Customer</TableHead>

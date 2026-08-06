@@ -68,12 +68,10 @@ function CustomersPage() {
         }
       />
 
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-3 max-w-lg">
         {[
           { label: "Total customers", value: `${customersList.length}` },
           { label: "New this month", value: "14" },
-          { label: "Active Directory", value: "100%" },
-          { label: "Location", value: `${restaurantInfo.branch}` },
         ].map((s) => (
           <Card key={s.label} className="p-4">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">{s.label}</div>
@@ -82,7 +80,7 @@ function CustomersPage() {
         ))}
       </div>
 
-      <Card className="p-4">
+      <Card className="w-full p-4 border shadow-xs overflow-hidden">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -94,14 +92,14 @@ function CustomersPage() {
             />
           </div>
         </div>
-        <div className="-mx-4 overflow-x-auto">
-          <Table>
-            <TableHeader>
+
+        <div className="w-full max-h-[420px] overflow-y-auto overflow-x-auto border rounded-lg scrollbar-thin">
+          <Table className="w-full">
+            <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-md">
               <TableRow className="bg-muted/40">
                 <TableHead>Customer</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead className="w-16"></TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -120,57 +118,13 @@ function CustomersPage() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="text-xs text-muted-foreground"><Mail className="mr-1 inline h-3 w-3" />{c.email || "N/A"}</div>
-                    <div className="text-xs text-muted-foreground"><Phone className="mr-1 inline h-3 w-3" />{c.phone || "N/A"}</div>
+                  <TableCell className="text-xs font-medium text-foreground">
+                    <Mail className="mr-1.5 inline h-3.5 w-3.5 text-muted-foreground" />
+                    {c.email || "N/A"}
                   </TableCell>
-                  <TableCell>
-                    <div className="text-xs text-muted-foreground"><MapPin className="mr-1 inline h-3 w-3" />{c.address || "N/A"}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Sheet>
-                      <SheetTrigger asChild>
-                        <Button variant="outline" size="sm" onClick={() => setSelectedCust(c)}>View</Button>
-                      </SheetTrigger>
-                      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-                        <SheetHeader>
-                          <SheetTitle>Customer Profile</SheetTitle>
-                        </SheetHeader>
-                        {selectedCust && (
-                          <div className="mt-6 space-y-6">
-                            <div className="flex items-center gap-4 border-b pb-4">
-                              <Avatar className="h-16 w-16">
-                                <AvatarFallback className="bg-primary/10 text-xl font-bold text-primary">
-                                  {selectedCust.name.split(" ").map((w) => w[0]).join("")}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <h3 className="font-display text-lg font-bold">{selectedCust.name}</h3>
-                                <p className="text-xs text-muted-foreground">Customer ID: {selectedCust.id}</p>
-                              </div>
-                            </div>
-
-                            <div className="space-y-3 border-t pt-4">
-                              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Contact Details</h4>
-                              <div className="space-y-2 text-xs">
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Email</span>
-                                  <span className="font-medium text-foreground">{selectedCust.email || "N/A"}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Phone</span>
-                                  <span className="font-medium text-foreground">{selectedCust.phone || "N/A"}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Address</span>
-                                  <span className="font-medium text-foreground">{selectedCust.address || "N/A"}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </SheetContent>
-                    </Sheet>
+                  <TableCell className="text-xs font-medium text-foreground">
+                    <Phone className="mr-1.5 inline h-3.5 w-3.5 text-muted-foreground" />
+                    {c.phone || "N/A"}
                   </TableCell>
                 </TableRow>
               ))}

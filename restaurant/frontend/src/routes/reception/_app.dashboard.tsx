@@ -89,22 +89,15 @@ function DashboardPage() {
   };
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
-        title={`Welcome back, Receptionist`}
-        description={`${restaurantInfo.branch} · Here's what's happening at ScanDine today.`}
+        title="Dashboard"
         icon={<Sparkles className="h-5 w-5" />}
         actions={
-          <>
-            <Button variant="outline" size="sm" onClick={handleTodayClick}>
-              <Calendar className="mr-2 h-4 w-4" />
-              Today
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExportCSV}>
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-          </>
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
         }
       />
 
@@ -112,6 +105,7 @@ function DashboardPage() {
         <StatCard label="Available Tables" value={`${availableTablesCount}`} icon={<Utensils className="h-5 w-5" />} tone="success" />
         <StatCard label="Occupied Tables" value={`${occupiedTablesCount}`} icon={<ChefHat className="h-5 w-5" />} tone="warning" />
         <StatCard label="Pending Bills" value={`${pendingBillsCount}`} icon={<DollarSign className="h-5 w-5" />} tone="destructive" />
+        <StatCard label="Total Orders" value={`${dbOrders.length}`} icon={<Utensils className="h-5 w-5" />} tone="info" />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-5">

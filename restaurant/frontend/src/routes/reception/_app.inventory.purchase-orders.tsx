@@ -330,20 +330,6 @@ function POPage() {
         icon={<ClipboardList className="h-5 w-5" />}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                fetchSuppliers();
-                fetchPurchaseOrders();
-                toast.info("Refreshed data from Supabase database");
-              }}
-              title="Refresh database records"
-            >
-              <RefreshCw className="h-4 w-4 mr-1.5" />
-              Refresh
-            </Button>
-
             {/* New Supplier Dialog */}
             <Dialog open={isCreateSupplierOpen} onOpenChange={setIsCreateSupplierOpen}>
               <DialogTrigger asChild>
@@ -490,15 +476,15 @@ function POPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <Label>Order Status *</Label>
+                    <Label>Payment Method / Status *</Label>
                     <Select value={poStatus} onValueChange={(v) => setPoStatus(v as PurchaseOrderRecord["status"])}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="preparing">Preparing / Processing</SelectItem>
-                        <SelectItem value="ready">Ready / Shipped</SelectItem>
-                        <SelectItem value="completed">Completed / Delivered</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="Prepaid">Prepaid</SelectItem>
+                        <SelectItem value="Pay on Delivery">Pay on Delivery</SelectItem>
+                        <SelectItem value="Cash">Cash</SelectItem>
+                        <SelectItem value="UPI">UPI</SelectItem>
+                        <SelectItem value="Card">Card</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -565,7 +551,7 @@ function POPage() {
                     <TableHead>Entry Type</TableHead>
                     <TableHead className="text-right">Item SKU Counts</TableHead>
                     <TableHead className="text-right">Total Amount ₹</TableHead>
-                    <TableHead>Order Status</TableHead>
+                    <TableHead>Payment Method</TableHead>
                     <TableHead>Created Date</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
@@ -596,7 +582,11 @@ function POPage() {
                         <TableCell className="text-right font-bold text-emerald-600">
                           {restaurantInfo.currency}{Number(p.total).toFixed(2)}
                         </TableCell>
-                        <TableCell><StatusBadge status={p.status} /></TableCell>
+                        <TableCell>
+                          <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-semibold border">
+                            {p.status || "Prepaid"}
+                          </span>
+                        </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{formatDate(p.created_at || p.date)}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-1">
@@ -679,14 +669,6 @@ function POPage() {
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-1">
                             <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedContactSupplier(s)}
-                            >
-                              <Phone className="h-3.5 w-3.5 mr-1" />
-                              Contact
-                            </Button>
-                            <Button
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
@@ -712,23 +694,25 @@ function POPage() {
         {selectedPO && (
           <DialogContent className="max-w-md rounded-2xl">
             <DialogHeader>
-              <DialogTitle className="flex items-center justify-between">
+              <DialogTitle className="flex items-center justify-between text-base font-bold">
                 <span>Purchase Order {selectedPO.id}</span>
-                <StatusBadge status={selectedPO.status} />
+                <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-semibold border">
+                  {selectedPO.status || "Prepaid"}
+                </span>
               </DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3 text-sm rounded-xl bg-muted/40 p-3">
+              <div className="grid grid-cols-2 gap-3 text-sm rounded-xl bg-muted/40 p-3.5 border">
                 <div>
                   <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Truck className="h-3 w-3" /> Supplier
+                    <Truck className="h-3.5 w-3.5 text-primary" /> Supplier
                   </span>
-                  <div className="font-bold mt-0.5">{selectedPO.supplier}</div>
+                  <div className="font-bold mt-0.5 text-foreground">{selectedPO.supplier}</div>
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Calendar className="h-3 w-3" /> Date Placed
+                    <Calendar className="h-3.5 w-3.5 text-primary" /> Date Placed
                   </span>
                   <div className="font-medium text-xs mt-0.5">{formatDate(selectedPO.created_at || selectedPO.date)}</div>
                 </div>
@@ -737,17 +721,27 @@ function POPage() {
                   <div className="font-semibold text-xs mt-0.5">{selectedPO.entry_type || "Direct Restock"}</div>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground">Item Count</span>
+                  <span className="text-xs text-muted-foreground">Quantity / Items</span>
                   <div className="font-semibold">{selectedPO.items} SKUs</div>
                 </div>
-                <div className="col-span-2 border-t pt-2 mt-1">
-                  <span className="text-xs text-muted-foreground">Order Total</span>
+                <div>
+                  <span className="text-xs text-muted-foreground">Payment Information</span>
+                  <div className="font-semibold text-xs text-emerald-600 mt-0.5">{selectedPO.status || "Prepaid"}</div>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Notes</span>
+                  <div className="font-medium text-xs text-muted-foreground mt-0.5">Verified inventory restock</div>
+                </div>
+                <div className="col-span-2 border-t pt-2.5 mt-1">
+                  <span className="text-xs text-muted-foreground">Order Total Amount</span>
                   <div className="font-bold text-lg text-primary">{restaurantInfo.currency}{Number(selectedPO.total).toFixed(2)}</div>
                 </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t">
-                <Button variant="outline" onClick={() => setSelectedPO(null)}>Close</Button>
+                <Button variant="outline" onClick={() => setSelectedPO(null)} className="w-full sm:w-auto">
+                  Close
+                </Button>
               </div>
             </div>
           </DialogContent>
