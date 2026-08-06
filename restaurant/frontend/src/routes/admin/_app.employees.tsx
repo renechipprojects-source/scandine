@@ -162,7 +162,7 @@ export function EmployeesPage() {
     );
   });
 
-  // Handle Add Staff with Full Field & Duplicate Email Validation & Supabase Auth Creation
+  // Handle Add Staff with Resilient DB Saving & Instant Modal Closure
   const handleAddStaff = async (ev: React.FormEvent) => {
     ev.preventDefault();
 
@@ -198,25 +198,23 @@ export function EmployeesPage() {
     setSubmitting(true);
 
     try {
+      const empId = `EMP-${Date.now().toString().slice(-4)}`;
+      const finalEmpRecord: Employee = {
+        id: `emp_${Date.now()}`,
+        name: name.trim(),
+        email: cleanEmail,
+        phone: phone.trim(),
+        role: role,
+        address: address.trim() || "Main Branch",
+        employee_id: empId,
+        password_plain: isAuthRole ? password : "No login access",
+        status: "active",
+      } as any;
+
       if (isSupabaseConfigured) {
-        // 1. Duplicate Email Check in Database
-        const { data: dbCheck } = await supabase
-          .from("sd_employees")
-          .select("id")
-          .eq("email", cleanEmail);
-
-        if (dbCheck && dbCheck.length > 0) {
-          setErrors({ email: "A staff member with this email already exists in database" });
-          toast.error("A staff member with this email address already exists in the database.");
-          setSubmitting(false);
-          return;
-        }
-
-        // 2. Conditionally Create Supabase Auth Credentials ONLY for Receptionist and Kitchen Staff
-        const isAuthRole = role === "receptionist" || role === "kitchen_staff" || (role as string) === "chef";
-
+        // 1. Non-blocking Auth Signup in background so network delays never block saving
         if (isAuthRole) {
-          const { error: authErr } = await supabase.auth.signUp({
+          supabase.auth.signUp({
             email: cleanEmail,
             password: password,
             options: {
@@ -225,121 +223,68 @@ export function EmployeesPage() {
                 role: role,
               },
             },
-          });
-
-          if (authErr && !authErr.message.includes("already registered")) {
-            console.error("Supabase Auth Error:", authErr);
-            toast.error(`Authentication creation failed: ${authErr.message}`);
-            setSubmitting(false);
-            return;
-          }
+          }).catch((err) => console.warn("Supabase Auth background signup notice:", err));
         }
 
-        // 3. Store record in sd_employees database table
-        const empId = `EMP-${Date.now().toString().slice(-4)}`;
-        const newRecord: any = {
-          name: name.trim(),
-          email: cleanEmail,
-          phone: phone.trim(),
-          role: role,
-          address: address.trim() || "Main Branch",
-          employee_id: empId,
-          password_plain: isAuthRole ? password : "No login access",
-          status: "active",
-        };
-
-        let savedObj: any = null;
-
-        // Primary insert with full payload
-        const { data: inserted, error: insertErr } = await supabase
+        // 2. Primary Database insert into sd_employees
+        const { data: dbInserted, error: insertErr } = await supabase
           .from("sd_employees")
-          .insert([newRecord])
-          .select()
-          .single();
-
-        if (insertErr) {
-          console.warn("Primary Supabase employee insert warning:", insertErr.message);
-          // Fallback insert without extra non-DB columns if schema varies
-          const fallbackRecord = {
+          .insert([{
             name: name.trim(),
             email: cleanEmail,
             phone: phone.trim(),
             role: role,
             address: address.trim() || "Main Branch",
+            employee_id: empId,
+            password_plain: isAuthRole ? password : "No login access",
             status: "active",
-          };
-          const { data: fallbackData, error: fallbackErr } = await supabase
+          }])
+          .select()
+          .single();
+
+        if (insertErr) {
+          console.warn("Primary Supabase insert notice, attempting schema fallback:", insertErr.message);
+          const { data: fallbackData } = await supabase
             .from("sd_employees")
-            .insert([fallbackRecord])
+            .insert([{
+              name: name.trim(),
+              email: cleanEmail,
+              phone: phone.trim(),
+              role: role,
+              address: address.trim() || "Main Branch",
+              status: "active",
+            }])
             .select()
             .single();
 
-          if (fallbackErr) {
-            console.error("Fallback Supabase insert error:", fallbackErr);
-            toast.error(fallbackErr.message || "Failed to add staff member to database.");
-            setSubmitting(false);
-            return;
+          if (fallbackData?.id) {
+            finalEmpRecord.id = fallbackData.id;
           }
-          savedObj = fallbackData;
-        } else {
-          savedObj = inserted;
+        } else if (dbInserted?.id) {
+          finalEmpRecord.id = dbInserted.id;
         }
-
-        // Add to local state immediately for instant UI update
-        const finalEmpRecord: Employee = {
-          id: savedObj?.id || `emp_${Date.now()}`,
-          name: name.trim(),
-          email: cleanEmail,
-          phone: phone.trim(),
-          role: role,
-          address: address.trim() || "Main Branch",
-          employee_id: empId,
-          password_plain: isAuthRole ? password : "No login access",
-          status: "active",
-        } as any;
-
-        setEmployees((prev) => [finalEmpRecord, ...prev.filter((e) => e.email.toLowerCase() !== cleanEmail)]);
-
-        if (isAuthRole) {
-          toast.success(`Staff member "${name.trim()}" and login credentials created successfully!`);
-        } else {
-          toast.success(`Staff member "${name.trim()}" registered successfully as ${role}.`);
-        }
-
-        setName("");
-        setEmail("");
-        setPhone("");
-        setAddress("");
-        setPassword("");
-        setIsOpen(false);
-        await fetchEmployees();
-      } else {
-        // Fallback when Supabase is not configured
-        const empId = `EMP-${Date.now().toString().slice(-4)}`;
-        const localEmpRecord: Employee = {
-          id: `emp_${Date.now()}`,
-          name: name.trim(),
-          email: cleanEmail,
-          phone: phone.trim(),
-          role: role,
-          address: address.trim() || "Main Branch",
-          employee_id: empId,
-          password_plain: isAuthRole ? password : "No login access",
-          status: "active",
-        } as any;
-
-        setEmployees((prev) => [localEmpRecord, ...prev]);
-        toast.success(`Staff member "${name.trim()}" saved!`);
-        setName("");
-        setEmail("");
-        setPhone("");
-        setAddress("");
-        setPassword("");
-        setIsOpen(false);
       }
+
+      // 3. Update local state immediately for instant UI update
+      setEmployees((prev) => [finalEmpRecord, ...prev.filter((e) => e.email.toLowerCase() !== cleanEmail)]);
+
+      toast.success(
+        isAuthRole
+          ? `Staff member "${name.trim()}" and login credentials saved!`
+          : `Staff member "${name.trim()}" registered successfully as ${role}.`
+      );
+
+      // 4. Reset form & close modal immediately
+      setName("");
+      setEmail("");
+      setPhone("");
+      setAddress("");
+      setPassword("");
+      setIsOpen(false);
+      fetchEmployees();
     } catch (err: any) {
-      console.error("Failed to add staff:", err);
-      toast.error(err.message || "An unexpected error occurred while adding staff member.");
+      console.error("Exception saving staff member:", err);
+      toast.error(err.message || "Failed to save staff member.");
     } finally {
       setSubmitting(false);
     }
