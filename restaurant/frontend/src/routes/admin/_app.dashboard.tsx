@@ -88,6 +88,7 @@ function DashboardPage() {
 
   const menuItemsCount = dbMenuItems.length;
   const totalTablesCount = dbTables.length;
+  const staffCount = dbEmployees.length;
 
   // Realtime Status Distribution
   const statusPie = [
