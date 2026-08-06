@@ -298,7 +298,31 @@ export function useSupabaseTable<T extends { id: string }>(
           updateLocalData((prev) => {
             const map = new Map<string, T>();
             prev.forEach((item) => map.set(item.id, item));
-            fetched.forEach((item) => map.set(item.id, item));
+
+            fetched.forEach((item: any) => {
+              const prevItem = (map.get(item.id) || Array.from(map.values()).find((p: any) => p.order_id === item.order_id)) as any;
+              if (prevItem && tableName === "sd_orders") {
+                const STAGE_ORDER: Record<string, number> = {
+                  pending: 1,
+                  accepted: 2,
+                  preparing: 3,
+                  ready: 4,
+                  completed: 5,
+                  cancelled: 6,
+                };
+                const prevStage = STAGE_ORDER[prevItem.status] || 0;
+                const fetchedStage = STAGE_ORDER[item.status] || 0;
+
+                // Keep locally advanced stage if fetched stage from DB is older/behind
+                if (prevStage > fetchedStage) {
+                  item.status = prevItem.status;
+                  item.accepted_at = prevItem.accepted_at || item.accepted_at;
+                  item.prep_time_minutes = prevItem.prep_time_minutes || item.prep_time_minutes;
+                  item.estimated_ready_at = prevItem.estimated_ready_at || item.estimated_ready_at;
+                }
+              }
+              map.set(item.id, item);
+            });
             return Array.from(map.values());
           });
         }
@@ -407,15 +431,15 @@ export function useSupabaseTable<T extends { id: string }>(
           if (payload.total !== undefined) dbOrderPayload.total = payload.total;
           if (payload.item !== undefined) dbOrderPayload.item = payload.item;
           if (payload.customer !== undefined) dbOrderPayload.customer = payload.customer;
+          if (payload.accepted_at !== undefined) dbOrderPayload.accepted_at = payload.accepted_at;
+          if (payload.prep_time_minutes !== undefined) dbOrderPayload.prep_time_minutes = payload.prep_time_minutes;
+          if (payload.estimated_ready_at !== undefined) dbOrderPayload.estimated_ready_at = payload.estimated_ready_at;
 
-          // 1. Try matching by id column with .select() to verify updated rows
-          let res = await supabase.from(tableName).update(dbOrderPayload).eq("id", id).select();
-          if (res.error || !res.data || res.data.length === 0) {
-            // 2. Fallback: match by order_id column with .select()
-            let res2 = await supabase.from(tableName).update(dbOrderPayload).eq("order_id", id).select();
-            updateErr = res2.error;
-          } else {
-            updateErr = res.error;
+          // Try updating by order_id first, then id column safely
+          let { error: err1 } = await supabase.from(tableName).update(dbOrderPayload).eq("order_id", id);
+          if (err1) {
+            let { error: err2 } = await supabase.from(tableName).update(dbOrderPayload).eq("id", id);
+            updateErr = err2;
           }
         } else if (tableName === "invoices") {
           let res = await supabase.from(tableName).update(payload).eq("id", id).select();
