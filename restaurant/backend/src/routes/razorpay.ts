@@ -6,8 +6,8 @@ const router = Router();
 
 // Lazy initialization of Razorpay instance
 const getRazorpayInstance = () => {
-  const key_id = process.env.RAZORPAY_KEY_ID || "rzp_test_placeholder";
-  const key_secret = process.env.RAZORPAY_KEY_SECRET || "razorpay_secret_placeholder";
+  const key_id = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TI7XNrxQP5GRTJ";
+  const key_secret = process.env.RAZORPAY_KEY_SECRET || "rPL5yd7n2hbvb6sEfxColuPl";
   return new Razorpay({ key_id, key_secret });
 };
 
@@ -17,7 +17,7 @@ router.post("/create-order", async (req: Request, res: Response) => {
     const { amount, currency = "INR", receipt } = req.body;
 
     if (!amount || typeof amount !== "number") {
-      return res.status(400).json({ error: "Invalid or missing amount (must be integer in paise)" });
+      return res.status(400).json({ error: "Invalid or missing amount" });
     }
 
     const razorpay = getRazorpayInstance();
@@ -33,7 +33,7 @@ router.post("/create-order", async (req: Request, res: Response) => {
       order_id: order.id,
       amount: order.amount,
       currency: order.currency,
-      key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_placeholder",
+      key_id: process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TI7XNrxQP5GRTJ",
     });
   } catch (err: any) {
     res.status(500).json({
@@ -47,7 +47,7 @@ router.post("/create-order", async (req: Request, res: Response) => {
 router.post("/verify", (req: Request, res: Response) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-    const secret = process.env.RAZORPAY_KEY_SECRET || "razorpay_secret_placeholder";
+    const secret = process.env.RAZORPAY_KEY_SECRET || "rPL5yd7n2hbvb6sEfxColuPl";
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({ error: "Missing required payment verification fields" });
