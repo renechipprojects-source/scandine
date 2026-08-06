@@ -88,12 +88,15 @@ export function EmployeesPage() {
   const [staffToDelete, setStaffToDelete] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Auto-generate password when modal opens
+  // Check if currently selected role requires login authentication
+  const isAuthRoleSelected = role === "receptionist" || role === "kitchen_staff" || (role as string) === "chef";
+
+  // Auto-generate password when modal opens or role changes to an auth role
   useEffect(() => {
-    if (isOpen && !password) {
+    if (isOpen && isAuthRoleSelected && !password) {
       setPassword(generateSecurePassword());
     }
-  }, [isOpen, password]);
+  }, [isOpen, isAuthRoleSelected, password]);
 
   // Pre-fill edit modal form when employee is selected
   useEffect(() => {
@@ -165,7 +168,11 @@ export function EmployeesPage() {
     if (!email.trim() || !email.includes("@")) newErrors.email = "Email is required";
     if (!phone.trim()) newErrors.phone = "Phone Number is required";
     if (!role) newErrors.role = "Role is required";
-    if (!password.trim() || password.length < 6) newErrors.password = "Password must be at least 6 characters";
+
+    const isAuthRole = role === "receptionist" || role === "kitchen_staff" || (role as string) === "chef";
+    if (isAuthRole && (!password.trim() || password.length < 6)) {
+      newErrors.password = "Password must be at least 6 characters";
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -432,59 +439,61 @@ export function EmployeesPage() {
                   />
                 </div>
 
-                {/* Generate Password Section */}
-                <div className="rounded-xl border border-border/80 bg-muted/30 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                      <Key className="h-3.5 w-3.5 text-primary" /> Generate Password *
-                    </label>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-[11px] gap-1 text-primary hover:bg-primary/10"
-                        onClick={() => setPassword(generateSecurePassword())}
-                      >
-                        <RefreshCw className="h-3 w-3" /> Generate New
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-[11px] gap-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
-                        onClick={() => {
-                          if (!password) return;
-                          navigator.clipboard.writeText(password);
-                          setCopiedPassword(true);
-                          toast.success("Password copied to clipboard!");
-                          setTimeout(() => setCopiedPassword(false), 2000);
-                        }}
-                      >
-                        {copiedPassword ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                        {copiedPassword ? "Copied" : "Copy"}
-                      </Button>
+                {/* Generate Password Section (Visible only for roles that receive login access) */}
+                {isAuthRoleSelected && (
+                  <div className="rounded-xl border border-border/80 bg-muted/30 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                        <Key className="h-3.5 w-3.5 text-primary" /> Generate Password *
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[11px] gap-1 text-primary hover:bg-primary/10"
+                          onClick={() => setPassword(generateSecurePassword())}
+                        >
+                          <RefreshCw className="h-3 w-3" /> Generate New
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[11px] gap-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                          onClick={() => {
+                            if (!password) return;
+                            navigator.clipboard.writeText(password);
+                            setCopiedPassword(true);
+                            toast.success("Password copied to clipboard!");
+                            setTimeout(() => setCopiedPassword(false), 2000);
+                          }}
+                        >
+                          {copiedPassword ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                          {copiedPassword ? "Copied" : "Copy"}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="e.g. kF8#Pw92Lm!"
-                      className={`font-mono text-xs pr-9 ${errors.password ? "border-destructive focus-visible:ring-destructive" : ""}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                    </button>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="e.g. kF8#Pw92Lm!"
+                        className={`font-mono text-xs pr-9 ${errors.password ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
+                    {errors.password && <p className="text-[11px] text-destructive font-medium">{errors.password}</p>}
                   </div>
-                  {errors.password && <p className="text-[11px] text-destructive font-medium">{errors.password}</p>}
-                </div>
+                )}
 
                 <div className="flex justify-end gap-2 border-t pt-3 mt-4">
                   <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
