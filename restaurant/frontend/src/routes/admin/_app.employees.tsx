@@ -432,7 +432,7 @@ export function EmployeesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Employees & Staff Management"
-        description={`${employees.length} team members registered in Supabase database`}
+        description="Manage team members, roles, and system access permissions."
         icon={<UserCog className="h-5 w-5" />}
         actions={
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -596,7 +596,7 @@ export function EmployeesPage() {
           { label: "Active staff", value: employees.length, tone: "text-success" },
           { label: "Receptionists", value: employees.filter((e) => e.role === "receptionist").length, tone: "text-info" },
           { label: "Kitchen Staff", value: employees.filter((e) => e.role === "kitchen_staff").length, tone: "text-warning" },
-          { label: "Waiters & Other", value: employees.filter((e) => e.role !== "receptionist" && e.role !== "kitchen_staff").length, tone: "text-primary" },
+          { label: "Chefs", value: employees.filter((e) => e.role === "chef" || (e.role !== "receptionist" && e.role !== "kitchen_staff")).length, tone: "text-primary" },
         ].map((s) => (
           <Card key={s.label} className="p-4">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">{s.label}</div>

@@ -33,59 +33,51 @@ export const Route = createFileRoute("/reception/_app/dashboard")({
 const COLORS = ["oklch(0.68 0.19 40)", "oklch(0.62 0.22 25)", "oklch(0.75 0.15 70)", "oklch(0.65 0.16 155)", "oklch(0.55 0.15 260)"];
 
 function DashboardPage() {
-  const { data: dbTables } = useSupabaseTable<TableItem>("tables");
+  const { data: dbTables, fetchData: fetchTables } = useSupabaseTable<TableItem>("tables");
   const { data: dbInvoices, fetchData: fetchInvoices } = useSupabaseTable<Invoice>("invoices");
   const { data: dbOrders, fetchData: fetchOrders } = useSupabaseTable<Order>("sd_orders");
+  const { data: dbEmployees, fetchData: fetchEmployees } = useSupabaseTable<any>("sd_employees");
 
   const handleRealtimePayload = useCallback(() => {
+    fetchTables();
     fetchInvoices();
     fetchOrders();
-  }, [fetchInvoices, fetchOrders]);
+    fetchEmployees();
+  }, [fetchTables, fetchInvoices, fetchOrders, fetchEmployees]);
 
+  useRealtimeTable("tables", handleRealtimePayload);
   useRealtimeTable("invoices", handleRealtimePayload);
   useRealtimeTable("sd_orders", handleRealtimePayload);
+  useRealtimeTable("sd_employees", handleRealtimePayload);
 
-  const availableTablesCount = dbTables.length > 0
-    ? dbTables.filter((t) => t.status === "available").length
-    : 4;
-  const occupiedTablesCount = dbTables.length > 0
-    ? dbTables.filter((t) => t.status === "occupied").length
-    : 2;
-  const pendingBillsCount = dbInvoices.length > 0
-    ? dbInvoices.filter((i) => i.status === "unpaid" || i.status === "Unpaid" || i.status === "pending" || i.status === "Pending" || i.status === "partial").length
-    : 1;
+  const totalTablesCount = dbTables.length;
+  const occupiedTablesCount = dbTables.filter((t) => t.status === "occupied").length;
+  const pendingBillsCount = dbInvoices.filter((i) => i.status === "unpaid" || i.status === "Unpaid" || i.status === "pending" || i.status === "Pending" || i.status === "partial").length;
 
-  const pendingCount = dbOrders.length > 0 ? dbOrders.filter((o) => o.status === "pending").length : kpis.pending;
-  const preparingCount = dbOrders.length > 0 ? dbOrders.filter((o) => o.status === "preparing").length : kpis.preparing;
-  const readyCount = dbOrders.length > 0 ? dbOrders.filter((o) => o.status === "ready").length : kpis.ready;
-  const completedCount = dbOrders.length > 0 ? dbOrders.filter((o) => o.status === "completed").length : kpis.completed;
-  const cancelledCount = dbOrders.length > 0 ? dbOrders.filter((o) => o.status === "cancelled").length : kpis.cancelled;
+  const pendingCount = dbOrders.filter((o) => o.status === "pending").length;
+  const preparingCount = dbOrders.filter((o) => o.status === "preparing").length;
+  const readyCount = dbOrders.filter((o) => o.status === "ready").length;
+  const completedCount = dbOrders.filter((o) => o.status === "completed").length;
+  const staffCount = dbEmployees.length;
 
   const statusPie = [
     { name: "Completed", value: completedCount },
     { name: "Preparing", value: preparingCount },
     { name: "Pending", value: pendingCount },
     { name: "Ready", value: readyCount },
-    { name: "Cancelled", value: cancelledCount },
   ];
 
   const handleExportCSV = () => {
     const exportData = [
-      { Metric: "Available Tables", Value: availableTablesCount },
-      { Metric: "Occupied Tables", Value: occupiedTablesCount },
+      { Metric: "Total Tables", Value: totalTablesCount },
+      { Metric: "Active Tables", Value: occupiedTablesCount },
       { Metric: "Pending Bills", Value: pendingBillsCount },
       { Metric: "Pending Orders", Value: pendingCount },
-      { Metric: "Preparing Orders", Value: preparingCount },
-      { Metric: "Ready Orders", Value: readyCount },
       { Metric: "Completed Orders", Value: completedCount },
-      { Metric: "Cancelled Orders", Value: cancelledCount },
+      { Metric: "Staff Count", Value: staffCount },
     ];
     exportToCSV("reception_dashboard_kpis", exportData);
     toast.success("Dashboard metrics exported to CSV!");
-  };
-
-  const handleTodayClick = () => {
-    toast.info("Dashboard filtered for Today's metrics");
   };
 
   return (
@@ -102,18 +94,17 @@ function DashboardPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Available Tables" value={`${availableTablesCount}`} icon={<Utensils className="h-5 w-5" />} tone="success" />
-        <StatCard label="Occupied Tables" value={`${occupiedTablesCount}`} icon={<ChefHat className="h-5 w-5" />} tone="warning" />
+        <StatCard label="Total Tables" value={`${totalTablesCount}`} icon={<Utensils className="h-5 w-5" />} tone="success" />
+        <StatCard label="Active Tables" value={`${occupiedTablesCount}`} icon={<ChefHat className="h-5 w-5" />} tone="warning" />
         <StatCard label="Pending Bills" value={`${pendingBillsCount}`} icon={<DollarSign className="h-5 w-5" />} tone="destructive" />
-        <StatCard label="Total Orders" value={`${dbOrders.length}`} icon={<Utensils className="h-5 w-5" />} tone="info" />
+        <StatCard label="Staff Count" value={`${staffCount}`} icon={<Utensils className="h-5 w-5" />} tone="info" />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MiniStat label="Pending" value={pendingCount} tone="text-warning" />
         <MiniStat label="Preparing" value={preparingCount} tone="text-info" />
         <MiniStat label="Ready" value={readyCount} tone="text-primary" />
         <MiniStat label="Completed" value={completedCount} tone="text-success" />
-        <MiniStat label="Cancelled" value={cancelledCount} tone="text-destructive" />
       </div>
 
       {/* Realtime Service Requests Section for Reception */}

@@ -87,8 +87,7 @@ function DashboardPage() {
   ).length;
 
   const menuItemsCount = dbMenuItems.length;
-  const staffCount = dbEmployees.length;
-  const customerCount = dbCustomers.length;
+  const totalTablesCount = dbTables.length;
 
   // Realtime Status Distribution
   const statusPie = [
@@ -128,10 +127,8 @@ function DashboardPage() {
       { Metric: "Total Revenue", Value: `${restaurantInfo.currency}${totalRevenue.toFixed(2)}` },
       { Metric: "Today's Revenue", Value: `${restaurantInfo.currency}${todaysRevenue.toFixed(2)}` },
       { Metric: "Active Tables", Value: activeTablesCount },
-      { Metric: "Available Tables", Value: availableTablesCount },
-      { Metric: "Menu Items", Value: menuItemsCount },
+      { Metric: "Total Tables", Value: totalTablesCount },
       { Metric: "Staff Count", Value: staffCount },
-      { Metric: "Customer Count", Value: customerCount },
     ];
     exportToCSV("live_dashboard_summary", summaryData);
   };
@@ -176,15 +173,13 @@ function DashboardPage() {
         />
       </div>
 
-      {/* Secondary Dynamic Metrics Row — 7 Detailed Cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
+      {/* Secondary Dynamic Metrics Row — 5 Cards (Pending, Completed, Active Tables, Total Tables, Staff Count) */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <MiniStat label="Pending" value={pendingOrdersCount} tone="text-warning" icon={<Clock className="h-3.5 w-3.5" />} />
         <MiniStat label="Completed" value={completedOrdersCount} tone="text-success" icon={<CheckCircle2 className="h-3.5 w-3.5" />} />
         <MiniStat label="Active Tables" value={activeTablesCount} tone="text-amber-600" icon={<Utensils className="h-3.5 w-3.5" />} />
-        <MiniStat label="Available Tables" value={availableTablesCount} tone="text-emerald-600" icon={<CheckSquare className="h-3.5 w-3.5" />} />
-        <MiniStat label="Menu Items" value={menuItemsCount} tone="text-primary" icon={<BookOpen className="h-3.5 w-3.5" />} />
+        <MiniStat label="Total Tables" value={totalTablesCount} tone="text-emerald-600" icon={<CheckSquare className="h-3.5 w-3.5" />} />
         <MiniStat label="Staff Count" value={staffCount} tone="text-indigo-600" icon={<UserCheck className="h-3.5 w-3.5" />} />
-        <MiniStat label="Customer Count" value={customerCount} tone="text-purple-600" icon={<Users className="h-3.5 w-3.5" />} />
       </div>
 
       {/* Realtime Charts Section */}

@@ -372,13 +372,11 @@ function LiveOrdersPage() {
         icon={<Radio className="h-5 w-5" />}
       />
 
-      {/* 4 Summary KPI Cards Moved from KDS to Live Orders */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* Summary KPI Cards */}
+      <div className="grid grid-cols-2 gap-3 max-w-lg">
         {[
           { label: "Active orders", value: activeOrders.length, icon: <Utensils className="h-4 w-4" />, tone: "text-primary" },
           { label: "Avg prep time", value: `${avgPrepMinutes} min`, icon: <Timer className="h-4 w-4" />, tone: "text-info" },
-          { label: "Longest wait", value: `${longestWaitMinutes} min`, icon: <Clock className="h-4 w-4" />, tone: "text-warning" },
-          { label: "Priority", value: priorityCount, icon: <Bell className="h-4 w-4" />, tone: "text-destructive" },
         ].map((s) => (
           <Card key={s.label} className="p-4">
             <div className="flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">

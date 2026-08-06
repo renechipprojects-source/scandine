@@ -167,45 +167,26 @@ function PaymentsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 w-full">
-        <Card className="p-5 lg:col-span-2">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <div className="font-display text-base font-semibold">Payment Methods Distribution</div>
-              <div className="text-xs text-muted-foreground">Cash vs UPI revenue</div>
-            </div>
+      <Card className="p-5 w-full">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <div className="font-display text-base font-semibold">Payment Methods Distribution</div>
+            <div className="text-xs text-muted-foreground">Cash vs UPI revenue</div>
           </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={methodBreakdown}>
-              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.008 60)" vertical={false} />
-              <XAxis dataKey="method" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis fontSize={11} tickLine={false} axisLine={false} />
-              <Tooltip
-                formatter={(val: any) => [formatINR(Number(val)), "Amount"]}
-                contentStyle={{ borderRadius: 12, border: "1px solid oklch(0.92 0.008 60)", fontSize: 12 }}
-              />
-              <Bar dataKey="amount" fill="oklch(0.68 0.19 40)" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-        <Card className="p-5">
-          <div className="font-display text-base font-semibold">Settlement Summary</div>
-          <div className="mt-3 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Gross Sales</span>
-              <span className="font-semibold">{formatINR(totalGrossSales)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Processing Fees</span>
-              <span className="text-destructive">−₹0</span>
-            </div>
-            <div className="flex justify-between border-t pt-3 font-display text-lg font-bold">
-              <span>Net Payout</span>
-              <span className="text-primary">{formatINR(totalGrossSales)}</span>
-            </div>
-          </div>
-        </Card>
-      </div>
+        </div>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={methodBreakdown}>
+            <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.008 60)" vertical={false} />
+            <XAxis dataKey="method" fontSize={11} tickLine={false} axisLine={false} />
+            <YAxis fontSize={11} tickLine={false} axisLine={false} />
+            <Tooltip
+              formatter={(val: any) => [formatINR(Number(val)), "Amount"]}
+              contentStyle={{ borderRadius: 12, border: "1px solid oklch(0.92 0.008 60)", fontSize: 12 }}
+            />
+            <Bar dataKey="amount" fill="oklch(0.68 0.19 40)" radius={[8, 8, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </Card>
 
       {/* Full Width Payment List with Dedicated Independent Scrollbar */}
       <Card className="w-full p-4 border shadow-sm">
