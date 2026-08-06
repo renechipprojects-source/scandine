@@ -216,16 +216,16 @@ function PaymentsPage() {
           </div>
         </div>
 
-        {/* Payment Table with Sticky Header and Dual UI/List Scrolling */}
-        <Table className="w-full min-w-[700px]" containerClassName="max-h-[520px] overflow-auto rounded-lg border border-border bg-card shadow-xs relative">
-          <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-md shadow-xs border-b [&_th]:sticky [&_th]:top-0 [&_th]:bg-muted/95 [&_th]:z-30">
+        {/* Payment Table with Visible Scrollbar and Frozen Sticky Header */}
+        <Table className="w-full min-w-[700px]" containerClassName="max-h-[380px] overflow-y-auto overflow-x-auto scrollbar-thin rounded-lg border border-border bg-card shadow-xs relative">
+          <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-md shadow-xs border-b">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="font-semibold text-foreground">Transaction / Txn ID</TableHead>
-              <TableHead className="font-semibold text-foreground">Invoice</TableHead>
-              <TableHead className="font-semibold text-foreground">Customer</TableHead>
-              <TableHead className="font-semibold text-foreground">Method</TableHead>
-              <TableHead className="font-semibold text-foreground">Date</TableHead>
-              <TableHead className="text-right font-semibold text-foreground">Amount</TableHead>
+              <TableHead className="sticky top-0 z-30 bg-muted/95 font-semibold text-foreground">Transaction / Txn ID</TableHead>
+              <TableHead className="sticky top-0 z-30 bg-muted/95 font-semibold text-foreground">Invoice</TableHead>
+              <TableHead className="sticky top-0 z-30 bg-muted/95 font-semibold text-foreground">Customer</TableHead>
+              <TableHead className="sticky top-0 z-30 bg-muted/95 font-semibold text-foreground">Method</TableHead>
+              <TableHead className="sticky top-0 z-30 bg-muted/95 font-semibold text-foreground">Date</TableHead>
+              <TableHead className="sticky top-0 z-30 bg-muted/95 text-right font-semibold text-foreground">Amount</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
