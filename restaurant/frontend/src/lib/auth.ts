@@ -54,40 +54,69 @@ export async function verifySessionActive(role: Role): Promise<boolean> {
   if (session.email.endsWith("@restaurant.com")) {
     return true;
   }
+  const cleanEmail = session.email.toLowerCase();
+
+  // 1. Check custom local credentials store
+  try {
+    if (typeof window !== "undefined") {
+      const storedJson = window.localStorage.getItem("sd_custom_credentials");
+      if (storedJson) {
+        const credsMap: Record<string, { role?: string; status?: string }> = JSON.parse(storedJson);
+        const customUser = credsMap[cleanEmail];
+        if (customUser) {
+          const status = (customUser.status || "active").toLowerCase();
+          const normalizedRole = (customUser.role || "").toLowerCase();
+          const isAllowed =
+            normalizedRole === "receptionist" ||
+            normalizedRole === "kitchen_staff" ||
+            normalizedRole === "chef" ||
+            normalizedRole === "admin";
+          if (status === "active" && isAllowed) {
+            return true;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("verifySessionActive local check notice:", e);
+  }
+
+  // 2. Check Supabase database if configured
   if (isSupabaseConfigured) {
     try {
-      const { data: emp, error } = await supabase
+      const { data: rows, error } = await supabase
         .from("sd_employees")
-        .select("status, role")
-        .eq("email", session.email.toLowerCase())
-        .maybeSingle();
+        .select("*")
+        .eq("email", cleanEmail);
 
-      if (error || !emp) {
-        await signOut();
-        return false;
-      }
-      const status = (emp.status || "").toLowerCase();
-      if (status !== "active") {
-        await signOut();
-        return false;
-      }
-      const normalizedRole = (emp.role || "").toLowerCase();
-      const isAllowed =
-        normalizedRole === "receptionist" ||
-        normalizedRole === "kitchen_staff" ||
-        normalizedRole === "chef" ||
-        normalizedRole === "admin";
+      const emp = rows && rows.length > 0 ? rows[0] : null;
 
-      if (!isAllowed) {
-        await signOut();
-        return false;
+      if (!error && emp) {
+        const status = (emp.status || "active").toLowerCase();
+        if (status === "active") {
+          const normalizedRole = (emp.role || "").toLowerCase();
+          const isAllowed =
+            normalizedRole === "receptionist" ||
+            normalizedRole === "kitchen_staff" ||
+            normalizedRole === "chef" ||
+            normalizedRole === "admin";
+          if (isAllowed) return true;
+        }
       }
     } catch {
-      await signOut();
-      return false;
+      /* ignore */
     }
   }
-  return true;
+
+  // 3. Fallback: check active Supabase Auth session
+  try {
+    const { data: authSession } = await supabase.auth.getSession();
+    if (authSession?.session) return true;
+  } catch {}
+
+  // If all checks fail, revoke session
+  await signOut();
+  return false;
 }
 
 export function saveSession(session: Session, remember: boolean = true): void {
