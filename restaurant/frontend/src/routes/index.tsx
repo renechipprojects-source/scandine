@@ -56,6 +56,43 @@ function LoginPage() {
       return;
     }
 
+    // 1.5 Check registered employee custom credentials store (for newly added staff)
+    try {
+      if (typeof window !== "undefined") {
+        const storedJson = window.localStorage.getItem("sd_custom_credentials");
+        if (storedJson) {
+          const credsMap: Record<string, { password?: string; role?: string; status?: string }> = JSON.parse(storedJson);
+          const customUser = credsMap[cleanEmail];
+          if (customUser) {
+            const status = (customUser.status || "active").toLowerCase();
+            const normalizedRole = (customUser.role || "").toLowerCase();
+            const isAllowedRole =
+              normalizedRole === "receptionist" ||
+              normalizedRole === "kitchen_staff" ||
+              normalizedRole === "chef" ||
+              normalizedRole === "admin";
+
+            if (status === "active" && isAllowedRole && customUser.password === password) {
+              let redirect: `/${Role}` = "/admin";
+              if (normalizedRole === "receptionist") {
+                redirect = "/reception";
+              } else if (normalizedRole === "kitchen_staff" || normalizedRole === "chef") {
+                redirect = "/kitchen";
+              }
+              window.localStorage.setItem(
+                "savora.auth",
+                JSON.stringify({ email: cleanEmail, redirect })
+              );
+              navigate({ to: redirect });
+              return;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Custom credential store check notice:", e);
+    }
+
     // 2. Authenticate dynamic employee credentials via Supabase
     if (isSupabaseConfigured) {
       try {

@@ -115,11 +115,20 @@ export function EmployeesPage() {
     }
   }, [staffToEdit]);
 
-  // Fetch employees directly from Supabase DB
+  // Fetch employees directly from Supabase DB & Local Store
   const fetchEmployees = useCallback(async () => {
     setLoading(true);
     setError(null);
+    let localList: Employee[] = [];
+    try {
+      if (typeof window !== "undefined") {
+        const raw = window.localStorage.getItem("sd_employees_local");
+        if (raw) localList = JSON.parse(raw);
+      }
+    } catch {}
+
     if (!isSupabaseConfigured) {
+      setEmployees(localList);
       setLoading(false);
       return;
     }
@@ -132,13 +141,16 @@ export function EmployeesPage() {
       if (fetchErr) {
         console.error("Error fetching employees:", fetchErr);
         setError(fetchErr.message);
-        toast.error("Failed to load employees from database");
+        setEmployees(localList);
       } else {
-        setEmployees(data || []);
+        const dbEmails = new Set((data || []).map((e: any) => e.email?.toLowerCase()));
+        const unsavedLocal = localList.filter((e) => !dbEmails.has(e.email?.toLowerCase()));
+        setEmployees([...(data || []), ...unsavedLocal]);
       }
     } catch (err: any) {
       console.error("Exception fetching employees:", err);
       setError(err.message || "An unexpected error occurred while fetching staff data.");
+      setEmployees(localList);
     } finally {
       setLoading(false);
     }
@@ -265,7 +277,28 @@ export function EmployeesPage() {
         }
       }
 
-      // 3. Update local state immediately for instant UI update
+      // 3. Persist custom credentials & local list so login works & staff shows in UI
+      try {
+        if (typeof window !== "undefined") {
+          const storedJson = window.localStorage.getItem("sd_custom_credentials") || "{}";
+          const credsMap = JSON.parse(storedJson);
+          credsMap[cleanEmail] = {
+            password: isAuthRole ? password : "No login access",
+            role: role,
+            status: "active",
+          };
+          window.localStorage.setItem("sd_custom_credentials", JSON.stringify(credsMap));
+
+          const storedEmpJson = window.localStorage.getItem("sd_employees_local") || "[]";
+          const localEmpList: Employee[] = JSON.parse(storedEmpJson);
+          const updatedEmpList = [finalEmpRecord, ...localEmpList.filter((e) => e.email?.toLowerCase() !== cleanEmail)];
+          window.localStorage.setItem("sd_employees_local", JSON.stringify(updatedEmpList));
+        }
+      } catch (e) {
+        console.warn("Credential persistence notice:", e);
+      }
+
+      // 4. Update local state immediately for instant UI display
       setEmployees((prev) => [finalEmpRecord, ...prev.filter((e) => e.email.toLowerCase() !== cleanEmail)]);
 
       toast.success(
@@ -274,7 +307,7 @@ export function EmployeesPage() {
           : `Staff member "${name.trim()}" registered successfully as ${role}.`
       );
 
-      // 4. Reset form & close modal immediately
+      // 5. Reset form & close modal immediately
       setName("");
       setEmail("");
       setPhone("");
@@ -302,9 +335,10 @@ export function EmployeesPage() {
 
     setEditUpdating(true);
     try {
+      const cleanEmail = editEmail.trim().toLowerCase();
       const updatedRecord = {
         name: editName.trim(),
-        email: editEmail.trim().toLowerCase(),
+        email: cleanEmail,
         phone: editPhone.trim(),
         role: editRole,
         address: editAddress.trim(),
@@ -323,10 +357,25 @@ export function EmployeesPage() {
         console.error("Supabase employee update error:", updateErr);
         toast.error(updateErr.message || "Failed to update employee details in database.");
       } else {
-        toast.success(`Employee "${updated?.name || editName}" updated successfully in Supabase!`);
-        setStaffToEdit(null);
-        await fetchEmployees();
+        toast.success(`Employee "${updated?.name || editName}" updated successfully!`);
       }
+
+      // Sync local credentials store
+      try {
+        if (typeof window !== "undefined") {
+          const storedJson = window.localStorage.getItem("sd_custom_credentials") || "{}";
+          const credsMap = JSON.parse(storedJson);
+          if (credsMap[cleanEmail]) {
+            credsMap[cleanEmail].status = editStatus;
+            credsMap[cleanEmail].role = editRole;
+            if (editPassword) credsMap[cleanEmail].password = editPassword.trim();
+            window.localStorage.setItem("sd_custom_credentials", JSON.stringify(credsMap));
+          }
+        }
+      } catch (e) {}
+
+      setStaffToEdit(null);
+      await fetchEmployees();
     } catch (err: any) {
       console.error("Exception updating employee:", err);
       toast.error(err.message || "An unexpected error occurred while updating staff details.");
@@ -341,6 +390,7 @@ export function EmployeesPage() {
     setDeleting(true);
 
     try {
+      const cleanEmail = staffToDelete.email?.toLowerCase();
       const { error: delErr } = await supabase
         .from("sd_employees")
         .delete()
@@ -351,8 +401,24 @@ export function EmployeesPage() {
         toast.error(delErr.message || "Failed to remove staff member from database.");
       } else {
         toast.success(`Staff member "${staffToDelete.name}" removed! Login access revoked.`);
-        await fetchEmployees();
       }
+
+      // Remove from local credentials store
+      try {
+        if (typeof window !== "undefined" && cleanEmail) {
+          const storedJson = window.localStorage.getItem("sd_custom_credentials") || "{}";
+          const credsMap = JSON.parse(storedJson);
+          delete credsMap[cleanEmail];
+          window.localStorage.setItem("sd_custom_credentials", JSON.stringify(credsMap));
+
+          const storedEmpJson = window.localStorage.getItem("sd_employees_local") || "[]";
+          const localEmpList: Employee[] = JSON.parse(storedEmpJson);
+          const updatedEmpList = localEmpList.filter((e) => e.email?.toLowerCase() !== cleanEmail);
+          window.localStorage.setItem("sd_employees_local", JSON.stringify(updatedEmpList));
+        }
+      } catch (e) {}
+
+      await fetchEmployees();
     } catch (err: any) {
       console.error("Failed to delete staff:", err);
       toast.error(err.message || "An unexpected error occurred while removing staff member.");
