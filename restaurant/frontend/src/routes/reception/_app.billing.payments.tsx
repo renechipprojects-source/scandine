@@ -216,49 +216,47 @@ function PaymentsPage() {
           </div>
         </div>
 
-        {/* Payment Table with Sticky Header and UI-level Page Scrolling */}
-        <div className="w-full rounded-lg border border-border bg-card overflow-x-auto relative">
-          <Table className="w-full min-w-[700px]">
-            <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-md shadow-sm border-b [&_th]:sticky [&_th]:top-0 [&_th]:bg-muted/95 [&_th]:z-30">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Transaction / Txn ID</TableHead>
-                <TableHead className="font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Invoice</TableHead>
-                <TableHead className="font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Customer</TableHead>
-                <TableHead className="font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Method</TableHead>
-                <TableHead className="font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Date</TableHead>
-                <TableHead className="text-right font-semibold text-foreground bg-muted/95 sticky top-0 z-30">Amount</TableHead>
+        {/* Payment Table with Sticky Header and Dual UI/List Scrolling */}
+        <Table className="w-full min-w-[700px]" containerClassName="max-h-[520px] overflow-auto rounded-lg border border-border bg-card shadow-xs relative">
+          <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-md shadow-xs border-b [&_th]:sticky [&_th]:top-0 [&_th]:bg-muted/95 [&_th]:z-30">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="font-semibold text-foreground">Transaction / Txn ID</TableHead>
+              <TableHead className="font-semibold text-foreground">Invoice</TableHead>
+              <TableHead className="font-semibold text-foreground">Customer</TableHead>
+              <TableHead className="font-semibold text-foreground">Method</TableHead>
+              <TableHead className="font-semibold text-foreground">Date</TableHead>
+              <TableHead className="text-right font-semibold text-foreground">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                  No payment transactions found in database.
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
-                    No payment transactions found in database.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((p) => {
-                  return (
-                    <TableRow key={p.id} className="hover:bg-muted/50 transition-colors">
-                      <TableCell className="font-mono text-xs font-semibold">{p.transaction_id || p.id}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{p.invoiceId}</TableCell>
-                      <TableCell className="font-medium text-foreground">{p.customer}</TableCell>
-                      <TableCell>
-                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium border border-border/50">
-                          {p.method}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {p.date ? (isNaN(Date.parse(p.date)) ? p.date : new Date(p.date).toLocaleDateString()) : "Today"}
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-foreground">{formatINR(Number(p.amount) || 0)}</TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
+            ) : (
+              filtered.map((p) => {
+                return (
+                  <TableRow key={p.id} className="hover:bg-muted/50 transition-colors">
+                    <TableCell className="font-mono text-xs font-semibold">{p.transaction_id || p.id}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{p.invoiceId}</TableCell>
+                    <TableCell className="font-medium text-foreground">{p.customer}</TableCell>
+                    <TableCell>
+                      <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium border border-border/50">
+                        {p.method}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {p.date ? (isNaN(Date.parse(p.date)) ? p.date : new Date(p.date).toLocaleDateString()) : "Today"}
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-foreground">{formatINR(Number(p.amount) || 0)}</TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
       </Card>
     </div>
   );
