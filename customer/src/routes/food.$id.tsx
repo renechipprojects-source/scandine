@@ -1,6 +1,7 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { foods } from "@/lib/mock-data";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { type FoodItem } from "@/lib/mock-data";
+import { fetchDbMenuItems } from "@/lib/supabase";
 import { cart } from "@/lib/cart-store";
 import { motion } from "framer-motion";
 import { ArrowLeft, Star, Clock, Flame, Heart, Minus, Plus, ShoppingBag, Utensils } from "lucide-react";
@@ -20,11 +21,39 @@ function FoodDetail() {
   const customer = useCustomer(tableNumber);
   const { id } = Route.useParams();
   const nav = useNavigate();
-  const food = foods.find((f) => f.id === id) ?? foods[0];
+  const [food, setFood] = useState<FoodItem | null>(null);
   const [qty, setQty] = useState(1);
   const [addons, setAddons] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [fav, setFav] = useState(false);
+
+  useEffect(() => {
+    async function loadItem() {
+      const dbItems = await fetchDbMenuItems();
+      const item = dbItems.find((f: any) => String(f.id) === String(id)) || dbItems[0];
+      if (item) {
+        const rawImg = item.image || item.image_url || item.photo || item.imageUrl || item.img || "";
+        setFood({
+          id: String(item.id),
+          name: item.name,
+          description: item.description || "Freshly prepared by our chef.",
+          price: Number(item.price),
+          image: rawImg,
+          category: (item.category || "Lunch") as any,
+          category_id: item.category_id || "cat_2",
+          rating: item.rating || 4.8,
+          reviews: item.reviews || 120,
+          veg: item.veg ?? true,
+          prepTime: item.prep_time || item.preparation_time || item.prepTime || 15,
+          calories: item.calories || 350,
+          spiceLevel: item.spiceLevel || 1,
+          available: item.available ?? true,
+          ingredients: item.ingredients || ["Fresh Produce", "Herbs", "Olive Oil"],
+        });
+      }
+    }
+    loadItem();
+  }, [id]);
 
   if (!customer) {
     return (
@@ -35,9 +64,20 @@ function FoodDetail() {
     );
   }
 
+  if (!food) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center">
+          <Utensils className="h-10 w-10 text-muted-foreground animate-pulse mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Loading dish details…</p>
+        </div>
+      </div>
+    );
+  }
+
   const addonTotal = (food.addons ?? []).filter((a) => addons.includes(a.name)).reduce((s, a) => s + a.price, 0);
   const total = (food.price + addonTotal) * qty;
-  const hasUploadedImage = food.image && !food.image.includes("images.unsplash.com");
+  const hasUploadedImage = Boolean(food.image);
 
   return (
     <div className="min-h-screen bg-background pb-32">

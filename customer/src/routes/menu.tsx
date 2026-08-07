@@ -4,7 +4,7 @@ import { Search, ChevronRight, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 import { CustomerNav } from "@/components/customer-nav";
 import { FoodCard } from "@/components/food-card";
-import { foods as mockFoods, categories, combos, type FoodItem } from "@/lib/mock-data";
+import { categories, combos, type FoodItem } from "@/lib/mock-data";
 import { fetchDbMenuItems, subscribeToMenuItems } from "@/lib/supabase";
 import { useLiveOrders } from "@/lib/live-order-store";
 import { tableStore, useTable } from "@/lib/table-store";
@@ -101,7 +101,7 @@ function Menu() {
   useEffect(() => {
     async function loadMenu(force = false) {
       const dbItems = await fetchDbMenuItems(force);
-      const itemsToMap = (dbItems && dbItems.length > 0) ? dbItems : mockFoods;
+      const itemsToMap = dbItems || [];
 
       const availableDbItems = itemsToMap.filter(
         (item: any) => item.available !== false && item.status !== "Unavailable"
