@@ -9,14 +9,18 @@ import { Bell, CheckCircle2, Sparkles, Gift, Trash2, CheckCheck, Utensils } from
 
 export const Route = createFileRoute("/notifications")({ component: Notifs });
 
-import { useCustomer } from "@/lib/customer-store";
 import { CustomerRegistration } from "@/components/customer-registration";
+import { InvalidQrScreen } from "@/components/invalid-qr";
 
 function Notifs() {
   const notifs = useNotifications();
   const tableNumber = tableStore.getTableNumber();
   const customer = useCustomer(tableNumber);
   const [filter, setFilter] = useState<"all" | "orders" | "services" | "offers">("all");
+
+  if (!tableNumber) {
+    return <InvalidQrScreen />;
+  }
 
   if (!customer) {
     return (

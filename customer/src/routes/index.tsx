@@ -6,6 +6,7 @@ import { restaurant } from "@/lib/mock-data";
 import { useTable } from "@/lib/table-store";
 import { useCustomer } from "@/lib/customer-store";
 import { CustomerRegistration } from "@/components/customer-registration";
+import { InvalidQrScreen } from "@/components/invalid-qr";
 import { getOrdersByTable, subscribeToAllOrders, type DbOrder } from "@/lib/supabase";
 
 export const Route = createFileRoute("/")({
@@ -28,6 +29,7 @@ function Welcome() {
     let unsubscribe = () => {};
 
     async function loadActiveOrder() {
+      if (!tableNumber) return;
       const orders = await getOrdersByTable(tableNumber);
       if (orders && orders.length > 0) {
         const latest = orders.find((o) => o.status !== "completed") || orders[0];
@@ -42,6 +44,10 @@ function Welcome() {
     loadActiveOrder();
     return () => unsubscribe();
   }, [tableNumber]);
+
+  if (!tableNumber) {
+    return <InvalidQrScreen />;
+  }
 
   // If customer details are not saved for the scanned table, show Customer Registration Page first
   if (!customer) {

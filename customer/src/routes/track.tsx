@@ -43,6 +43,10 @@ function Track() {
   const [order, setOrder] = useState<DbOrder | null>(null);
   const [loading, setLoading] = useState(true);
 
+  if (!tableNumber) {
+    return <InvalidQrScreen />;
+  }
+
   if (!customer) {
     return (
       <CustomerRegistration

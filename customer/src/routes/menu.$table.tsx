@@ -1,6 +1,6 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { tableStore } from "@/lib/table-store";
+import { tableStore, formatTableNumber } from "@/lib/table-store";
 
 export const Route = createFileRoute("/menu/$table")({
   component: MenuTableRoute,
@@ -8,16 +8,17 @@ export const Route = createFileRoute("/menu/$table")({
 
 function MenuTableRoute() {
   const { table } = Route.useParams();
-
-  const rawDigits = (table || "").replace(/\D/g, "");
-  const formatted = rawDigits ? `Table ${rawDigits}` : (table || "Table 1");
+  const formatted = formatTableNumber(table || "");
 
   useEffect(() => {
-    tableStore.setTableNumber(formatted);
+    if (formatted) {
+      tableStore.setTableNumber(formatted);
+    }
   }, [formatted]);
 
-  // Synchronously update store before rendering redirect
-  tableStore.setTableNumber(formatted);
+  if (formatted) {
+    tableStore.setTableNumber(formatted);
+  }
 
   return <Navigate to="/" replace />;
 }

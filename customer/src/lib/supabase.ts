@@ -498,7 +498,7 @@ export function mapNotificationToServiceRequest(row: any): ServiceRequest {
 }
 
 export async function sendServiceRequest(tableNumber: string, serviceType: string, label: string, customerName: string = "Guest"): Promise<ServiceRequest> {
-  const finalTable = tableNumber || "Table 1";
+  const finalTable = tableNumber;
   const requestType = label || serviceType || "Call Waiter";
   const createdAt = new Date().toISOString();
 

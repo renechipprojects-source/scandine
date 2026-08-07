@@ -10,6 +10,7 @@ import { createOrder, notifyKitchenNewOrder } from "@/lib/supabase";
 import { liveOrderStore } from "@/lib/live-order-store";
 import { toast } from "sonner";
 import { CustomerNav } from "@/components/customer-nav";
+import { InvalidQrScreen } from "@/components/invalid-qr";
 
 export const Route = createFileRoute("/cart")({
   component: Cart,
@@ -22,6 +23,10 @@ function Cart() {
   const nav = useNavigate();
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const totals = cartTotals(state.items);
+
+  if (!tableNumber) {
+    return <InvalidQrScreen />;
+  }
 
   if (!customer) {
     return (

@@ -10,6 +10,7 @@ import { useLiveOrders } from "@/lib/live-order-store";
 import { tableStore, useTable } from "@/lib/table-store";
 import { useCustomer } from "@/lib/customer-store";
 import { CustomerRegistration } from "@/components/customer-registration";
+import { InvalidQrScreen } from "@/components/invalid-qr";
 import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/menu")({
@@ -86,6 +87,10 @@ function Menu() {
   const tableNumber = useTable();
   const customer = useCustomer(tableNumber);
   const allLiveOrders = useLiveOrders();
+
+  if (!tableNumber) {
+    return <InvalidQrScreen />;
+  }
 
   const activeTableOrders = useMemo(() => {
     const normDigits = tableNumber.replace(/\D/g, "");
