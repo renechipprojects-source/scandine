@@ -5,7 +5,7 @@ import { fetchDbMenuItems } from "@/lib/supabase";
 import { cart } from "@/lib/cart-store";
 import { motion } from "framer-motion";
 import { ArrowLeft, Star, Clock, Flame, Heart, Minus, Plus, ShoppingBag, Utensils } from "lucide-react";
-import { VegDot } from "@/components/food-card";
+import { VegDot, getKitchenImageUrl } from "@/components/food-card";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/food/$id")({
@@ -77,13 +77,13 @@ function FoodDetail() {
 
   const addonTotal = (food.addons ?? []).filter((a) => addons.includes(a.name)).reduce((s, a) => s + a.price, 0);
   const total = (food.price + addonTotal) * qty;
-  const hasUploadedImage = Boolean(food.image);
+  const headerImgUrl = getKitchenImageUrl(food.image);
 
   return (
     <div className="min-h-screen bg-background pb-32">
       <div className="relative h-[42vh] bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-primary/20 flex items-center justify-center">
-        {hasUploadedImage ? (
-          <img src={food.image} alt={food.name} className="absolute inset-0 h-full w-full object-cover" />
+        {headerImgUrl ? (
+          <img src={headerImgUrl} alt={food.name} className="absolute inset-0 h-full w-full object-cover" />
         ) : (
           <div className="flex flex-col items-center justify-center text-center p-6">
             <Utensils className="h-16 w-16 text-primary/40 mb-2" />

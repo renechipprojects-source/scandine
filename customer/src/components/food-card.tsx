@@ -6,17 +6,29 @@ import { useState } from "react";
 import { cart } from "@/lib/cart-store";
 import { toast } from "sonner";
 
-function getOptimizedImageUrl(url?: string): string {
-  if (!url) return "";
-  if (url.includes("res.cloudinary.com") && !url.includes("q_auto")) {
-    return url.replace("/upload/", "/upload/w_600,f_auto,q_auto,c_limit/");
+export function getKitchenImageUrl(url?: string): string {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
+    if (trimmed.includes("res.cloudinary.com") && !trimmed.includes("q_auto")) {
+      return trimmed.replace("/upload/", "/upload/w_600,f_auto,q_auto,c_limit/");
+    }
+    return trimmed;
   }
-  return url;
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://uynujkynuvsodnuhvvox.supabase.co";
+  const cleanPath = trimmed.replace(/^\/+/, "");
+  if (cleanPath.startsWith("storage/v1/object/public/")) {
+    return `${supabaseUrl}/${cleanPath}`;
+  }
+  return `${supabaseUrl}/storage/v1/object/public/sd_menu_items/${cleanPath}`;
 }
 
 export function FoodCard({ food, layout = "grid" }: { food: FoodItem; layout?: "grid" | "row" }) {
   const [fav, setFav] = useState(false);
-  const imgUrl = getOptimizedImageUrl(food.image);
+  const imgUrl = getKitchenImageUrl(food.image);
 
   if (layout === "row") {
     return (

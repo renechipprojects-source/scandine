@@ -490,7 +490,7 @@ function KitchenItemsPage() {
                     <TableRow key={item.id}>
                       <TableCell>
                         <div className="h-12 w-12 overflow-hidden rounded-md bg-muted">
-                          {item.image && !item.image.includes("unsplash.com") ? (
+                          {item.image ? (
                             <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                           ) : (
                             <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground font-medium bg-muted/60 text-center">No img</div>
@@ -557,7 +557,7 @@ function KitchenItemsPage() {
             return (
               <Card key={item.id} className="overflow-hidden transition-shadow hover:shadow-md">
                 <div className="relative h-40 w-full overflow-hidden bg-muted">
-                  {item.image && !item.image.includes("unsplash.com") ? (
+                  {item.image ? (
                     <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full items-center justify-center text-muted-foreground bg-muted/60 flex-col gap-1">
