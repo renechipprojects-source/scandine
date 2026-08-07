@@ -6,7 +6,7 @@ import { Button } from "@/kitchen/components/ui/button";
 import { Input } from "@/kitchen/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/kitchen/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/kitchen/components/ui/select";
-import { Radio, Search, Filter, Bell, Clock, Utensils, User, StickyNote, ArrowRight, CheckCircle2, Timer, Check } from "lucide-react";
+import { Radio, Search, Filter, Bell, Clock, Utensils, User, StickyNote, ArrowRight, CheckCircle2, Timer, Check, X } from "lucide-react";
 import { orders as mockOrdersRaw, restaurantInfo } from "@/kitchen/lib/mock-data";
 import { useCallback, useState, useEffect } from "react";
 import { useSupabaseTable, type Order, type MenuItem } from "@/hooks/useSupabaseData";
@@ -51,11 +51,13 @@ function OrderLiveCardItem({
   onAccept,
   onAdvance,
   onAutoReady,
+  onCancel,
 }: {
   order: Order;
   onAccept: (order: Order) => void;
   onAdvance: (order: Order) => void;
   onAutoReady: (order: Order) => void;
+  onCancel: (order: Order) => void;
 }) {
   const handleComplete = useCallback(() => {
     onAutoReady(order);
@@ -116,23 +118,43 @@ function OrderLiveCardItem({
       {/* Workflow Controls */}
       <div className="mt-3 border-t pt-2">
         {order.status === "pending" && (
-          <Button
-            size="sm"
-            className="w-full h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs"
-            onClick={() => onAccept(order)}
-          >
-            <Check className="mr-1 h-3.5 w-3.5" /> Accept Order
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              className="flex-1 h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs"
+              onClick={() => onAccept(order)}
+            >
+              <Check className="mr-1 h-3.5 w-3.5" /> Accept Order
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive font-semibold shadow-xs"
+              onClick={() => onCancel(order)}
+            >
+              <X className="mr-1 h-3.5 w-3.5" /> Cancel
+            </Button>
+          </div>
         )}
 
         {order.status === "accepted" && (
-          <Button
-            size="sm"
-            className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs"
-            onClick={() => onAdvance(order)}
-          >
-            <Timer className="mr-1 h-3.5 w-3.5" /> Start Preparing
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              className="flex-1 h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs"
+              onClick={() => onAdvance(order)}
+            >
+              <Timer className="mr-1 h-3.5 w-3.5" /> Start Preparing
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive font-semibold shadow-xs"
+              onClick={() => onCancel(order)}
+            >
+              <X className="mr-1 h-3.5 w-3.5" /> Cancel
+            </Button>
+          </div>
         )}
 
         {order.status === "preparing" && (
@@ -345,6 +367,34 @@ function LiveOrdersPage() {
     }
   };
 
+  const handleCancelOrder = async (order: Order) => {
+    const primaryId = order.id || order.order_id;
+    const secondaryId = order.order_id;
+
+    try {
+      await updateItem(primaryId, { status: "cancelled" });
+
+      if (secondaryId && secondaryId !== primaryId) {
+        await updateItem(secondaryId, { status: "cancelled" });
+      }
+
+      toast.error(`Order ${order.order_id || order.id} cancelled ❌`);
+
+      window.dispatchEvent(
+        new CustomEvent("order-status-changed", {
+          detail: {
+            orderId: order.order_id || order.id,
+            tableNumber: order.table_number,
+            status: "cancelled",
+          },
+        })
+      );
+    } catch (err) {
+      console.error("Failed to cancel order:", err);
+      toast.error("Failed to cancel order");
+    }
+  };
+
   const nowMs = Date.now();
   const activeOrders = allOrders.filter((o) => ["pending", "accepted", "preparing", "ready"].includes(o.status));
   const activePreps = allOrders.filter((o) => o.status === "preparing" || o.status === "accepted");
@@ -441,6 +491,7 @@ function LiveOrdersPage() {
                     onAccept={handleAcceptOrder}
                     onAdvance={handleStageAdvance}
                     onAutoReady={handleAutoReady}
+                    onCancel={handleCancelOrder}
                   />
                 ))}
               </div>
