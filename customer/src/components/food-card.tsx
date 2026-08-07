@@ -18,7 +18,7 @@ export function getKitchenImageUrl(url?: string): string {
     return trimmed;
   }
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://uynujkynuvsodnuhvvox.supabase.co";
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://nyhnkftlkigoliyogwvp.supabase.co";
   const cleanPath = trimmed.replace(/^\/+/, "");
   if (cleanPath.startsWith("storage/v1/object/public/")) {
     return `${supabaseUrl}/${cleanPath}`;
