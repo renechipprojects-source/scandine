@@ -445,6 +445,22 @@ export function useSupabaseTable<T extends { id: string }>(
             let { error: err2 } = await supabase.from(tableName).update(dbOrderPayload).eq("id", id);
             updateErr = err2;
           }
+        } else if (tableName === "sd_menu_items") {
+          let { data: existingRows } = await supabase.from(tableName).select("id").eq("id", id);
+          if (existingRows && existingRows.length > 0) {
+            let res = await supabase.from(tableName).update(payload).eq("id", id);
+            updateErr = res.error;
+          } else {
+            const fullItem = (data.find((it: any) => it.id === id) || initialData.find((it: any) => it.id === id)) as any;
+            if (fullItem) {
+              const fullPayload = cleanPayloadForSupabase(tableName, { ...fullItem, ...updates });
+              let res = await supabase.from(tableName).upsert([fullPayload]);
+              updateErr = res.error;
+            } else {
+              let res = await supabase.from(tableName).update(payload).eq("id", id);
+              updateErr = res.error;
+            }
+          }
         } else if (tableName === "invoices") {
           let res = await supabase.from(tableName).update(payload).eq("id", id).select();
           if (res.error || !res.data || res.data.length === 0) {

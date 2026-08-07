@@ -14,7 +14,7 @@ import { foodItems as mockFoodItems, restaurantInfo } from "@/kitchen/lib/mock-d
 import { useState, useCallback } from "react";
 import { useSupabaseTable, type MenuItem } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
-import { uploadToCloudinary } from "@/lib/cloudinary";
+import { uploadToCloudinary, deleteFromCloudinary } from "@/lib/cloudinary";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/kitchen/_app/menu/items")({
@@ -30,8 +30,24 @@ const mapCategory = (cat?: string): string => {
   return cat;
 };
 
+const initialMenuItemsList: MenuItem[] = mockFoodItems.map((f, i) => ({
+  id: f.id || `f${i + 1}`,
+  name: f.name,
+  category: mapCategory(f.category),
+  category_name: mapCategory(f.category),
+  category_id: f.category === "Starters" ? "cat_4" : f.category === "Desserts" ? "cat_5" : f.category === "Beverages" ? "cat_6" : "cat_2",
+  price: f.price,
+  description: f.description,
+  image: "https://images.unsplash.com/photo-1541529086526-db283c563270?w=600&auto=format&fit=crop",
+  image_url: "https://images.unsplash.com/photo-1541529086526-db283c563270?w=600&auto=format&fit=crop",
+  available: f.available ?? true,
+  status: f.available ? "Available" : "Unavailable",
+  preparation_time: f.prepTime || 15,
+  prep_time_minutes: f.prepTime || 15,
+}));
+
 function KitchenItemsPage() {
-  const { data: dbMenuItems, addItem, updateItem, deleteItem, fetchData } = useSupabaseTable<MenuItem>("sd_menu_items", []);
+  const { data: dbMenuItems, addItem, updateItem, deleteItem, fetchData } = useSupabaseTable<MenuItem>("sd_menu_items", initialMenuItemsList);
 
   const handleRealtime = useCallback(() => {
     fetchData();
@@ -184,6 +200,13 @@ function KitchenItemsPage() {
         status: nextVal ? "Available" : "Unavailable",
       });
       toast.success(nextVal ? "Item marked as Available" : "Item marked as Unavailable");
+
+      try {
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+          const bc = new BroadcastChannel("aura_dine_sync_channel");
+          bc.postMessage({ type: "MENU_UPDATED" });
+        }
+      } catch {}
     } catch (err) {
       console.error("Failed to update availability:", err);
       toast.error("Failed to update availability");
@@ -192,8 +215,18 @@ function KitchenItemsPage() {
 
   const handleDelete = async (id: string) => {
     try {
+      const itemToDelete = dbMenuItems.find((item) => item.id === id);
+      const imgUrl = itemToDelete?.image || (itemToDelete as any)?.image_url;
+
       await deleteItem(id);
-      toast.success("Food item deleted successfully");
+
+      if (imgUrl && (imgUrl.includes("cloudinary.com") || imgUrl.includes("res.cloudinary"))) {
+        deleteFromCloudinary(imgUrl).catch((err) => {
+          console.warn("Cloudinary image delete notice:", err);
+        });
+      }
+
+      toast.success("Food item and associated image deleted successfully 🗑️");
     } catch (err) {
       console.error("Failed to delete menu item:", err);
       toast.error("Failed to delete food item");

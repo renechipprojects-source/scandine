@@ -84,8 +84,18 @@ router.post("/delete", async (req: Request, res: Response) => {
 
     if (!targetPublicId && url && typeof url === "string" && url.includes("res.cloudinary.com")) {
       const parts = url.split("/");
-      const filename = parts.pop() || "";
-      targetPublicId = filename.split(".")[0];
+      const uploadIdx = parts.indexOf("upload");
+      if (uploadIdx !== -1) {
+        const afterUpload = parts.slice(uploadIdx + 1);
+        if (afterUpload[0] && /^v\d+$/.test(afterUpload[0])) {
+          afterUpload.shift();
+        }
+        const fullPath = afterUpload.join("/");
+        targetPublicId = fullPath.substring(0, fullPath.lastIndexOf(".")) || fullPath;
+      } else {
+        const filename = parts.pop() || "";
+        targetPublicId = filename.split(".")[0];
+      }
     }
 
     if (!targetPublicId) {

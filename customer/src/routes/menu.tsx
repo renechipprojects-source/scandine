@@ -67,14 +67,14 @@ function normalizeCategory(catStr?: string, catId?: string): "Breakfast" | "Lunc
   }
 
   const str = (catStr || "").toLowerCase();
-  if (str.includes("breakfast")) return "Breakfast";
-  if (str.includes("lunch")) return "Lunch";
-  if (str.includes("dinner")) return "Dinner";
-  if (str.includes("starter") || str.includes("appetizer")) return "Starters";
-  if (str.includes("dessert") || str.includes("sweet")) return "Desserts";
-  if (str.includes("drink") || str.includes("beverage")) return "Drinks";
+  if (str.includes("breakfast") || str.includes("morning")) return "Breakfast";
+  if (str.includes("lunch") || str.includes("main course") || str.includes("pizza") || str.includes("burger") || str.includes("pasta")) return "Lunch";
+  if (str.includes("dinner") || str.includes("supper") || str.includes("night")) return "Dinner";
+  if (str.includes("starter") || str.includes("appetizer") || str.includes("snack") || str.includes("side")) return "Starters";
+  if (str.includes("dessert") || str.includes("sweet") || str.includes("cake") || str.includes("ice cream")) return "Desserts";
+  if (str.includes("drink") || str.includes("beverage") || str.includes("juice") || str.includes("coffee") || str.includes("tea")) return "Drinks";
 
-  return "Dinner";
+  return "Lunch";
 }
 
 function Menu() {
@@ -101,16 +101,16 @@ function Menu() {
   useEffect(() => {
     async function loadMenu() {
       const dbItems = await fetchDbMenuItems();
-      if (dbItems) {
+      if (dbItems && dbItems.length > 0) {
         const mapped: FoodItem[] = dbItems.map((item: any) => {
           const normCat = normalizeCategory(item.category || item.category_name, item.category_id);
           const catId = item.category_id || CATEGORY_TO_ID[normCat];
           return {
-            id: item.id,
+            id: String(item.id),
             name: item.name,
             description: item.description || "Freshly prepared by our chef.",
             price: Number(item.price),
-            image: item.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80",
+            image: item.image || item.image_url || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80",
             category: normCat,
             category_id: catId,
             rating: item.rating || 4.8,
@@ -119,12 +119,14 @@ function Menu() {
             prepTime: item.prep_time || item.prepTime || 15,
             calories: item.calories || 350,
             spiceLevel: item.spiceLevel || 1,
-            available: item.available ?? true,
+            available: item.available ?? (item.status !== "Unavailable"),
             ingredients: item.ingredients || ["Fresh Produce", "Herbs", "Olive Oil"],
           };
         });
 
         setItemList(mapped);
+      } else {
+        setItemList(mockFoods);
       }
     }
 
@@ -139,7 +141,8 @@ function Menu() {
     return itemList.filter((f) => {
       const itemCategoryId = f.category_id || CATEGORY_TO_ID[f.category];
 
-      if (itemCategoryId !== selectedCategoryId) return false;
+      const matchesCat = f.category === cat || itemCategoryId === selectedCategoryId;
+      if (!matchesCat) return false;
       if (q && !f.name.toLowerCase().includes(q.toLowerCase())) return false;
       return true;
     });

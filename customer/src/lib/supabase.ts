@@ -725,11 +725,13 @@ export async function fetchDbMenuItems(forceRefresh = false): Promise<DbMenuItem
     try {
       const { data, error } = await supabase
         .from("sd_menu_items")
-        .select("*")
-        .eq("available", true);
+        .select("*");
 
-      if (!error && data) {
-        cachedMenuItems = data as DbMenuItem[];
+      if (!error && data && data.length > 0) {
+        const availableItems = data.filter(
+          (item: any) => item.available !== false && item.status !== "Unavailable"
+        );
+        cachedMenuItems = (availableItems.length > 0 ? availableItems : data) as DbMenuItem[];
         lastMenuFetchTimestamp = now;
         return cachedMenuItems;
       }
