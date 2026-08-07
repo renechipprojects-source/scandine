@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useState, useEffect } from "react";
 
 const TABLE_STORAGE_KEY = "aura_dine_table_number";
 
@@ -96,12 +96,20 @@ export const tableStore = {
 };
 
 export function useTable(): string {
-  return useSyncExternalStore(
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const current = useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
     () => currentTableNumber,
-    () => currentTableNumber
+    () => ""
   );
+
+  return mounted ? current : "";
 }

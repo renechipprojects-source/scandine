@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useState, useEffect } from "react";
 import { supabase, isSupabaseConfigured } from "./supabase";
 
 export type CustomerDetails = {
@@ -14,32 +14,44 @@ const getStorageKey = (table: string) =>
   `scandine_customer_${table.toLowerCase().replace(/\s+/g, "")}`;
 
 let cachedTable: string | null = null;
-let cachedRaw: string | null = null;
+let cachedComposite: string | null = null;
 let cachedCustomer: CustomerDetails | null = null;
 
 function loadCustomer(table: string): CustomerDetails | null {
+  if (!table) return null;
   try {
     if (typeof window !== "undefined") {
       const key = getStorageKey(table);
       const raw = localStorage.getItem(key);
-      if (raw) {
-        return JSON.parse(raw);
-      }
       const rawCurrent = localStorage.getItem("scandine_current_customer");
+      const composite = `${raw || ""}|${rawCurrent || ""}`;
+
+      if (table === cachedTable && composite === cachedComposite) {
+        return cachedCustomer;
+      }
+
+      cachedTable = table;
+      cachedComposite = composite;
+
+      if (raw) {
+        cachedCustomer = JSON.parse(raw);
+        return cachedCustomer;
+      }
+
       if (rawCurrent) {
         const current: CustomerDetails = JSON.parse(rawCurrent);
-        const updated: CustomerDetails = {
+        cachedCustomer = {
           ...current,
           tableNumber: table,
         };
-        try {
-          localStorage.setItem(key, JSON.stringify(updated));
-          localStorage.setItem("scandine_current_customer", JSON.stringify(updated));
-        } catch {}
-        return updated;
+        return cachedCustomer;
       }
     }
   } catch {}
+
+  cachedTable = table;
+  cachedComposite = null;
+  cachedCustomer = null;
   return null;
 }
 
@@ -162,7 +174,13 @@ export const customerStore = {
 const SERVER_CUSTOMER: CustomerDetails | null = null;
 
 export function useCustomer(table: string): CustomerDetails | null {
-  return useSyncExternalStore(
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const storeCust = useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
@@ -170,4 +188,6 @@ export function useCustomer(table: string): CustomerDetails | null {
     () => loadCustomer(table),
     () => SERVER_CUSTOMER
   );
+
+  return mounted ? storeCust : null;
 }
