@@ -101,37 +101,35 @@ function Menu() {
   useEffect(() => {
     async function loadMenu(force = false) {
       const dbItems = await fetchDbMenuItems(force);
-      let mapped: FoodItem[] = [];
+      const itemsToMap = (dbItems && dbItems.length > 0) ? dbItems : mockFoods;
 
-      if (dbItems && dbItems.length > 0) {
-        const availableDbItems = dbItems.filter(
-          (item: any) => item.available !== false && item.status !== "Unavailable"
-        );
+      const availableDbItems = itemsToMap.filter(
+        (item: any) => item.available !== false && item.status !== "Unavailable"
+      );
 
-        mapped = availableDbItems.map((item: any) => {
-          const normCat = normalizeCategory(item.category || item.category_name, item.category_id);
-          const catId = item.category_id || CATEGORY_TO_ID[normCat];
-          const rawImg = item.image || item.image_url || "";
-          const finalImg = rawImg.includes("images.unsplash.com") ? "" : rawImg;
-          return {
-            id: String(item.id),
-            name: item.name,
-            description: item.description || "Freshly prepared by our chef.",
-            price: Number(item.price),
-            image: finalImg,
-            category: normCat,
-            category_id: catId,
-            rating: item.rating || 4.8,
-            reviews: item.reviews || 120,
-            veg: item.veg ?? true,
-            prepTime: item.prep_time || item.preparation_time || item.prepTime || 15,
-            calories: item.calories || 350,
-            spiceLevel: item.spiceLevel || 1,
-            available: true,
-            ingredients: item.ingredients || ["Fresh Produce", "Herbs", "Olive Oil"],
-          };
-        });
-      }
+      const mapped: FoodItem[] = availableDbItems.map((item: any) => {
+        const normCat = normalizeCategory(item.category || item.category_name, item.category_id);
+        const catId = item.category_id || CATEGORY_TO_ID[normCat];
+        const rawImg = item.image || item.image_url || "";
+        const finalImg = rawImg.includes("images.unsplash.com") ? "" : rawImg;
+        return {
+          id: String(item.id),
+          name: item.name,
+          description: item.description || "Freshly prepared by our chef.",
+          price: Number(item.price),
+          image: finalImg,
+          category: normCat,
+          category_id: catId,
+          rating: item.rating || 4.8,
+          reviews: item.reviews || 120,
+          veg: item.veg ?? true,
+          prepTime: item.prep_time || item.preparation_time || item.prepTime || 15,
+          calories: item.calories || 350,
+          spiceLevel: item.spiceLevel || 1,
+          available: true,
+          ingredients: item.ingredients || ["Fresh Produce", "Herbs", "Olive Oil"],
+        };
+      });
 
       setItemList(mapped);
     }
