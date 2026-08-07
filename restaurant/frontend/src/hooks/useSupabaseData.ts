@@ -164,10 +164,8 @@ function cleanPayloadForSupabase(tableName: string, payload: Record<string, unkn
       delete cleaned.image;
       delete cleaned.image_url;
     }
+
     const catVal = String(cleaned.category || cleaned.category_name || "Lunch");
-    cleaned.category = catVal;
-    cleaned.category_name = catVal;
-    
     const CATEGORY_MAP: Record<string, string> = {
       Breakfast: "cat_1",
       Lunch: "cat_2",
@@ -182,13 +180,14 @@ function cleanPayloadForSupabase(tableName: string, payload: Record<string, unkn
       cleaned.category_id = "cat_1";
     }
 
-    if (cleaned.available !== undefined) {
-      cleaned.status = cleaned.available ? "Available" : "Unavailable";
-    }
-    if (cleaned.preparation_time === undefined && cleaned.prep_time_minutes !== undefined) {
-      cleaned.preparation_time = Number(cleaned.prep_time_minutes) || 15;
-    }
+    const prepVal = Number(cleaned.preparation_time ?? cleaned.prep_time_minutes ?? cleaned.prepTime) || 15;
+    cleaned.preparation_time = prepVal;
 
+    // Delete all non-existent Postgres table columns for sd_menu_items
+    delete cleaned.category;
+    delete cleaned.category_name;
+    delete cleaned.status;
+    delete cleaned.prep_time_minutes;
     delete cleaned.prepTime;
     delete cleaned.spicy;
     delete cleaned.veg;
