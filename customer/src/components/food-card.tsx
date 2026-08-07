@@ -7,7 +7,7 @@ import { cart } from "@/lib/cart-store";
 import { toast } from "sonner";
 
 function getOptimizedImageUrl(url?: string): string {
-  if (!url || url.includes("images.unsplash.com")) return "";
+  if (!url) return "";
   if (url.includes("res.cloudinary.com") && !url.includes("q_auto")) {
     return url.replace("/upload/", "/upload/w_600,f_auto,q_auto,c_limit/");
   }

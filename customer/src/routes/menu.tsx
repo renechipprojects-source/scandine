@@ -110,14 +110,13 @@ function Menu() {
       const mapped: FoodItem[] = availableDbItems.map((item: any) => {
         const normCat = normalizeCategory(item.category || item.category_name, item.category_id);
         const catId = item.category_id || CATEGORY_TO_ID[normCat];
-        const rawImg = item.image || item.image_url || "";
-        const finalImg = rawImg.includes("images.unsplash.com") ? "" : rawImg;
+        const rawImg = item.image || item.image_url || item.photo || item.imageUrl || item.img || "";
         return {
           id: String(item.id),
           name: item.name,
           description: item.description || "Freshly prepared by our chef.",
           price: Number(item.price),
-          image: finalImg,
+          image: rawImg,
           category: normCat,
           category_id: catId,
           rating: item.rating || 4.8,
