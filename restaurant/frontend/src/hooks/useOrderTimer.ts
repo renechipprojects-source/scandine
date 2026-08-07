@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { type OrderItem, type MenuItem } from "@/hooks/useSupabaseData";
 
 /**
@@ -52,6 +52,11 @@ export function useOrderCountdown(
   status?: string,
   onTimerComplete?: () => void
 ) {
+  const onCompleteRef = useRef(onTimerComplete);
+  useEffect(() => {
+    onCompleteRef.current = onTimerComplete;
+  }, [onTimerComplete]);
+
   const getSecondsLeft = (): number => {
     if (!estimatedReadyAt || (status !== "accepted" && status !== "preparing")) {
       return 0;
@@ -65,7 +70,6 @@ export function useOrderCountdown(
   const [remainingSeconds, setRemainingSeconds] = useState<number>(getSecondsLeft);
 
   useEffect(() => {
-    // Sync initial state
     const currentLeft = getSecondsLeft();
     setRemainingSeconds(currentLeft);
 
@@ -79,14 +83,14 @@ export function useOrderCountdown(
 
       if (left <= 0) {
         clearInterval(intervalId);
-        if (onTimerComplete) {
-          onTimerComplete();
+        if (onCompleteRef.current) {
+          onCompleteRef.current();
         }
       }
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [estimatedReadyAt, status, onTimerComplete]);
+  }, [estimatedReadyAt, status]);
 
   return {
     remainingSeconds,

@@ -165,7 +165,7 @@ function cleanPayloadForSupabase(tableName: string, payload: Record<string, unkn
       delete cleaned.image_url;
     }
 
-    const catVal = String(cleaned.category || cleaned.category_name || "Lunch");
+    const catVal = String(cleaned.category || cleaned.category_name || "").trim();
     const CATEGORY_MAP: Record<string, string> = {
       Breakfast: "cat_1",
       Lunch: "cat_2",
@@ -176,8 +176,8 @@ function cleanPayloadForSupabase(tableName: string, payload: Record<string, unkn
     };
     if (catVal && CATEGORY_MAP[catVal]) {
       cleaned.category_id = CATEGORY_MAP[catVal];
-    } else if (!cleaned.category_id) {
-      cleaned.category_id = "cat_1";
+    } else if (!cleaned.category_id && catVal) {
+      cleaned.category_id = "cat_2";
     }
 
     const prepVal = Number(cleaned.preparation_time ?? cleaned.prep_time_minutes ?? cleaned.prepTime) || 15;
@@ -206,8 +206,17 @@ function cleanPayloadForSupabase(tableName: string, payload: Record<string, unkn
     if (typeof cleaned.status === "string") {
       cleaned.status = cleaned.status.toLowerCase();
     }
-    if (typeof cleaned.payment === "string") {
-      cleaned.payment = cleaned.payment.toLowerCase();
+    if (cleaned.payment || cleaned.payment_status) {
+      cleaned.payment_status = String(cleaned.payment_status || cleaned.payment).toLowerCase();
+      delete cleaned.payment;
+    }
+    if (cleaned.items || cleaned.item) {
+      cleaned.items = cleaned.items || cleaned.item;
+      delete cleaned.item;
+    }
+    if (cleaned.customer_name || cleaned.customer) {
+      cleaned.customer_name = String(cleaned.customer_name || cleaned.customer);
+      delete cleaned.customer;
     }
   }
 
@@ -461,18 +470,23 @@ export function useSupabaseTable<T extends { id: string }>(
           // Clean payload containing only valid Postgres DB columns
           const dbOrderPayload: Record<string, any> = {};
           if (payload.status !== undefined) dbOrderPayload.status = payload.status;
-          if (payload.payment !== undefined) dbOrderPayload.payment = payload.payment;
+          if (payload.payment_status !== undefined || payload.payment !== undefined) {
+            dbOrderPayload.payment_status = payload.payment_status || payload.payment;
+          }
           if (payload.total !== undefined) dbOrderPayload.total = payload.total;
-          if (payload.item !== undefined) dbOrderPayload.item = payload.item;
-          if (payload.customer !== undefined) dbOrderPayload.customer = payload.customer;
+          if (payload.items !== undefined || payload.item !== undefined) {
+            dbOrderPayload.items = payload.items || payload.item;
+          }
+          if (payload.customer_name !== undefined || payload.customer !== undefined) {
+            dbOrderPayload.customer_name = payload.customer_name || payload.customer;
+          }
           if (payload.accepted_at !== undefined) dbOrderPayload.accepted_at = payload.accepted_at;
           if (payload.prep_time_minutes !== undefined) dbOrderPayload.prep_time_minutes = payload.prep_time_minutes;
           if (payload.estimated_ready_at !== undefined) dbOrderPayload.estimated_ready_at = payload.estimated_ready_at;
 
-          // Try updating by order_id first, then id column safely
-          let { error: err1 } = await supabase.from(tableName).update(dbOrderPayload).eq("order_id", id);
+          let { error: err1 } = await supabase.from(tableName).update(dbOrderPayload).eq("id", id);
           if (err1) {
-            let { error: err2 } = await supabase.from(tableName).update(dbOrderPayload).eq("id", id);
+            let { error: err2 } = await supabase.from(tableName).update(dbOrderPayload).eq("order_id", id);
             updateErr = err2;
           }
         } else if (tableName === "sd_menu_items") {

@@ -30,7 +30,7 @@ function FoodDetail() {
   useEffect(() => {
     async function loadItem() {
       const dbItems = await fetchDbMenuItems();
-      const item = dbItems.find((f: any) => String(f.id) === String(id)) || dbItems[0];
+      const item = dbItems.find((f: any) => String(f.id) === String(id));
       if (item) {
         const rawImg = item.image || item.image_url || item.photo || item.imageUrl || item.img || "";
         setFood({

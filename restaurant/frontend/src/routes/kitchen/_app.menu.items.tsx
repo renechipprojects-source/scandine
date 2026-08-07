@@ -203,10 +203,14 @@ function KitchenItemsPage() {
 
   const handleToggleAvailable = async (id: string, currentVal: boolean) => {
     const nextVal = !currentVal;
+    const itemToUpdate = dbMenuItems.find((item) => item.id === id);
     try {
       await updateItem(id, {
         available: nextVal,
         status: nextVal ? "Available" : "Unavailable",
+        category: itemToUpdate?.category,
+        category_name: itemToUpdate?.category_name || itemToUpdate?.category,
+        category_id: itemToUpdate?.category_id,
       });
       toast.success(nextVal ? "Item marked as Available" : "Item marked as Unavailable");
 
