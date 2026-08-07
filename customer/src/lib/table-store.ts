@@ -58,7 +58,7 @@ export const tableStore = {
     try {
       if (typeof window !== "undefined") {
         const urlParams = new URLSearchParams(window.location.search);
-        const paramTable = urlParams.get("table");
+        const paramTable = urlParams.get("table") || urlParams.get("t") || urlParams.get("tbl");
         if (paramTable) {
           const formatted = formatTableNumber(paramTable);
           if (currentTableNumber !== formatted) {
@@ -66,16 +66,16 @@ export const tableStore = {
             localStorage.setItem(TABLE_STORAGE_KEY, formatted);
             emit();
           }
-        } else {
-          const pathname = window.location.pathname;
-          const match = pathname.match(/\/(?:menu|table|t)\/([^/]+)/i);
-          if (match && match[1]) {
-            const formatted = formatTableNumber(match[1]);
-            if (currentTableNumber !== formatted) {
-              currentTableNumber = formatted;
-              localStorage.setItem(TABLE_STORAGE_KEY, formatted);
-              emit();
-            }
+          return;
+        }
+        const pathname = window.location.pathname;
+        const match = pathname.match(/\/(?:menu|table|t)\/([^/]+)/i);
+        if (match && match[1]) {
+          const formatted = formatTableNumber(match[1]);
+          if (currentTableNumber !== formatted) {
+            currentTableNumber = formatted;
+            localStorage.setItem(TABLE_STORAGE_KEY, formatted);
+            emit();
           }
         }
       }

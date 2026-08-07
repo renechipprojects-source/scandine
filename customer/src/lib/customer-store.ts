@@ -43,20 +43,19 @@ export const customerStore = {
     const tableCust = loadCustomer(table);
     if (tableCust) return tableCust;
 
-    // 2. Fallback to global current customer if table matches
+    // 2. Fallback to global current customer and bind to target table
     try {
       if (typeof window !== "undefined") {
         const rawCurrent = localStorage.getItem("scandine_current_customer");
         if (rawCurrent) {
           const current: CustomerDetails = JSON.parse(rawCurrent);
-          const cTableDigits = current.tableNumber.replace(/\D/g, "");
-          const targetDigits = table.replace(/\D/g, "");
-          if (cTableDigits && targetDigits && cTableDigits === targetDigits) {
-            // Restore for this table
-            const key = getStorageKey(table);
-            localStorage.setItem(key, JSON.stringify(current));
-            return current;
-          }
+          const updated: CustomerDetails = {
+            ...current,
+            tableNumber: table,
+          };
+          const key = getStorageKey(table);
+          localStorage.setItem(key, JSON.stringify(updated));
+          return updated;
         }
       }
     } catch {}
