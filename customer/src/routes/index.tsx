@@ -113,19 +113,13 @@ function Welcome() {
                   Browse the menu, customise dishes and pay — all from your phone.
                 </p>
               </div>
-              {(() => {
-                const rawDigits = tableNumber.replace(/\D/g, "");
-                const menuTarget = rawDigits ? `/menu/${rawDigits}` : "/menu";
-                return (
-                  <Link
-                    to={menuTarget as any}
-                    className="group inline-flex items-center gap-2 rounded-full gradient-primary text-white font-semibold px-6 py-4 shadow-float"
-                  >
-                    Start ordering
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                );
-              })()}
+              <Link
+                to="/menu"
+                className="group inline-flex items-center gap-2 rounded-full gradient-primary text-white font-semibold px-6 py-4 shadow-float"
+              >
+                Start ordering
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
             </div>
 
             {/* Active Live Order Tracker Widget */}
