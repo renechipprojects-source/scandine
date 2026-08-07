@@ -22,13 +22,22 @@ function loadCustomer(table: string): CustomerDetails | null {
     if (typeof window !== "undefined") {
       const key = getStorageKey(table);
       const raw = localStorage.getItem(key);
-      if (table === cachedTable && raw === cachedRaw) {
-        return cachedCustomer;
+      if (raw) {
+        return JSON.parse(raw);
       }
-      cachedTable = table;
-      cachedRaw = raw;
-      cachedCustomer = raw ? JSON.parse(raw) : null;
-      return cachedCustomer;
+      const rawCurrent = localStorage.getItem("scandine_current_customer");
+      if (rawCurrent) {
+        const current: CustomerDetails = JSON.parse(rawCurrent);
+        const updated: CustomerDetails = {
+          ...current,
+          tableNumber: table,
+        };
+        try {
+          localStorage.setItem(key, JSON.stringify(updated));
+          localStorage.setItem("scandine_current_customer", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      }
     }
   } catch {}
   return null;
@@ -39,28 +48,7 @@ const emit = () => listeners.forEach((l) => l());
 
 export const customerStore = {
   getCustomer(table: string): CustomerDetails | null {
-    // 1. Try table specific customer
-    const tableCust = loadCustomer(table);
-    if (tableCust) return tableCust;
-
-    // 2. Fallback to global current customer and bind to target table
-    try {
-      if (typeof window !== "undefined") {
-        const rawCurrent = localStorage.getItem("scandine_current_customer");
-        if (rawCurrent) {
-          const current: CustomerDetails = JSON.parse(rawCurrent);
-          const updated: CustomerDetails = {
-            ...current,
-            tableNumber: table,
-          };
-          const key = getStorageKey(table);
-          localStorage.setItem(key, JSON.stringify(updated));
-          return updated;
-        }
-      }
-    } catch {}
-
-    return null;
+    return loadCustomer(table);
   },
 
   getSessionId(table: string): string | undefined {
