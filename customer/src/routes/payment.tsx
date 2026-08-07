@@ -54,9 +54,7 @@ function Payment() {
   const search = useSearch({ strict: false }) as { orderId?: string };
   const activeId = search.orderId || cart.getActiveOrderId();
 
-  if (!tableNumber) {
-    return <InvalidQrScreen />;
-  }
+
 
   const [order, setOrder] = useState<DbOrder | null>(null);
   const [loading, setLoading] = useState(true);

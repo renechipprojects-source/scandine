@@ -88,8 +88,15 @@ function Menu() {
   const customer = useCustomer(tableNumber);
   const allLiveOrders = useLiveOrders();
 
-  if (!tableNumber) {
-    return <InvalidQrScreen />;
+  if (!customer) {
+    return (
+      <CustomerRegistration
+        tableNumber={tableNumber}
+        onSuccess={() => {
+          navigate({ to: "/menu", replace: true });
+        }}
+      />
+    );
   }
 
   const activeTableOrders = useMemo(() => {

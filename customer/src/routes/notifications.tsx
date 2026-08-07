@@ -18,9 +18,7 @@ function Notifs() {
   const customer = useCustomer(tableNumber);
   const [filter, setFilter] = useState<"all" | "orders" | "services" | "offers">("all");
 
-  if (!tableNumber) {
-    return <InvalidQrScreen />;
-  }
+
 
   if (!customer) {
     return (

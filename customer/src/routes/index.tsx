@@ -45,11 +45,7 @@ function Welcome() {
     return () => unsubscribe();
   }, [tableNumber]);
 
-  if (!tableNumber) {
-    return <InvalidQrScreen />;
-  }
-
-  // If customer details are not saved for the scanned table, show Customer Registration Page first
+  // If customer details are not saved for the active table, show Customer Registration Page first
   if (!customer) {
     return (
       <CustomerRegistration

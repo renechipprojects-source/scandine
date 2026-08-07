@@ -24,9 +24,7 @@ function Cart() {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const totals = cartTotals(state.items);
 
-  if (!tableNumber) {
-    return <InvalidQrScreen />;
-  }
+
 
   if (!customer) {
     return (

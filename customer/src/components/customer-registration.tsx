@@ -77,7 +77,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
         {/* Header */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-xs font-semibold text-primary mb-6">
-            <QrCode className="h-3.5 w-3.5" /> Table Scanned · {tableNumber}
+            <QrCode className="h-3.5 w-3.5" /> {tableNumber ? `Table Scanned · ${tableNumber}` : "ScanDine Guest"}
           </div>
           <div className="flex justify-center mb-2">
             <img src="/scandine-customer-logo.png" alt="ScanDine" className="h-16 w-16 sm:h-20 sm:w-20 object-contain drop-shadow-md" />
@@ -90,7 +90,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
             SCAN • ORDER • DINE
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Please register your details to view {tableNumber} menu and place orders.
+            Please register your details to view {tableNumber ? `${tableNumber} menu` : "the menu"} and place orders.
           </p>
         </div>
 

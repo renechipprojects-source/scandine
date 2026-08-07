@@ -49,9 +49,7 @@ function Profile() {
   const [langModalOpen, setLangModalOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
-  if (!tableNumber) {
-    return <InvalidQrScreen />;
-  }
+
 
   if (!customer) {
     return (

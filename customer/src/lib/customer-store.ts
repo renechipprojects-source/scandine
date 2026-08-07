@@ -174,13 +174,7 @@ export const customerStore = {
 const SERVER_CUSTOMER: CustomerDetails | null = null;
 
 export function useCustomer(table: string): CustomerDetails | null {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const storeCust = useSyncExternalStore(
+  return useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
@@ -188,6 +182,4 @@ export function useCustomer(table: string): CustomerDetails | null {
     () => loadCustomer(table),
     () => SERVER_CUSTOMER
   );
-
-  return mounted ? storeCust : null;
 }

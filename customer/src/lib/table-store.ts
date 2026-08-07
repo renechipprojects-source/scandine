@@ -58,13 +58,13 @@ export const tableStore = {
   },
   setTableNumber(table: string) {
     const formatted = formatTableNumber(table);
-    currentTableNumber = formatted;
-    try {
-      if (formatted) {
+    if (formatted) {
+      currentTableNumber = formatted;
+      try {
         localStorage.setItem(TABLE_STORAGE_KEY, formatted);
-      }
-    } catch {}
-    emit();
+      } catch {}
+      emit();
+    }
   },
   initFromUrl() {
     try {
@@ -96,20 +96,12 @@ export const tableStore = {
 };
 
 export function useTable(): string {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const current = useSyncExternalStore(
+  return useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
     () => currentTableNumber,
-    () => ""
+    () => currentTableNumber
   );
-
-  return mounted ? current : "";
 }
