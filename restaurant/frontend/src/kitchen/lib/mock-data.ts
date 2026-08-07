@@ -90,20 +90,7 @@ export type FoodItem = {
   stock: "in" | "low" | "out";
 };
 
-export const foodItems: (FoodItem & { image?: string })[] = [
-  { id: "f1", name: "Truffle Mushroom Pizza", category: "Pizza", price: 18.5, veg: true, spicy: 0, prepTime: 18, available: true, popular: true, featured: true, description: "Wild mushrooms, black truffle oil, mozzarella on wood-fired crust.", emoji: "🍕", stock: "in", image: "https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=800&q=80" },
-  { id: "f2", name: "Spicy Chipotle Burger", category: "Burgers", price: 14.0, veg: false, spicy: 2, prepTime: 14, available: true, popular: true, description: "Angus beef, chipotle mayo, pepper jack, brioche bun.", emoji: "🍔", stock: "in", image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80" },
-  { id: "f3", name: "Butter Chicken", category: "Main Course", price: 16.75, veg: false, spicy: 1, prepTime: 22, available: true, popular: true, featured: true, description: "Tender chicken in creamy tomato gravy, served with basmati rice.", emoji: "🍛", stock: "in", image: "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=800&q=80" },
-  { id: "f4", name: "Caesar Salad", category: "Starters", price: 9.5, veg: true, spicy: 0, prepTime: 8, available: true, description: "Crisp romaine, shaved parmesan, garlic croutons.", emoji: "🥗", stock: "in", image: "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?auto=format&fit=crop&w=800&q=80" },
-  { id: "f5", name: "Penne Arrabiata", category: "Pasta", price: 13.25, veg: true, spicy: 2, prepTime: 15, available: true, description: "Al dente penne in a fiery tomato and chili sauce.", emoji: "🍝", stock: "low", image: "https://images.unsplash.com/photo-1621996346565-e3d5d6281282?auto=format&fit=crop&w=800&q=80" },
-  { id: "f6", name: "Molten Chocolate Cake", category: "Desserts", price: 8.0, veg: true, spicy: 0, prepTime: 10, available: true, popular: true, description: "Warm dark chocolate cake with a molten center, vanilla ice cream.", emoji: "🍰", stock: "in", image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80" },
-  { id: "f7", name: "Iced Hazelnut Latte", category: "Beverages", price: 5.25, veg: true, spicy: 0, prepTime: 4, available: true, description: "Cold-brewed espresso, hazelnut syrup, oat milk.", emoji: "🥤", stock: "in", image: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=800&q=80" },
-  { id: "f8", name: "Paneer Tikka", category: "Starters", price: 11.0, veg: true, spicy: 2, prepTime: 12, available: true, description: "Cottage cheese cubes marinated in yogurt and tandoori spices.", emoji: "🧆", stock: "in", image: "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?auto=format&fit=crop&w=800&q=80" },
-  { id: "f9", name: "Grilled Salmon Bowl", category: "Main Course", price: 21.5, veg: false, spicy: 1, prepTime: 20, available: true, featured: true, description: "Atlantic salmon, quinoa, avocado, citrus vinaigrette.", emoji: "🐟", stock: "in", image: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=800&q=80" },
-  { id: "f10", name: "Margherita Pizza", category: "Pizza", price: 14.0, veg: true, spicy: 0, prepTime: 16, available: true, description: "Fresh basil, tomato, buffalo mozzarella.", emoji: "🍕", stock: "in", image: "https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=800&q=80" },
-  { id: "f11", name: "BBQ Wings", category: "Starters", price: 12.5, veg: false, spicy: 2, prepTime: 14, available: false, description: "Slow-smoked chicken wings glazed with house BBQ.", emoji: "🍗", stock: "out", image: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?auto=format&fit=crop&w=800&q=80" },
-  { id: "f12", name: "Tiramisu", category: "Desserts", price: 8.5, veg: true, spicy: 0, prepTime: 5, available: true, description: "Classic Italian layered coffee dessert.", emoji: "🍮", stock: "in", image: "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=800&q=80" },
-];
+export const foodItems: (FoodItem & { image?: string })[] = [];
 
 export const topSelling = [
   { name: "Truffle Mushroom Pizza", sold: 142, revenue: 2627 },

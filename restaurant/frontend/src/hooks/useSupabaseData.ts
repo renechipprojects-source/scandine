@@ -226,17 +226,28 @@ function normalizeFetchedRows<T>(tableName: string, rows: T[]): T[] {
       cat_5: "Desserts",
       cat_6: "Drinks",
     };
-    return rows.map((r: any) => {
-      const catName = r.category_name || r.category || (r.category_id ? ID_TO_CATEGORY[r.category_id] : null) || "Lunch";
-      return {
-        ...r,
-        category: catName,
-        category_name: catName,
-        image_url: r.image_url || r.image,
-        image: r.image || r.image_url,
-        status: r.status || (r.available ? "Available" : "Unavailable"),
-      };
-    });
+    const mockIds = new Set(["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"]);
+    const mockNames = new Set([
+      "Truffle Mushroom Risotto", "Wagyu Smash Burger", "Avocado Sourdough Toast", "Miso Glazed Salmon",
+      "Berry Chia Bowl", "Butter Chicken", "Pistachio Kunafa", "Iced Matcha Latte", "Crispy Calamari",
+      "Margherita Napoletana", "Peri Peri Chicken Wings", "Dark Chocolate Fondant", "Truffle Mushroom Pizza",
+      "Spicy Chipotle Burger", "Caesar Salad", "Penne Arrabiata", "Molten Chocolate Cake", "Iced Hazelnut Latte",
+      "Paneer Tikka", "Grilled Salmon Bowl", "Margherita Pizza", "BBQ Wings", "Tiramisu"
+    ]);
+
+    return rows
+      .filter((r: any) => !mockIds.has(String(r.id)) && !mockNames.has(String(r.name || "").trim()))
+      .map((r: any) => {
+        const catName = r.category_name || r.category || (r.category_id ? ID_TO_CATEGORY[r.category_id] : null) || "Lunch";
+        return {
+          ...r,
+          category: catName,
+          category_name: catName,
+          image_url: r.image_url || r.image,
+          image: r.image || r.image_url,
+          status: r.status || (r.available ? "Available" : "Unavailable"),
+        };
+      });
   }
   return rows;
 }
@@ -251,7 +262,23 @@ export function useSupabaseTable<T extends { id: string }>(
   const [data, setData] = useState<T[]>(() => {
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && tableName === "sd_menu_items") {
+          const mockIds = new Set(["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"]);
+          const mockNames = new Set([
+            "Truffle Mushroom Risotto", "Wagyu Smash Burger", "Avocado Sourdough Toast", "Miso Glazed Salmon",
+            "Berry Chia Bowl", "Butter Chicken", "Pistachio Kunafa", "Iced Matcha Latte", "Crispy Calamari",
+            "Margherita Napoletana", "Peri Peri Chicken Wings", "Dark Chocolate Fondant", "Truffle Mushroom Pizza",
+            "Spicy Chipotle Burger", "Caesar Salad", "Penne Arrabiata", "Molten Chocolate Cake", "Iced Hazelnut Latte",
+            "Paneer Tikka", "Grilled Salmon Bowl", "Margherita Pizza", "BBQ Wings", "Tiramisu"
+          ]);
+          const filtered = parsed.filter((item: any) => !mockIds.has(String(item.id)) && !mockNames.has(String(item.name || "").trim()));
+          localStorage.setItem(storageKey, JSON.stringify(filtered));
+          return filtered as T[];
+        }
+        return parsed;
+      }
       if (initialData.length > 0) {
         localStorage.setItem(storageKey, JSON.stringify(initialData));
         return initialData;

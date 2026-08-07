@@ -717,8 +717,21 @@ const MENU_CACHE_TTL_MS = 30000;
 
 export async function fetchDbMenuItems(forceRefresh = false): Promise<DbMenuItem[]> {
   const now = Date.now();
+  const isMockItem = (item: any) => {
+    if (!item) return true;
+    const mockIds = new Set(["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"]);
+    const mockNames = new Set([
+      "Truffle Mushroom Risotto", "Wagyu Smash Burger", "Avocado Sourdough Toast", "Miso Glazed Salmon",
+      "Berry Chia Bowl", "Butter Chicken", "Pistachio Kunafa", "Iced Matcha Latte", "Crispy Calamari",
+      "Margherita Napoletana", "Peri Peri Chicken Wings", "Dark Chocolate Fondant", "Truffle Mushroom Pizza",
+      "Spicy Chipotle Burger", "Caesar Salad", "Penne Arrabiata", "Molten Chocolate Cake", "Iced Hazelnut Latte",
+      "Paneer Tikka", "Grilled Salmon Bowl", "Margherita Pizza", "BBQ Wings", "Tiramisu"
+    ]);
+    return mockIds.has(String(item.id)) || mockNames.has(String(item.name || "").trim());
+  };
+
   if (!forceRefresh && cachedMenuItems && now - lastMenuFetchTimestamp < MENU_CACHE_TTL_MS) {
-    return cachedMenuItems;
+    return cachedMenuItems.filter((it) => !isMockItem(it));
   }
 
   if (isSupabaseConfigured()) {
@@ -727,8 +740,9 @@ export async function fetchDbMenuItems(forceRefresh = false): Promise<DbMenuItem
         .from("sd_menu_items")
         .select("*");
 
-      if (!error && data && data.length > 0) {
-        cachedMenuItems = data.map((item: any) => {
+      if (!error && data) {
+        const filtered = data.filter((it: any) => !isMockItem(it));
+        cachedMenuItems = filtered.map((item: any) => {
           const rawImg = item.image || item.image_url || item.photo || item.imageUrl || item.img || "";
           return {
             ...item,
@@ -748,8 +762,9 @@ export async function fetchDbMenuItems(forceRefresh = false): Promise<DbMenuItem
     const raw = localStorage.getItem("mock_table_sd_menu_items");
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        cachedMenuItems = parsed.map((item: any) => {
+      if (Array.isArray(parsed)) {
+        const filtered = parsed.filter((it: any) => !isMockItem(it));
+        cachedMenuItems = filtered.map((item: any) => {
           const rawImg = item.image || item.image_url || item.photo || item.imageUrl || item.img || "";
           return {
             ...item,

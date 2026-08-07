@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/kitchen/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/kitchen/components/ui/dialog";
 import { UtensilsCrossed, Plus, Search, Trash2, Clock, LayoutGrid, List, Loader2, Image as ImageIcon, Upload, X } from "lucide-react";
-import { foodItems as mockFoodItems, restaurantInfo } from "@/kitchen/lib/mock-data";
+import { restaurantInfo } from "@/kitchen/lib/mock-data";
 import { useState, useCallback } from "react";
 import { useSupabaseTable, type MenuItem } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
@@ -30,24 +30,10 @@ const mapCategory = (cat?: string): string => {
   return cat;
 };
 
-const initialMenuItemsList: MenuItem[] = mockFoodItems.map((f, i) => ({
-  id: f.id || `f${i + 1}`,
-  name: f.name,
-  category: mapCategory(f.category),
-  category_name: mapCategory(f.category),
-  category_id: f.category === "Starters" ? "cat_4" : f.category === "Desserts" ? "cat_5" : f.category === "Beverages" ? "cat_6" : "cat_2",
-  price: f.price,
-  description: f.description,
-  image: (f as any).image || "",
-  image_url: (f as any).image || "",
-  available: f.available ?? true,
-  status: f.available ? "Available" : "Unavailable",
-  preparation_time: f.prepTime || 15,
-  prep_time_minutes: f.prepTime || 15,
-}));
+const initialMenuItemsList: MenuItem[] = [];
 
 function KitchenItemsPage() {
-  const { data: dbMenuItems, addItem, updateItem, deleteItem, fetchData } = useSupabaseTable<MenuItem>("sd_menu_items", initialMenuItemsList);
+  const { data: dbMenuItems, addItem, updateItem, deleteItem, fetchData } = useSupabaseTable<MenuItem>("sd_menu_items", []);
 
   const handleRealtime = useCallback(() => {
     fetchData();
