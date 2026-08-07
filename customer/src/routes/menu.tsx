@@ -99,10 +99,16 @@ function Menu() {
   }, [allLiveOrders, tableNumber]);
 
   useEffect(() => {
-    async function loadMenu() {
-      const dbItems = await fetchDbMenuItems();
+    async function loadMenu(force = false) {
+      const dbItems = await fetchDbMenuItems(force);
+      let mapped: FoodItem[] = [];
+
       if (dbItems && dbItems.length > 0) {
-        const mapped: FoodItem[] = dbItems.map((item: any) => {
+        const availableDbItems = dbItems.filter(
+          (item: any) => item.available !== false && item.status !== "Unavailable"
+        );
+
+        mapped = availableDbItems.map((item: any) => {
           const normCat = normalizeCategory(item.category || item.category_name, item.category_id);
           const catId = item.category_id || CATEGORY_TO_ID[normCat];
           const rawImg = item.image || item.image_url || "";
@@ -118,23 +124,47 @@ function Menu() {
             rating: item.rating || 4.8,
             reviews: item.reviews || 120,
             veg: item.veg ?? true,
-            prepTime: item.prep_time || item.prepTime || 15,
+            prepTime: item.prep_time || item.preparation_time || item.prepTime || 15,
             calories: item.calories || 350,
             spiceLevel: item.spiceLevel || 1,
-            available: item.available ?? (item.status !== "Unavailable"),
+            available: true,
             ingredients: item.ingredients || ["Fresh Produce", "Herbs", "Olive Oil"],
           };
         });
-
-        setItemList(mapped);
-      } else {
-        setItemList(mockFoods);
       }
+
+      setItemList(mapped);
     }
 
-    loadMenu();
-    const unsubscribe = subscribeToMenuItems(() => loadMenu());
-    return () => unsubscribe();
+    loadMenu(true);
+
+    const unsubscribe = subscribeToMenuItems(() => loadMenu(true));
+
+    const handleLocalSync = () => {
+      loadMenu(true);
+    };
+
+    window.addEventListener("local-table-updated", handleLocalSync);
+    window.addEventListener("storage", handleLocalSync);
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        bc = new BroadcastChannel("aura_dine_sync_channel");
+        bc.onmessage = (msg) => {
+          if (msg.data?.type === "MENU_UPDATED" || msg.data?.tableName === "sd_menu_items") {
+            loadMenu(true);
+          }
+        };
+      }
+    } catch {}
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("local-table-updated", handleLocalSync);
+      window.removeEventListener("storage", handleLocalSync);
+      if (bc) bc.close();
+    };
   }, []);
 
   const list = useMemo(() => {

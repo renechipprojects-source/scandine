@@ -728,10 +728,7 @@ export async function fetchDbMenuItems(forceRefresh = false): Promise<DbMenuItem
         .select("*");
 
       if (!error && data && data.length > 0) {
-        const availableItems = data.filter(
-          (item: any) => item.available !== false && item.status !== "Unavailable"
-        );
-        cachedMenuItems = (availableItems.length > 0 ? availableItems : data) as DbMenuItem[];
+        cachedMenuItems = data as DbMenuItem[];
         lastMenuFetchTimestamp = now;
         return cachedMenuItems;
       }
@@ -739,6 +736,21 @@ export async function fetchDbMenuItems(forceRefresh = false): Promise<DbMenuItem
       console.warn("Supabase menu fetch error:", err);
     }
   }
+
+  try {
+    const raw = localStorage.getItem("mock_table_sd_menu_items");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        cachedMenuItems = parsed as DbMenuItem[];
+        lastMenuFetchTimestamp = now;
+        return cachedMenuItems;
+      }
+    }
+  } catch (err) {
+    console.warn("Local kitchen menu storage fetch error:", err);
+  }
+
   return cachedMenuItems || [];
 }
 

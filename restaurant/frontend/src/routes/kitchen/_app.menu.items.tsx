@@ -165,6 +165,14 @@ function KitchenItemsPage() {
 
       await addItem(newItem);
       toast.success(`Food item "${name.trim()}" added to menu! 🍽️`);
+
+      try {
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+          const bc = new BroadcastChannel("aura_dine_sync_channel");
+          bc.postMessage({ type: "MENU_UPDATED" });
+        }
+      } catch {}
+
       resetForm();
       setIsAddModalOpen(false);
     } catch (err: any) {
