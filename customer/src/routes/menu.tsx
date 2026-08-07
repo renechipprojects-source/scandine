@@ -105,12 +105,14 @@ function Menu() {
         const mapped: FoodItem[] = dbItems.map((item: any) => {
           const normCat = normalizeCategory(item.category || item.category_name, item.category_id);
           const catId = item.category_id || CATEGORY_TO_ID[normCat];
+          const rawImg = item.image || item.image_url || "";
+          const finalImg = rawImg.includes("images.unsplash.com") ? "" : rawImg;
           return {
             id: String(item.id),
             name: item.name,
             description: item.description || "Freshly prepared by our chef.",
             price: Number(item.price),
-            image: item.image || item.image_url || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80",
+            image: finalImg,
             category: normCat,
             category_id: catId,
             rating: item.rating || 4.8,

@@ -38,8 +38,8 @@ const initialMenuItemsList: MenuItem[] = mockFoodItems.map((f, i) => ({
   category_id: f.category === "Starters" ? "cat_4" : f.category === "Desserts" ? "cat_5" : f.category === "Beverages" ? "cat_6" : "cat_2",
   price: f.price,
   description: f.description,
-  image: "https://images.unsplash.com/photo-1541529086526-db283c563270?w=600&auto=format&fit=crop",
-  image_url: "https://images.unsplash.com/photo-1541529086526-db283c563270?w=600&auto=format&fit=crop",
+  image: "",
+  image_url: "",
   available: f.available ?? true,
   status: f.available ? "Available" : "Unavailable",
   preparation_time: f.prepTime || 15,
@@ -155,8 +155,8 @@ function KitchenItemsPage() {
         category_id: categoryId,
         price: Number(price),
         description: description.trim(),
-        image: finalImgUrl || "https://images.unsplash.com/photo-1541529086526-db283c563270?w=600&auto=format&fit=crop",
-        image_url: finalImgUrl || "https://images.unsplash.com/photo-1541529086526-db283c563270?w=600&auto=format&fit=crop",
+        image: finalImgUrl || "",
+        image_url: finalImgUrl || "",
         available: available,
         status: available ? "Available" : "Unavailable",
         preparation_time: parseInt(prepTime, 10) || 15,
@@ -482,10 +482,10 @@ function KitchenItemsPage() {
                     <TableRow key={item.id}>
                       <TableCell>
                         <div className="h-12 w-12 overflow-hidden rounded-md bg-muted">
-                          {item.image ? (
+                          {item.image && !item.image.includes("unsplash.com") ? (
                             <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                           ) : (
-                            <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground">No img</div>
+                            <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground font-medium bg-muted/60 text-center">No img</div>
                           )}
                         </div>
                       </TableCell>
@@ -549,10 +549,13 @@ function KitchenItemsPage() {
             return (
               <Card key={item.id} className="overflow-hidden transition-shadow hover:shadow-md">
                 <div className="relative h-40 w-full overflow-hidden bg-muted">
-                  {item.image ? (
+                  {item.image && !item.image.includes("unsplash.com") ? (
                     <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-muted-foreground">No image</div>
+                    <div className="flex h-full items-center justify-center text-muted-foreground bg-muted/60 flex-col gap-1">
+                      <UtensilsCrossed className="h-6 w-6 text-muted-foreground/40" />
+                      <span className="text-xs">No image uploaded</span>
+                    </div>
                   )}
                   <div className="absolute left-2 top-2">
                     <Badge variant="outline" className="bg-background/90 backdrop-blur font-normal">

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { foods } from "@/lib/mock-data";
 import { cart } from "@/lib/cart-store";
 import { motion } from "framer-motion";
-import { ArrowLeft, Star, Clock, Flame, Heart, Minus, Plus, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Star, Clock, Flame, Heart, Minus, Plus, ShoppingBag, Utensils } from "lucide-react";
 import { VegDot } from "@/components/food-card";
 import { toast } from "sonner";
 
@@ -37,11 +37,19 @@ function FoodDetail() {
 
   const addonTotal = (food.addons ?? []).filter((a) => addons.includes(a.name)).reduce((s, a) => s + a.price, 0);
   const total = (food.price + addonTotal) * qty;
+  const hasUploadedImage = food.image && !food.image.includes("images.unsplash.com");
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <div className="relative h-[52vh]">
-        <img src={food.image} alt={food.name} className="absolute inset-0 h-full w-full object-cover" />
+      <div className="relative h-[42vh] bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-primary/20 flex items-center justify-center">
+        {hasUploadedImage ? (
+          <img src={food.image} alt={food.name} className="absolute inset-0 h-full w-full object-cover" />
+        ) : (
+          <div className="flex flex-col items-center justify-center text-center p-6">
+            <Utensils className="h-16 w-16 text-primary/40 mb-2" />
+            <span className="text-sm font-semibold text-muted-foreground/80">{food.name}</span>
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-background" />
         <button onClick={() => nav({ to: "/menu" })} className="absolute top-4 left-4 h-10 w-10 grid place-items-center rounded-full glass">
           <ArrowLeft className="h-4 w-4" />

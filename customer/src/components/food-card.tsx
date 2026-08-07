@@ -1,13 +1,13 @@
 import type { FoodItem } from "@/lib/mock-data";
 import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
-import { Star, Plus, Heart, Clock, Flame } from "lucide-react";
+import { Star, Plus, Heart, Clock, Flame, Utensils } from "lucide-react";
 import { useState } from "react";
 import { cart } from "@/lib/cart-store";
 import { toast } from "sonner";
 
 function getOptimizedImageUrl(url?: string): string {
-  if (!url) return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80";
+  if (!url || url.includes("images.unsplash.com")) return "";
   if (url.includes("res.cloudinary.com") && !url.includes("q_auto")) {
     return url.replace("/upload/", "/upload/w_600,f_auto,q_auto,c_limit/");
   }
@@ -25,7 +25,14 @@ export function FoodCard({ food, layout = "grid" }: { food: FoodItem; layout?: "
         className="glass rounded-2xl p-3 flex gap-3 items-center shadow-soft"
       >
         <Link to="/food/$id" params={{ id: food.id }} className="shrink-0">
-          <img src={imgUrl} alt={food.name} loading="lazy" className="h-20 w-20 rounded-xl object-cover" />
+          {imgUrl ? (
+            <img src={imgUrl} alt={food.name} loading="lazy" className="h-20 w-20 rounded-xl object-cover" />
+          ) : (
+            <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-amber-500/15 to-primary/15 flex flex-col items-center justify-center text-muted-foreground p-1 text-center">
+              <Utensils className="h-6 w-6 text-primary/40 mb-1" />
+              <span className="text-[9px] font-semibold text-muted-foreground/70 truncate max-w-full">{food.name}</span>
+            </div>
+          )}
         </Link>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
@@ -50,12 +57,19 @@ export function FoodCard({ food, layout = "grid" }: { food: FoodItem; layout?: "
     >
       <Link to="/food/$id" params={{ id: food.id }} className="block relative">
         <div className="relative aspect-[4/3] overflow-hidden">
-          <img
-            src={imgUrl}
-            alt={food.name}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-          />
+          {imgUrl ? (
+            <img
+              src={imgUrl}
+              alt={food.name}
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-primary/10 flex flex-col items-center justify-center text-muted-foreground p-3 text-center">
+              <Utensils className="h-10 w-10 text-primary/40 mb-1" />
+              <span className="text-xs font-semibold text-muted-foreground/70 truncate max-w-full px-2">{food.name}</span>
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           {food.discount && (
             <div className="absolute top-3 left-3 rounded-full gradient-primary text-white text-[10px] font-bold px-2.5 py-1">

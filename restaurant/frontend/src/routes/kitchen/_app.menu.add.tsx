@@ -17,7 +17,7 @@ function KitchenAddItemPage() {
   const [preparationTime, setPreparationTime] = useState("15");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState<"Available" | "Unavailable">("Available");
-  const [imageUrl, setImageUrl] = useState("https://images.unsplash.com/photo-1541529086526-db283c563270?w=600&auto=format&fit=crop");
+  const [imageUrl, setImageUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -45,7 +45,7 @@ function KitchenAddItemPage() {
     }
 
     setIsUploading(true);
-    let finalImageUrl = imageUrl || "https://images.unsplash.com/photo-1541529086526-db283c563270?w=600&auto=format&fit=crop";
+    let finalImageUrl = imageUrl || "";
 
     try {
       if (selectedFile) {
