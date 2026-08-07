@@ -81,6 +81,15 @@ export const customerStore = {
     email?: string;
     tableNumber: string;
   }): Promise<CustomerDetails> {
+    const cleanPhone = (details.phone || "").trim().replace(/\D/g, "");
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      throw new Error("Mobile number must be exactly 10 digits.");
+    }
+    const cleanName = (details.fullName || "").trim();
+    if (!cleanName) {
+      throw new Error("Full name is required.");
+    }
+
     const normTable = details.tableNumber.toLowerCase().replace(/\s+/g, "");
     
     // Check if existing customer profile matches (Deduplication by phone & table)

@@ -59,7 +59,9 @@ function FoodDetail() {
     return (
       <CustomerRegistration
         tableNumber={tableNumber}
-        onSuccess={() => {}}
+        onSuccess={() => {
+          nav({ to: "/", replace: true });
+        }}
       />
     );
   }

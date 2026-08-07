@@ -15,17 +15,27 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value;
+    const digitsOnly = rawVal.replace(/\D/g, "").slice(0, 10);
+    setPhone(digitsOnly);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim()) {
+    const trimmedName = fullName.trim();
+    const trimmedPhone = phone.trim().replace(/\D/g, "");
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName) {
       toast.error("Please enter your Full Name.");
       return;
     }
-    if (!phone.trim() || phone.trim().length < 10) {
-      toast.error("Please enter a valid 10-digit Phone Number.");
+    if (!trimmedPhone || trimmedPhone.length !== 10) {
+      toast.error("Mobile number must be exactly 10 digits.");
       return;
     }
-    if (email.trim() && !email.includes("@")) {
+    if (trimmedEmail && !trimmedEmail.includes("@")) {
       toast.error("Please enter a valid Email address.");
       return;
     }
@@ -33,19 +43,19 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
     setLoading(true);
     try {
       await customerStore.registerCustomer({
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-        email: email.trim(),
+        fullName: trimmedName,
+        phone: trimmedPhone,
+        email: trimmedEmail,
         tableNumber,
       });
 
-      toast.success(`Welcome to ScanDine, ${fullName.trim()}! Registered for ${tableNumber}.`);
+      toast.success(`Welcome to ScanDine, ${trimmedName}! Registered for ${tableNumber}.`);
       if (onSuccess) {
         onSuccess();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("Failed to save registration. Please try again.");
+      toast.error(err?.message || "Failed to save registration. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -110,11 +120,19 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
             <div className="relative">
               <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <input
-                type="tel"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={10}
                 required
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="e.g. 9876543210"
+                onChange={handlePhoneChange}
+                onKeyDown={(e) => {
+                  if (["e", "E", "+", "-", ".", " "].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                placeholder="10-digit mobile number"
                 className="w-full rounded-2xl border bg-background/80 pl-9 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/40 transition"
               />
             </div>
@@ -148,7 +166,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4" /> Continue to Menu
+                <Sparkles className="h-4 w-4" /> Start Ordering
                 <ArrowRight className="h-4 w-4" />
               </>
             )}

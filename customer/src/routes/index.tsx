@@ -49,7 +49,7 @@ function Welcome() {
       <CustomerRegistration
         tableNumber={tableNumber}
         onSuccess={() => {
-          navigate({ to: "/menu" });
+          navigate({ to: "/", replace: true });
         }}
       />
     );

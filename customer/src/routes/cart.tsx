@@ -28,7 +28,7 @@ function Cart() {
       <CustomerRegistration
         tableNumber={tableNumber}
         onSuccess={() => {
-          // Registration complete
+          nav({ to: "/", replace: true });
         }}
       />
     );

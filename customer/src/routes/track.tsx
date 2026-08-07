@@ -47,7 +47,9 @@ function Track() {
     return (
       <CustomerRegistration
         tableNumber={tableNumber}
-        onSuccess={() => {}}
+        onSuccess={() => {
+          window.location.href = "/";
+        }}
       />
     );
   }
