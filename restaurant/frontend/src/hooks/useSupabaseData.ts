@@ -156,9 +156,13 @@ function cleanPayloadForSupabase(tableName: string, payload: Record<string, unkn
   } else if (tableName === "sd_purchase_orders") {
     delete cleaned.entry_type;
   } else if (tableName === "sd_menu_items") {
-    if (cleaned.image_url || cleaned.image) {
-      cleaned.image = (cleaned.image || cleaned.image_url) as string;
-      cleaned.image_url = (cleaned.image_url || cleaned.image) as string;
+    const rawImg = String(cleaned.image || cleaned.image_url || "").trim();
+    if (rawImg && !rawImg.startsWith("blob:") && !rawImg.startsWith("file:")) {
+      cleaned.image = rawImg;
+      cleaned.image_url = rawImg;
+    } else {
+      delete cleaned.image;
+      delete cleaned.image_url;
     }
     const catVal = String(cleaned.category || cleaned.category_name || "Lunch");
     cleaned.category = catVal;

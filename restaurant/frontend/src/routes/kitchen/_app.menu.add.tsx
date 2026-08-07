@@ -49,14 +49,20 @@ function KitchenAddItemPage() {
 
     try {
       if (selectedFile) {
-        toast.info("Uploading image to Cloudinary...");
+        toast.info("Uploading food image...");
         finalImageUrl = await uploadToCloudinary(selectedFile);
-      } else if (imageUrl && !imageUrl.startsWith("blob:")) {
+      } else if (imageUrl && !imageUrl.startsWith("blob:") && !imageUrl.startsWith("file:")) {
         try {
           finalImageUrl = await uploadToCloudinary(imageUrl);
         } catch {
           // Fallback to provided URL if direct upload fails
         }
+      }
+
+      if (!finalImageUrl || finalImageUrl.startsWith("blob:") || finalImageUrl.startsWith("file:")) {
+        toast.error("Image upload failed or invalid image path. Please upload a valid image file.");
+        setIsUploading(false);
+        return;
       }
 
       const CATEGORY_MAP: Record<string, string> = {

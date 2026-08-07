@@ -28,7 +28,9 @@ export function getKitchenImageUrl(url?: string): string {
 
 export function FoodCard({ food, layout = "grid" }: { food: FoodItem; layout?: "grid" | "row" }) {
   const [fav, setFav] = useState(false);
-  const imgUrl = getKitchenImageUrl(food.image);
+  const [imgError, setImgError] = useState(false);
+  const rawUrl = getKitchenImageUrl(food.image);
+  const showImage = Boolean(rawUrl && !imgError);
 
   if (layout === "row") {
     return (
@@ -37,8 +39,14 @@ export function FoodCard({ food, layout = "grid" }: { food: FoodItem; layout?: "
         className="glass rounded-2xl p-3 flex gap-3 items-center shadow-soft"
       >
         <Link to="/food/$id" params={{ id: food.id }} className="shrink-0">
-          {imgUrl ? (
-            <img src={imgUrl} alt={food.name} loading="lazy" className="h-20 w-20 rounded-xl object-cover" />
+          {showImage ? (
+            <img
+              src={rawUrl}
+              alt={food.name}
+              loading="lazy"
+              onError={() => setImgError(true)}
+              className="h-20 w-20 rounded-xl object-cover"
+            />
           ) : (
             <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-amber-500/15 to-primary/15 flex flex-col items-center justify-center text-muted-foreground p-1 text-center">
               <Utensils className="h-6 w-6 text-primary/40 mb-1" />
@@ -69,11 +77,12 @@ export function FoodCard({ food, layout = "grid" }: { food: FoodItem; layout?: "
     >
       <Link to="/food/$id" params={{ id: food.id }} className="block relative">
         <div className="relative aspect-[4/3] overflow-hidden">
-          {imgUrl ? (
+          {showImage ? (
             <img
-              src={imgUrl}
+              src={rawUrl}
               alt={food.name}
               loading="lazy"
+              onError={() => setImgError(true)}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
             />
           ) : (

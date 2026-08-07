@@ -728,7 +728,14 @@ export async function fetchDbMenuItems(forceRefresh = false): Promise<DbMenuItem
         .select("*");
 
       if (!error && data && data.length > 0) {
-        cachedMenuItems = data as DbMenuItem[];
+        cachedMenuItems = data.map((item: any) => {
+          const rawImg = item.image || item.image_url || item.photo || item.imageUrl || item.img || "";
+          return {
+            ...item,
+            image: rawImg,
+            image_url: rawImg,
+          };
+        }) as DbMenuItem[];
         lastMenuFetchTimestamp = now;
         return cachedMenuItems;
       }
@@ -742,7 +749,14 @@ export async function fetchDbMenuItems(forceRefresh = false): Promise<DbMenuItem
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        cachedMenuItems = parsed as DbMenuItem[];
+        cachedMenuItems = parsed.map((item: any) => {
+          const rawImg = item.image || item.image_url || item.photo || item.imageUrl || item.img || "";
+          return {
+            ...item,
+            image: rawImg,
+            image_url: rawImg,
+          };
+        }) as DbMenuItem[];
         lastMenuFetchTimestamp = now;
         return cachedMenuItems;
       }

@@ -2,82 +2,74 @@ import { getApiUrl } from "./api";
 import { supabase } from "./supabase";
 
 function getCloudinaryCredentials() {
-  const cloudName = (import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || import.meta.env.CLOUDINARY_CLOUD_NAME || "").trim();
-  const uploadPreset = (import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || import.meta.env.CLOUDINARY_UPLOAD_PRESET || "").trim();
+  const cloudName = (
+    import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ||
+    import.meta.env.CLOUDINARY_CLOUD_NAME ||
+    "gjldiqd9"
+  ).trim();
+  const uploadPreset = (
+    import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET ||
+    import.meta.env.CLOUDINARY_UPLOAD_PRESET ||
+    "r17mbgbt"
+  ).trim();
 
-  if (!cloudName) {
-    throw new Error("Cloudinary configuration error: Missing VITE_CLOUDINARY_CLOUD_NAME in frontend environment variables.");
+  if (!cloudName || !uploadPreset) {
+    throw new Error("Missing Cloudinary configuration credentials (VITE_CLOUDINARY_CLOUD_NAME / VITE_CLOUDINARY_UPLOAD_PRESET).");
   }
-  if (!uploadPreset) {
-    throw new Error("Cloudinary configuration error: Missing VITE_CLOUDINARY_UPLOAD_PRESET in frontend environment variables.");
-  }
-
   return { cloudName, uploadPreset };
 }
 
 export async function uploadToCloudinary(fileOrUrl: File | Blob | string): Promise<string> {
-  // If already a persistent HTTP/HTTPS, Cloudinary, or Data URL, return as is
+  // If already a valid Cloudinary secure_url or HTTP/HTTPS image URL, return as is
   if (typeof fileOrUrl === "string") {
-    if (fileOrUrl.startsWith("http://") || fileOrUrl.startsWith("https://") || fileOrUrl.startsWith("data:")) {
-      return fileOrUrl;
+    const trimmed = fileOrUrl.trim();
+    if (trimmed.startsWith("https://res.cloudinary.com/") || (trimmed.startsWith("https://") && !trimmed.startsWith("blob:") && !trimmed.startsWith("file:"))) {
+      return trimmed;
     }
   }
 
-  // 1. Try Cloudinary Upload
+  const { cloudName, uploadPreset } = getCloudinaryCredentials();
+
+  // Try backend Cloudinary endpoint first if available for base64
   try {
-    const { cloudName, uploadPreset } = getCloudinaryCredentials();
-    const formData = new FormData();
-    formData.append("file", fileOrUrl);
-    formData.append("upload_preset", uploadPreset);
-
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data.secure_url) return data.secure_url;
-    }
-  } catch (cloudinaryErr) {
-    console.warn("Cloudinary upload fallback to Supabase Storage / Data URL:", cloudinaryErr);
-  }
-
-  // 2. Try Supabase Storage Bucket ("sd_menu_items")
-  if (fileOrUrl instanceof File || fileOrUrl instanceof Blob) {
-    try {
-      const ext = fileOrUrl instanceof File ? fileOrUrl.name.split(".").pop() : "jpg";
-      const fileName = `item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from("sd_menu_items")
-        .upload(fileName, fileOrUrl, { upsert: true, contentType: fileOrUrl.type || "image/jpeg" });
-
-      if (!storageError && storageData) {
-        const { data: publicUrlData } = supabase.storage.from("sd_menu_items").getPublicUrl(fileName);
-        if (publicUrlData?.publicUrl) {
-          return publicUrlData.publicUrl;
-        }
+    const backendUrl = getApiUrl();
+    if (typeof fileOrUrl === "string" && fileOrUrl.startsWith("data:")) {
+      const response = await fetch(`${backendUrl}/api/cloudinary/upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: fileOrUrl }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.secure_url) return data.secure_url;
       }
-    } catch (supabaseErr) {
-      console.warn("Supabase Storage upload fallback to Data URL:", supabaseErr);
     }
-
-    // 3. Fallback: Convert File/Blob to Base64 Data URL (guaranteed accessible across all tabs/devices)
-    return new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === "string") {
-          resolve(reader.result);
-        } else {
-          reject(new Error("Failed to read image file as Data URL"));
-        }
-      };
-      reader.onerror = () => reject(new Error("FileReader error reading image file"));
-      reader.readAsDataURL(fileOrUrl);
-    });
+  } catch (backendError) {
+    console.warn("Backend Cloudinary endpoint notice, using direct Cloudinary REST upload:", backendError);
   }
 
-  return typeof fileOrUrl === "string" ? fileOrUrl : "";
+  // Direct Cloudinary REST API Unsigned Upload
+  const formData = new FormData();
+  formData.append("file", fileOrUrl);
+  formData.append("upload_preset", uploadPreset);
+
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Cloudinary upload failed:", errorText);
+    throw new Error(`Cloudinary upload failed: ${response.statusText || errorText}`);
+  }
+
+  const data = await response.json();
+  if (!data.secure_url) {
+    throw new Error("Cloudinary did not return a valid secure_url.");
+  }
+
+  return data.secure_url;
 }
 
 export async function deleteFromCloudinary(urlOrPublicId: string): Promise<boolean> {

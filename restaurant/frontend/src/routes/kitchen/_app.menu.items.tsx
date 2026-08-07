@@ -90,19 +90,20 @@ function KitchenItemsPage() {
     if (!file) return;
 
     setSelectedFile(file);
-    const localPreviewUrl = URL.createObjectURL(file);
-    setImageUrl(localPreviewUrl);
     if (errors.image) setErrors((prev) => ({ ...prev, image: undefined }));
 
     setUploading(true);
     try {
       const url = await uploadToCloudinary(file);
-      if (url) {
+      if (url && !url.startsWith("blob:") && !url.startsWith("file:")) {
         setImageUrl(url);
-        toast.success("Image uploaded to Cloudinary!");
+        toast.success("Image uploaded successfully!");
+      } else {
+        throw new Error("Upload did not return a valid public image URL.");
       }
     } catch (err: any) {
-      console.warn("Cloudinary upload notice, using local image preview:", err);
+      console.error("Image upload error:", err);
+      toast.error(err.message || "Failed to upload image. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -129,13 +130,27 @@ function KitchenItemsPage() {
 
     try {
       let finalImgUrl = imageUrl.trim();
-      if (selectedFile && (!finalImgUrl || finalImgUrl.startsWith("blob:"))) {
-        try {
-          const uploaded = await uploadToCloudinary(selectedFile);
-          if (uploaded) finalImgUrl = uploaded;
-        } catch (e) {
-          console.warn("Using local image preview URL fallback");
+      if (selectedFile) {
+        if (!finalImgUrl || finalImgUrl.startsWith("blob:") || finalImgUrl.startsWith("file:")) {
+          try {
+            const uploaded = await uploadToCloudinary(selectedFile);
+            if (uploaded && !uploaded.startsWith("blob:") && !uploaded.startsWith("file:")) {
+              finalImgUrl = uploaded;
+            } else {
+              throw new Error("Invalid URL returned after upload.");
+            }
+          } catch (uploadErr: any) {
+            toast.error(`Image upload failed: ${uploadErr.message || "Could not upload image"}`);
+            setSubmitting(false);
+            return;
+          }
         }
+      }
+
+      if (finalImgUrl.startsWith("blob:") || finalImgUrl.startsWith("file:")) {
+        toast.error("Invalid image path detected. Please re-upload the image.");
+        setSubmitting(false);
+        return;
       }
 
       const CATEGORY_MAP: Record<string, string> = {
