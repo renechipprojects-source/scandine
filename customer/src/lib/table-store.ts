@@ -4,14 +4,17 @@ const TABLE_STORAGE_KEY = "aura_dine_table_number";
 
 export function formatTableNumber(raw: string): string {
   if (!raw) return "";
-  const trimmed = raw.trim();
-  const digits = trimmed.replace(/\D/g, "");
-  if (digits) {
-    const num = parseInt(digits, 10);
-    if (num > 0 && num <= 100) {
-      return `Table ${num}`;
+  try {
+    const decoded = decodeURIComponent(raw);
+    const trimmed = decoded.trim();
+    const digits = trimmed.replace(/\D/g, "");
+    if (digits) {
+      const num = parseInt(digits, 10);
+      if (num > 0 && num <= 100) {
+        return `Table ${num}`;
+      }
     }
-  }
+  } catch {}
   return "";
 }
 

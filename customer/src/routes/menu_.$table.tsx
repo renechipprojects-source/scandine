@@ -2,7 +2,7 @@ import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { tableStore, formatTableNumber } from "@/lib/table-store";
 
-export const Route = createFileRoute("/menu/$table")({
+export const Route = createFileRoute("/menu_/$table")({
   component: MenuTableRoute,
 });
 

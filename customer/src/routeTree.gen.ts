@@ -22,7 +22,7 @@ import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as MenuTableRouteImport } from './routes/menu.$table'
+import { Route as MenuTableRouteImport } from './routes/menu_.$table'
 import { Route as FoodIdRouteImport } from './routes/food.$id'
 
 const TrackRoute = TrackRouteImport.update({
@@ -91,9 +91,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const MenuTableRoute = MenuTableRouteImport.update({
-  id: '/$table',
-  path: '/$table',
-  getParentRoute: () => MenuRoute,
+  id: '/menu_/$table',
+  path: '/menu/$table',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const FoodIdRoute = FoodIdRouteImport.update({
   id: '/food/$id',
@@ -108,7 +108,7 @@ export interface FileRoutesByFullPath {
   '/feedback': typeof FeedbackRoute
   '/kitchen': typeof KitchenRoute
   '/login': typeof LoginRoute
-  '/menu': typeof MenuRouteWithChildren
+  '/menu': typeof MenuRoute
   '/notifications': typeof NotificationsRoute
   '/payment': typeof PaymentRoute
   '/profile': typeof ProfileRoute
@@ -125,7 +125,7 @@ export interface FileRoutesByTo {
   '/feedback': typeof FeedbackRoute
   '/kitchen': typeof KitchenRoute
   '/login': typeof LoginRoute
-  '/menu': typeof MenuRouteWithChildren
+  '/menu': typeof MenuRoute
   '/notifications': typeof NotificationsRoute
   '/payment': typeof PaymentRoute
   '/profile': typeof ProfileRoute
@@ -143,7 +143,7 @@ export interface FileRoutesById {
   '/feedback': typeof FeedbackRoute
   '/kitchen': typeof KitchenRoute
   '/login': typeof LoginRoute
-  '/menu': typeof MenuRouteWithChildren
+  '/menu': typeof MenuRoute
   '/notifications': typeof NotificationsRoute
   '/payment': typeof PaymentRoute
   '/profile': typeof ProfileRoute
@@ -151,7 +151,7 @@ export interface FileRoutesById {
   '/services': typeof ServicesRoute
   '/track': typeof TrackRoute
   '/food/$id': typeof FoodIdRoute
-  '/menu/$table': typeof MenuTableRoute
+  '/menu_/$table': typeof MenuTableRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -204,7 +204,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/track'
     | '/food/$id'
-    | '/menu/$table'
+    | '/menu_/$table'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -214,7 +214,7 @@ export interface RootRouteChildren {
   FeedbackRoute: typeof FeedbackRoute
   KitchenRoute: typeof KitchenRoute
   LoginRoute: typeof LoginRoute
-  MenuRoute: typeof MenuRouteWithChildren
+  MenuRoute: typeof MenuRoute
   NotificationsRoute: typeof NotificationsRoute
   PaymentRoute: typeof PaymentRoute
   ProfileRoute: typeof ProfileRoute
@@ -222,6 +222,7 @@ export interface RootRouteChildren {
   ServicesRoute: typeof ServicesRoute
   TrackRoute: typeof TrackRoute
   FoodIdRoute: typeof FoodIdRoute
+  MenuTableRoute: typeof MenuTableRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -317,12 +318,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/menu/$table': {
-      id: '/menu/$table'
-      path: '/$table'
+    '/menu_/$table': {
+      id: '/menu_/$table'
+      path: '/menu/$table'
       fullPath: '/menu/$table'
       preLoaderRoute: typeof MenuTableRouteImport
-      parentRoute: typeof MenuRoute
+      parentRoute: typeof rootRouteImport
     }
     '/food/$id': {
       id: '/food/$id'
@@ -334,16 +335,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface MenuRouteChildren {
-  MenuTableRoute: typeof MenuTableRoute
-}
-
-const MenuRouteChildren: MenuRouteChildren = {
-  MenuTableRoute: MenuTableRoute,
-}
-
-const MenuRouteWithChildren = MenuRoute._addFileChildren(MenuRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
@@ -351,7 +342,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedbackRoute: FeedbackRoute,
   KitchenRoute: KitchenRoute,
   LoginRoute: LoginRoute,
-  MenuRoute: MenuRouteWithChildren,
+  MenuRoute: MenuRoute,
   NotificationsRoute: NotificationsRoute,
   PaymentRoute: PaymentRoute,
   ProfileRoute: ProfileRoute,
@@ -359,6 +350,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServicesRoute: ServicesRoute,
   TrackRoute: TrackRoute,
   FoodIdRoute: FoodIdRoute,
+  MenuTableRoute: MenuTableRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
