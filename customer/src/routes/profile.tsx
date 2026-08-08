@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { CustomerNav } from "@/components/customer-nav";
 import { restaurant } from "@/lib/mock-data";
 import { AnimatePresence, motion } from "framer-motion";
@@ -38,6 +38,7 @@ const FAQ_ITEMS = [
 ];
 
 function Profile() {
+  const navigate = useNavigate();
   const tableNumber = useTable();
   const customer = useCustomer(tableNumber);
   const theme = useTheme();
@@ -55,7 +56,9 @@ function Profile() {
     return (
       <CustomerRegistration
         tableNumber={tableNumber}
-        onSuccess={() => {}}
+        onSuccess={() => {
+          navigate({ to: "/", replace: true });
+        }}
       />
     );
   }

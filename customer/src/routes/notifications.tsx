@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CustomerNav } from "@/components/customer-nav";
 import { useNotifications, notificationStore, type AppNotification } from "@/lib/notification-store";
-import { tableStore } from "@/lib/table-store";
+import { useTable, tableStore } from "@/lib/table-store";
+import { useCustomer } from "@/lib/customer-store";
+import { CustomerRegistration } from "@/components/customer-registration";
 import { subscribeToAllOrders, type DbOrder } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -9,22 +11,20 @@ import { Bell, CheckCircle2, Sparkles, Gift, Trash2, CheckCheck, Utensils } from
 
 export const Route = createFileRoute("/notifications")({ component: Notifs });
 
-import { CustomerRegistration } from "@/components/customer-registration";
-import { InvalidQrScreen } from "@/components/invalid-qr";
-
 function Notifs() {
+  const navigate = useNavigate();
   const notifs = useNotifications();
-  const tableNumber = tableStore.getTableNumber();
+  const tableNumber = useTable();
   const customer = useCustomer(tableNumber);
   const [filter, setFilter] = useState<"all" | "orders" | "services" | "offers">("all");
-
-
 
   if (!customer) {
     return (
       <CustomerRegistration
         tableNumber={tableNumber}
-        onSuccess={() => {}}
+        onSuccess={() => {
+          navigate({ to: "/", replace: true });
+        }}
       />
     );
   }

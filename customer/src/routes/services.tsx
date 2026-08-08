@@ -1,9 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Droplet, Sparkles, Receipt, ConciergeBell, CheckCircle2, Utensils, HelpCircle } from "lucide-react";
 import { CustomerNav } from "@/components/customer-nav";
-import { tableStore } from "@/lib/table-store";
+import { useTable, tableStore } from "@/lib/table-store";
+import { useCustomer } from "@/lib/customer-store";
+import { CustomerRegistration } from "@/components/customer-registration";
 import { sendServiceRequest, getServiceRequestsByTable, subscribeToServiceRequests, type ServiceRequest } from "@/lib/supabase";
 import { liveOrderStore, useLiveServiceRequests } from "@/lib/live-order-store";
 import { notificationStore } from "@/lib/notification-store";
@@ -18,12 +20,11 @@ const services = [
   { id: "other", label: "Other Service", icon: HelpCircle, color: "gradient-primary" },
 ];
 
-import { useCustomer } from "@/lib/customer-store";
-
 export const Route = createFileRoute("/services")({ component: Services });
 
 function Services() {
-  const tableNumber = tableStore.getTableNumber();
+  const navigate = useNavigate();
+  const tableNumber = useTable();
   const customer = useCustomer(tableNumber);
   const customerName = customer?.fullName || "Guest";
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
@@ -34,7 +35,9 @@ function Services() {
     return (
       <CustomerRegistration
         tableNumber={tableNumber}
-        onSuccess={() => {}}
+        onSuccess={() => {
+          navigate({ to: "/", replace: true });
+        }}
       />
     );
   }
