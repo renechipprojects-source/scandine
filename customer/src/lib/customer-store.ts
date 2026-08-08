@@ -153,7 +153,7 @@ export const customerStore = {
     }
 
     cachedTable = null;
-    cachedRaw = null;
+    cachedComposite = null;
     emit();
     return customer;
   },
@@ -166,7 +166,7 @@ export const customerStore = {
       localStorage.removeItem("scandine_current_customer");
     } catch {}
     cachedTable = null;
-    cachedRaw = null;
+    cachedComposite = null;
     emit();
   },
 };
