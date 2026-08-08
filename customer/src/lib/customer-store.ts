@@ -23,27 +23,16 @@ function loadCustomer(table: string): CustomerDetails | null {
     if (typeof window !== "undefined") {
       const key = getStorageKey(table);
       const raw = localStorage.getItem(key);
-      const rawCurrent = localStorage.getItem("scandine_current_customer");
-      const composite = `${raw || ""}|${rawCurrent || ""}`;
 
-      if (table === cachedTable && composite === cachedComposite) {
+      if (table === cachedTable && raw === cachedComposite) {
         return cachedCustomer;
       }
 
       cachedTable = table;
-      cachedComposite = composite;
+      cachedComposite = raw;
 
       if (raw) {
         cachedCustomer = JSON.parse(raw);
-        return cachedCustomer;
-      }
-
-      if (rawCurrent) {
-        const current: CustomerDetails = JSON.parse(rawCurrent);
-        cachedCustomer = {
-          ...current,
-          tableNumber: table,
-        };
         return cachedCustomer;
       }
     }
