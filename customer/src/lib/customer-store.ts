@@ -161,13 +161,18 @@ export const customerStore = {
 
   clearCustomer(table: string) {
     try {
-      const normTable = table.toLowerCase().replace(/\s+/g, "");
-      localStorage.removeItem(getStorageKey(table));
-      localStorage.removeItem(`scandine_session_${normTable}`);
+      const normTable = table ? table.toLowerCase().replace(/\s+/g, "") : "";
+      if (table) {
+        localStorage.removeItem(getStorageKey(table));
+      }
+      if (normTable) {
+        localStorage.removeItem(`scandine_session_${normTable}`);
+      }
       localStorage.removeItem("scandine_current_customer");
     } catch {}
     cachedTable = null;
     cachedComposite = null;
+    cachedCustomer = null;
     emit();
   },
 };
