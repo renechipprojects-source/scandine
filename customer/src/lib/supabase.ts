@@ -447,7 +447,7 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
         const activeOrderId = localStorage.getItem(k);
         if (activeOrderId && !fetchedOrders.some((o) => o.id === activeOrderId || o.order_number === activeOrderId)) {
           const activeOrder = await getOrderById(activeOrderId);
-          if (activeOrder && (activeOrder.session_id === sessionId || !activeOrder.session_id)) {
+          if (activeOrder && activeOrder.session_id === sessionId) {
             fetchedOrders.push(activeOrder);
           }
         }
@@ -458,7 +458,7 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
   // Merge local session orders so offline/newly created session orders appear immediately
   const localOrders = getLocalOrders();
   localOrders
-    .filter((o) => o.session_id === sessionId || !o.session_id)
+    .filter((o) => o.session_id === sessionId)
     .forEach((o) => {
       if (!fetchedOrders.some((existing) => existing.id === o.id || existing.order_number === o.order_number)) {
         fetchedOrders.push(o);
