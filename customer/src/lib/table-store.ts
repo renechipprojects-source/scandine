@@ -10,7 +10,7 @@ export function formatTableNumber(raw: string): string {
     const digits = trimmed.replace(/\D/g, "");
     if (digits) {
       const num = parseInt(digits, 10);
-      if (num > 0 && num <= 100) {
+      if (num > 0 && num <= 1000) {
         return `Table ${num}`;
       }
     }

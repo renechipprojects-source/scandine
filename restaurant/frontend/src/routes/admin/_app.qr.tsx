@@ -9,6 +9,7 @@ import {
   QrCode, ExternalLink, Printer, Sparkles, Check, Copy, RotateCcw, Trash2, AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 export const Route = createFileRoute("/admin/_app/qr")({
   head: () => ({
@@ -24,12 +25,14 @@ interface StoredTableQr {
   id: string;
   name: string;
   url: string;
+  tableNumber: number;
   createdAt: string;
 }
 
 const DEFAULT_PRESET_TABLES: StoredTableQr[] = Array.from({ length: 5 }, (_, i) => ({
   id: `table-${i + 1}`,
   name: `Table ${i + 1}`,
+  tableNumber: i + 1,
   url: `https://scandine-ln2f.vercel.app/menu/${i + 1}`,
   createdAt: new Date().toISOString(),
 }));
@@ -39,104 +42,148 @@ function AdminQrPageRedesigned() {
   const [customerAppUrl, setCustomerAppUrl] = useState("");
   const [isEnvMissing, setIsEnvMissing] = useState(false);
   const [storedTables, setStoredTables] = useState<StoredTableQr[]>(DEFAULT_PRESET_TABLES);
+  const [loading, setLoading] = useState(true);
   
   // Popup Modal State
   const [activePopupTable, setActivePopupTable] = useState<StoredTableQr | null>(null);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const envCustomerUrl = (import.meta.env.VITE_CUSTOMER_APP_URL || "").trim();
-        if (!envCustomerUrl || envCustomerUrl.includes("your-customer-app") || envCustomerUrl.includes("localhost:3000")) {
-          setIsEnvMissing(false);
-          setCustomerAppUrl("https://scandine-ln2f.vercel.app");
-        } else {
-          setIsEnvMissing(false);
-          setCustomerAppUrl(envCustomerUrl.replace(/\/+$/, ""));
-        }
-
-        const savedTables = localStorage.getItem("savora_stored_table_qrs");
-        if (savedTables) {
-          const parsed: StoredTableQr[] = JSON.parse(savedTables);
-          const filtered = parsed.filter((t) => {
-            const num = parseInt(t.name.replace(/\D/g, ""), 10);
-            return num >= 1 && num <= 5;
-          });
-          if (filtered.length === 5) {
-            setStoredTables(filtered);
-          } else {
-            setStoredTables(DEFAULT_PRESET_TABLES);
-          }
-        }
-      } catch {}
-    }
-  }, []);
-
-  const saveToStorage = (tables: StoredTableQr[]) => {
-    setStoredTables(tables);
-    try {
-      localStorage.setItem("savora_stored_table_qrs", JSON.stringify(tables));
-    } catch {}
-  };
-
-  const getTableUrl = (rawName: string) => {
+  const getTableUrl = (tableNum: number | string) => {
     const envCustomerUrl = (import.meta.env.VITE_CUSTOMER_APP_URL || "").trim();
     const cleanHost = (envCustomerUrl && !envCustomerUrl.includes("your-customer-app") && !envCustomerUrl.includes("localhost:3000"))
       ? envCustomerUrl.replace(/\/+$/, "")
       : "https://scandine-ln2f.vercel.app";
 
-    const rawDigits = rawName.replace(/\D/g, "");
-    const tableNum = rawDigits || "1";
-    return `${cleanHost}/menu/${tableNum}`;
+    const cleanNum = String(tableNum).replace(/\D/g, "") || "1";
+    return `${cleanHost}/menu/${cleanNum}`;
+  };
+
+  const loadTables = async () => {
+    setLoading(true);
+    let loadedFromDb = false;
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from("sd_tables")
+          .select("*")
+          .order("table_number", { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          const mapped: StoredTableQr[] = data.map((r: any) => ({
+            id: r.id || `table-${r.table_number}`,
+            name: r.table_name || `Table ${r.table_number}`,
+            tableNumber: Number(r.table_number),
+            url: r.qr_url || getTableUrl(r.table_number),
+            createdAt: r.created_at || new Date().toISOString(),
+          }));
+          setStoredTables(mapped);
+          try {
+            localStorage.setItem("savora_stored_table_qrs", JSON.stringify(mapped));
+          } catch {}
+          loadedFromDb = true;
+        }
+      } catch (err) {
+        console.warn("Supabase sd_tables fetch error:", err);
+      }
+    }
+
+    if (!loadedFromDb) {
+      try {
+        const savedTables = localStorage.getItem("savora_stored_table_qrs");
+        if (savedTables) {
+          const parsed: StoredTableQr[] = JSON.parse(savedTables);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setStoredTables(parsed.sort((a, b) => a.tableNumber - b.tableNumber));
+          }
+        }
+      } catch {}
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const envCustomerUrl = (import.meta.env.VITE_CUSTOMER_APP_URL || "").trim();
+      if (!envCustomerUrl || envCustomerUrl.includes("your-customer-app") || envCustomerUrl.includes("localhost:3000")) {
+        setIsEnvMissing(false);
+        setCustomerAppUrl("https://scandine-ln2f.vercel.app");
+      } else {
+        setIsEnvMissing(false);
+        setCustomerAppUrl(envCustomerUrl.replace(/\/+$/, ""));
+      }
+
+      loadTables();
+    }
+  }, []);
+
+  const saveToStorage = (tables: StoredTableQr[]) => {
+    const sorted = [...tables].sort((a, b) => a.tableNumber - b.tableNumber);
+    setStoredTables(sorted);
+    try {
+      localStorage.setItem("savora_stored_table_qrs", JSON.stringify(sorted));
+    } catch {}
   };
 
   const getQrImageUrl = (url: string) => {
     return `https://quickchart.io/qr?text=${encodeURIComponent(url)}&size=350&margin=2&ecLevel=H`;
   };
 
-  const checkEnvOrNotify = (): boolean => {
-    return true;
-  };
-
-  const handleGenerate = (e?: React.FormEvent) => {
+  const handleGenerate = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!tableInput.trim()) {
-      toast.error("Please enter a Table Number or Name.");
+    const rawVal = tableInput.trim();
+    if (!rawVal) {
+      toast.error("Please enter a Table Number.");
       return;
     }
 
-    checkEnvOrNotify();
+    const numDigits = parseInt(rawVal.replace(/\D/g, ""), 10);
+    const tableNum = !isNaN(numDigits) && numDigits > 0 ? numDigits : (storedTables.length + 1);
+    const formattedName = `Table ${tableNum}`;
+    const url = getTableUrl(tableNum);
 
-    const formattedName = tableInput.trim().toLowerCase().startsWith("table")
-      ? tableInput.trim()
-      : `Table ${tableInput.trim()}`;
-    
-    const url = getTableUrl(formattedName);
-    const existingIndex = storedTables.findIndex(
-      (t) => t.name.toLowerCase() === formattedName.toLowerCase()
-    );
+    const existingTable = storedTables.find((t) => t.tableNumber === tableNum);
 
-    let newTableObj: StoredTableQr;
-
-    if (existingIndex >= 0) {
-      newTableObj = { ...storedTables[existingIndex], url };
-    } else {
-      newTableObj = {
-        id: `table-${Date.now()}`,
-        name: formattedName,
-        url,
-        createdAt: new Date().toISOString(),
-      };
-      saveToStorage([newTableObj, ...storedTables]);
+    if (existingTable) {
+      setActivePopupTable(existingTable);
+      toast.info(`${formattedName} QR code opened.`);
+      setTableInput("");
+      return;
     }
 
+    const newTableObj: StoredTableQr = {
+      id: `table-${tableNum}`,
+      name: formattedName,
+      tableNumber: tableNum,
+      url,
+      createdAt: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from("sd_tables").insert([
+          {
+            id: newTableObj.id,
+            table_number: tableNum,
+            table_name: formattedName,
+            qr_url: url,
+            is_active: true,
+          },
+        ]);
+      } catch (err) {
+        console.warn("Supabase sd_tables insert error:", err);
+      }
+    }
+
+    const updatedList = [...storedTables, newTableObj];
+    saveToStorage(updatedList);
     setActivePopupTable(newTableObj);
-    toast.success(`Generated QR Code for ${formattedName}!`);
+    setTableInput("");
+    toast.success(`Generated permanent QR Code for ${formattedName}!`);
   };
 
   const handleOpenPopup = (tableObj: StoredTableQr) => {
-    const freshUrl = getTableUrl(tableObj.name);
+    const freshUrl = getTableUrl(tableObj.tableNumber);
     setActivePopupTable({ ...tableObj, url: freshUrl });
   };
 
