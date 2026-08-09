@@ -436,18 +436,18 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
     }
   }
 
-  // Also query active order ID from local storage if present (same order tracked on Track page)
+  // Also query active order ID from local storage if present (session-scoped)
   try {
     if (typeof window !== "undefined") {
       const keysToTry = [
         "scandine_active_order_id",
-        `scandine_active_order_${tableStore.getTableNumber().toLowerCase().replace(/\s+/g, "")}`,
+        `scandine_active_order_${sessionId}`,
       ];
       for (const k of keysToTry) {
         const activeOrderId = localStorage.getItem(k);
         if (activeOrderId && !fetchedOrders.some((o) => o.id === activeOrderId || o.order_number === activeOrderId)) {
           const activeOrder = await getOrderById(activeOrderId);
-          if (activeOrder) {
+          if (activeOrder && (activeOrder.session_id === sessionId || !activeOrder.session_id)) {
             fetchedOrders.push(activeOrder);
           }
         }

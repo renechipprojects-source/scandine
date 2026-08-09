@@ -95,7 +95,10 @@ export const cart = {
     state = loadState();
     state = { ...state, activeOrderId: orderId };
     try {
-      localStorage.setItem(`scandine_active_order_${tableStore.getTableNumber().toLowerCase().replace(/\s+/g, "")}`, orderId);
+      const rawCust = localStorage.getItem("scandine_current_customer");
+      const sid = rawCust ? JSON.parse(rawCust)?.sessionId : "guest";
+      localStorage.setItem(`scandine_active_order_${sid}`, orderId);
+      localStorage.setItem("scandine_active_order_id", orderId);
     } catch {}
     emit();
   },
@@ -103,7 +106,9 @@ export const cart = {
     state = loadState();
     if (state.activeOrderId) return state.activeOrderId;
     try {
-      return localStorage.getItem(`scandine_active_order_${tableStore.getTableNumber().toLowerCase().replace(/\s+/g, "")}`) || undefined;
+      const rawCust = localStorage.getItem("scandine_current_customer");
+      const sid = rawCust ? JSON.parse(rawCust)?.sessionId : "guest";
+      return localStorage.getItem(`scandine_active_order_${sid}`) || localStorage.getItem("scandine_active_order_id") || undefined;
     } catch {
       return undefined;
     }
@@ -120,7 +125,10 @@ export const cart = {
     try {
       const key = getCartStorageKey();
       localStorage.removeItem(key);
-      localStorage.removeItem(`scandine_active_order_${tableStore.getTableNumber().toLowerCase().replace(/\s+/g, "")}`);
+      const rawCust = localStorage.getItem("scandine_current_customer");
+      const sid = rawCust ? JSON.parse(rawCust)?.sessionId : "guest";
+      localStorage.removeItem(`scandine_active_order_${sid}`);
+      localStorage.removeItem("scandine_active_order_id");
     } catch {}
     listeners.forEach((l) => l());
   },
