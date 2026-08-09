@@ -66,8 +66,8 @@ function TrackOrder() {
         return;
       }
 
-      setLoading(true);
       console.log("[TRACK] Customer session:", customer.sessionId);
+      setLoading(true);
 
       let fetchedOrder: DbOrder | null = null;
 
@@ -115,46 +115,41 @@ function TrackOrder() {
       setLoading(false);
 
       // 3. Realtime subscription for order updates
-      unsubscribe = subscribeToOrdersBySession(customer.sessionId, (updatedOrder) => {
-        console.log(
-          "[TRACK] Realtime UPDATE:",
-          updatedOrder.id,
-          "Session:",
-          updatedOrder.session_id,
-          "Status:",
-          updatedOrder.status
-        );
+      console.log("[TRACK] Creating realtime subscription:");
+      unsubscribe = subscribeToOrdersBySession(
+        customer.sessionId,
+        (updatedOrder) => {
+          console.log("[TRACK] Realtime UPDATE RECEIVED:");
+          console.log("[TRACK] Realtime order ID:", updatedOrder.id);
+          console.log("[TRACK] Realtime session ID:", updatedOrder.session_id);
+          console.log("[TRACK] Realtime status:", updatedOrder.status);
 
-        setOrder((prev) => {
-          if (!prev) {
-            if (!updatedOrder.session_id || updatedOrder.session_id === customer.sessionId) {
-              console.log("[TRACK] Status changed:", updatedOrder.status);
-              return updatedOrder;
+          setOrder((prev) => {
+            const isSameSession =
+              !updatedOrder.session_id || updatedOrder.session_id === customer.sessionId;
+
+            if (!isSameSession) {
+              console.log("[TRACK] Ignoring UPDATE - different customer session:", updatedOrder.session_id);
+              return prev;
             }
-            console.log("[TRACK] Ignoring UPDATE - different customer session:", updatedOrder.session_id);
-            return prev;
-          }
 
-          const isSameOrder =
-            prev.id === updatedOrder.id || prev.order_number === updatedOrder.order_number;
-          const isSameSession =
-            !updatedOrder.session_id || updatedOrder.session_id === customer.sessionId;
+            if (prev) {
+              const isSameOrder =
+                prev.id === updatedOrder.id || prev.order_number === updatedOrder.order_number;
+              if (!isSameOrder) {
+                console.log("[TRACK] Ignoring UPDATE - different order:", updatedOrder.id);
+                return prev;
+              }
+            }
 
-          if (!isSameSession) {
-            console.log("[TRACK] Ignoring UPDATE - different customer session:", updatedOrder.session_id);
-            return prev;
-          }
-
-          if (!isSameOrder) {
-            console.log("[TRACK] Ignoring UPDATE - different order:", updatedOrder.id);
-            return prev;
-          }
-
-          console.log("[TRACK] Status changed:", prev.status, "->", updatedOrder.status);
-          return updatedOrder;
-        });
-      });
-      console.log("[TRACK] Realtime subscribed");
+            console.log("[TRACK] React state updated:", updatedOrder.status);
+            return updatedOrder;
+          });
+        },
+        () => {
+          console.log("[TRACK] Realtime SUBSCRIBED");
+        }
+      );
     }
 
     loadOrder();

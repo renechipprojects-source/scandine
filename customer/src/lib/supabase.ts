@@ -468,7 +468,11 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
   return fetchedOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
-export function subscribeToOrdersBySession(sessionId: string, onUpdate: (order: DbOrder) => void) {
+export function subscribeToOrdersBySession(
+  sessionId: string,
+  onUpdate: (order: DbOrder) => void,
+  onSubscribed?: () => void
+) {
   if (!isSupabaseConfigured() || !sessionId) {
     return () => {};
   }
@@ -504,17 +508,32 @@ export function subscribeToOrdersBySession(sessionId: string, onUpdate: (order: 
               mapped.customer_phone.replace(/\D/g, "") === currentCust.phone.replace(/\D/g, "");
             const emailMatch = currentCust.email && mapped.customer_email &&
               mapped.customer_email.trim().toLowerCase() === currentCust.email.trim().toLowerCase();
-            const nameMatch = currentCust.fullName && mapped.customer &&
-              mapped.customer.trim().toLowerCase() === currentCust.fullName.trim().toLowerCase();
+            
+            const nameA = (currentCust.fullName || "").trim().toLowerCase();
+            const nameB = (mapped.customer_name || (payload.new as any).customer || "").trim().toLowerCase();
+            const nameMatch = Boolean(nameA && nameB && (nameA === nameB || nameB.includes(nameA) || nameA.includes(nameB)));
 
             if (phoneMatch || emailMatch || nameMatch) {
               onUpdate(mapped);
+              return;
             }
           }
+
+          // Match Priority 3: Session active order ID lookup
+          try {
+            const activeOrderId = localStorage.getItem(`scandine_active_order_${sessionId}`) || localStorage.getItem("scandine_active_order_id");
+            if (activeOrderId && (mapped.id === activeOrderId || mapped.order_number === activeOrderId)) {
+              onUpdate(mapped);
+            }
+          } catch {}
         }
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED" && onSubscribed) {
+        onSubscribed();
+      }
+    });
 
   return () => {
     supabase.removeChannel(channel);
