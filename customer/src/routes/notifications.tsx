@@ -16,7 +16,6 @@ function Notifs() {
   const notifs = useNotifications();
   const tableNumber = useTable();
   const customer = useCustomer(tableNumber);
-  const [filter, setFilter] = useState<"all" | "orders" | "services" | "offers">("all");
 
   if (!customer) {
     return (
@@ -30,12 +29,14 @@ function Notifs() {
   }
 
   useEffect(() => {
-    if (!customer?.phone) return;
+    if (!customer?.phone && !customer?.sessionId) return;
 
     // Listen for live updates on orders for this table
     const unsubscribe = subscribeToAllOrders(tableNumber, (updatedOrder: DbOrder) => {
-      // Isolate notifications to current customer session / phone
-      if (
+      // Priority 1: Strict Session ID isolation
+      if (updatedOrder.session_id && customer?.sessionId) {
+        if (updatedOrder.session_id !== customer.sessionId) return;
+      } else if (
         customer?.phone &&
         updatedOrder.customer_phone &&
         updatedOrder.customer_phone.replace(/\D/g, "") !== customer.phone.replace(/\D/g, "")
@@ -57,16 +58,18 @@ function Notifs() {
           type: "info",
           category: "orders",
         });
+      } else if (updatedOrder.status === "completed" || updatedOrder.status === "served") {
+        notificationStore.addNotification({
+          title: `Order ${updatedOrder.order_number} Completed ✨`,
+          desc: `Thank you for dining with us! Hope you enjoyed your meal.`,
+          type: "success",
+          category: "orders",
+        });
       }
     });
 
     return () => unsubscribe();
   }, [tableNumber, customer?.phone, customer?.sessionId]);
-
-  const filteredNotifs = notifs.filter((n) => {
-    if (filter === "all") return true;
-    return n.category === filter;
-  });
 
   return (
     <div className="min-h-screen bg-background pb-32">
@@ -95,27 +98,9 @@ function Notifs() {
           </div>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-          {(["all", "orders", "services", "offers"] as const).map((tab) => {
-            const active = filter === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => setFilter(tab)}
-                className={`rounded-full px-4 py-1.5 text-xs font-semibold capitalize transition ${
-                  active ? "gradient-primary text-white shadow-float" : "bg-card border text-muted-foreground"
-                }`}
-              >
-                {tab}
-              </button>
-            );
-          })}
-        </div>
-
         {/* Notifications Feed */}
         <div className="mt-6 space-y-3">
-          {filteredNotifs.length === 0 ? (
+          {notifs.length === 0 ? (
             <div className="text-center py-16 glass rounded-3xl">
               <Bell className="h-10 w-10 mx-auto text-muted-foreground mb-2 opacity-50" />
               <div className="font-semibold text-sm">No notifications yet</div>
@@ -123,7 +108,7 @@ function Notifs() {
             </div>
           ) : (
             <AnimatePresence>
-              {filteredNotifs.map((n, i) => (
+              {notifs.map((n, i) => (
                 <motion.div
                   key={n.id}
                   layout

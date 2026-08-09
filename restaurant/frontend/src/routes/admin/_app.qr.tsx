@@ -27,7 +27,7 @@ interface StoredTableQr {
   createdAt: string;
 }
 
-const DEFAULT_PRESET_TABLES: StoredTableQr[] = Array.from({ length: 6 }, (_, i) => ({
+const DEFAULT_PRESET_TABLES: StoredTableQr[] = Array.from({ length: 5 }, (_, i) => ({
   id: `table-${i + 1}`,
   name: `Table ${i + 1}`,
   url: `https://scandine-ln2f.vercel.app/menu/${i + 1}`,
@@ -58,7 +58,16 @@ function AdminQrPageRedesigned() {
 
         const savedTables = localStorage.getItem("savora_stored_table_qrs");
         if (savedTables) {
-          setStoredTables(JSON.parse(savedTables));
+          const parsed: StoredTableQr[] = JSON.parse(savedTables);
+          const filtered = parsed.filter((t) => {
+            const num = parseInt(t.name.replace(/\D/g, ""), 10);
+            return num >= 1 && num <= 5;
+          });
+          if (filtered.length === 5) {
+            setStoredTables(filtered);
+          } else {
+            setStoredTables(DEFAULT_PRESET_TABLES);
+          }
         }
       } catch {}
     }

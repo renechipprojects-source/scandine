@@ -107,7 +107,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="e.g. Rahul Sharma"
+                placeholder="Enter your name"
                 className="w-full rounded-2xl border bg-background/80 pl-9 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/40 transition"
               />
             </div>
@@ -148,7 +148,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g. rahul@example.com (Optional)"
+                placeholder="Enter your mail"
                 className="w-full rounded-2xl border bg-background/80 pl-9 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/40 transition"
               />
             </div>
