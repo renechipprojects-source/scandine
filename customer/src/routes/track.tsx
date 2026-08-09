@@ -18,21 +18,21 @@ export const Route = createFileRoute("/track")({
 });
 
 function getStepFromStatus(status?: string): number {
-  switch (status?.toLowerCase()) {
+  switch (status?.toLowerCase().trim()) {
     case "pending":
     case "received":
-      return 1;
+      return 0;
     case "accepted":
-      return 2;
+      return 1;
     case "preparing":
-      return 3;
+      return 2;
     case "ready":
-      return 4;
+      return 3;
     case "served":
     case "completed":
-      return 5;
+      return 4;
     default:
-      return 1;
+      return 0;
   }
 }
 
@@ -60,41 +60,101 @@ function TrackOrder() {
 
     async function loadOrder() {
       if (!customer?.sessionId) {
+        console.log("[TRACK] Missing customer session");
         setOrder(null);
         setLoading(false);
         return;
       }
 
       setLoading(true);
+      console.log("[TRACK] Customer session:", customer.sessionId);
+
       let fetchedOrder: DbOrder | null = null;
 
-      if (activeId) {
-        const byId = await getOrderById(activeId);
-        // Strict Session Isolation: ensure order belongs to current session
+      // 1. Try URL orderId parameter or session-scoped active order ID
+      const targetOrderId =
+        activeId ||
+        localStorage.getItem(`scandine_active_order_${customer.sessionId}`) ||
+        localStorage.getItem("scandine_active_order_id");
+
+      if (targetOrderId) {
+        const byId = await getOrderById(targetOrderId);
+        // Strict Session Isolation: ensure order belongs to current customer session
         if (byId && (byId.session_id === customer.sessionId || !byId.session_id)) {
           fetchedOrder = byId;
         }
       }
 
+      // 2. If not found by ID, fetch latest active session order
       if (!fetchedOrder && customer?.sessionId) {
         const myOrders = await getOrdersBySession(customer.sessionId);
         if (myOrders && myOrders.length > 0) {
-          const activeOrLatest = myOrders.find((o) => o.status !== "completed" && o.status !== "served" && o.status !== "cancelled") || myOrders[0];
-          fetchedOrder = activeOrLatest;
+          const activeOrLatest =
+            myOrders.find(
+              (o) =>
+                o.status !== "completed" &&
+                o.status !== "served" &&
+                o.status !== "cancelled"
+            ) || myOrders[0];
+          if (
+            activeOrLatest &&
+            (activeOrLatest.session_id === customer.sessionId || !activeOrLatest.session_id)
+          ) {
+            fetchedOrder = activeOrLatest;
+          }
         }
+      }
+
+      if (fetchedOrder) {
+        console.log("[TRACK] Initial order:", fetchedOrder.id, "Status:", fetchedOrder.status);
+      } else {
+        console.log("[TRACK] Initial order: null");
       }
 
       setOrder(fetchedOrder);
       setLoading(false);
 
+      // 3. Realtime subscription for order updates
       unsubscribe = subscribeToOrdersBySession(customer.sessionId, (updatedOrder) => {
+        console.log(
+          "[TRACK] Realtime UPDATE:",
+          updatedOrder.id,
+          "Session:",
+          updatedOrder.session_id,
+          "Status:",
+          updatedOrder.status
+        );
+
         setOrder((prev) => {
-          if (!prev || prev.id === updatedOrder.id) {
-            return updatedOrder;
+          if (!prev) {
+            if (!updatedOrder.session_id || updatedOrder.session_id === customer.sessionId) {
+              console.log("[TRACK] Status changed:", updatedOrder.status);
+              return updatedOrder;
+            }
+            console.log("[TRACK] Ignoring UPDATE - different customer session:", updatedOrder.session_id);
+            return prev;
           }
-          return prev;
+
+          const isSameOrder =
+            prev.id === updatedOrder.id || prev.order_number === updatedOrder.order_number;
+          const isSameSession =
+            !updatedOrder.session_id || updatedOrder.session_id === customer.sessionId;
+
+          if (!isSameSession) {
+            console.log("[TRACK] Ignoring UPDATE - different customer session:", updatedOrder.session_id);
+            return prev;
+          }
+
+          if (!isSameOrder) {
+            console.log("[TRACK] Ignoring UPDATE - different order:", updatedOrder.id);
+            return prev;
+          }
+
+          console.log("[TRACK] Status changed:", prev.status, "->", updatedOrder.status);
+          return updatedOrder;
         });
       });
+      console.log("[TRACK] Realtime subscribed");
     }
 
     loadOrder();
