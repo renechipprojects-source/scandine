@@ -45,7 +45,13 @@ function Cart() {
       const orderId = `ord_${Date.now()}`;
       const activeTable = tableStore.getTableNumber();
       const registeredCust = customerStore.getCustomer(activeTable);
-      const custDisplayName = registeredCust ? registeredCust.fullName : `${activeTable} Guest`;
+      if (!registeredCust?.sessionId) {
+        toast.error("Session invalid or expired. Please re-register.");
+        setIsPlacingOrder(false);
+        return;
+      }
+
+      const custDisplayName = registeredCust.fullName || `${activeTable} Guest`;
 
       const orderPayloadItems = state.items.map((i) => ({
         id: i.food.id,
@@ -73,8 +79,8 @@ function Cart() {
         order_number: orderNumber,
         table_number: activeTable,
         customer_name: custDisplayName,
-        customer_phone: registeredCust?.phone,
-        session_id: registeredCust?.sessionId,
+        customer_phone: registeredCust.phone,
+        session_id: registeredCust.sessionId,
         items: orderPayloadItems,
         subtotal: totals.subtotal,
         discount: totals.discount,

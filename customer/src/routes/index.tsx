@@ -7,7 +7,7 @@ import { useTable } from "@/lib/table-store";
 import { useCustomer } from "@/lib/customer-store";
 import { CustomerRegistration } from "@/components/customer-registration";
 import { InvalidQrScreen } from "@/components/invalid-qr";
-import { getOrdersByTable, subscribeToAllOrders, type DbOrder } from "@/lib/supabase";
+import { getOrdersBySession, subscribeToOrdersBySession, type DbOrder } from "@/lib/supabase";
 
 export const Route = createFileRoute("/")({
   component: Welcome,
@@ -29,49 +29,32 @@ function Welcome() {
     let unsubscribe = () => {};
 
     async function loadActiveOrder() {
-      if (!tableNumber || !customer?.phone) {
+      if (!customer?.sessionId) {
         setActiveOrder(null);
         return;
       }
-      const orders = await getOrdersByTable(tableNumber, customer.fullName, customer.sessionId);
-      if (orders && orders.length > 0) {
-        const myOrders = orders.filter((o) => {
-          if (o.session_id && customer.sessionId) {
-            return o.session_id === customer.sessionId;
-          }
-          const nameMatch = o.customer_name && customer.fullName &&
-            o.customer_name.trim().toLowerCase() === customer.fullName.trim().toLowerCase();
-          const phoneMatch = o.customer_phone && customer.phone &&
-            o.customer_phone.replace(/\D/g, "") === customer.phone.replace(/\D/g, "");
-          return nameMatch || phoneMatch;
-        });
-        if (myOrders.length > 0) {
-          const latest = myOrders.find((o) => o.status !== "completed") || myOrders[0];
-          setActiveOrder(latest);
-        } else {
-          setActiveOrder(null);
-        }
+      const myOrders = await getOrdersBySession(customer.sessionId);
+      if (myOrders && myOrders.length > 0) {
+        const latest = myOrders.find(
+          (o) => o.status !== "completed" && o.status !== "served" && o.status !== "cancelled"
+        ) || null;
+        setActiveOrder(latest);
       } else {
         setActiveOrder(null);
       }
 
-      unsubscribe = subscribeToAllOrders(tableNumber, (updated) => {
-        if (updated.session_id && customer?.sessionId) {
-          if (updated.session_id !== customer.sessionId) return;
-        } else if (
-          customer?.phone &&
-          updated.customer_phone &&
-          updated.customer_phone.replace(/\D/g, "") !== customer.phone.replace(/\D/g, "")
-        ) {
-          return;
+      unsubscribe = subscribeToOrdersBySession(customer.sessionId, (updated) => {
+        if (updated.status === "completed" || updated.status === "served" || updated.status === "cancelled") {
+          setActiveOrder(null);
+        } else {
+          setActiveOrder(updated);
         }
-        setActiveOrder(updated);
       });
     }
 
     loadActiveOrder();
     return () => unsubscribe();
-  }, [tableNumber, customer?.phone, customer?.sessionId]);
+  }, [customer?.sessionId]);
 
   // If customer details are not saved for the active table, show Customer Registration Page first
   if (!customer) {

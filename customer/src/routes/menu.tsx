@@ -5,8 +5,7 @@ import { motion } from "framer-motion";
 import { CustomerNav } from "@/components/customer-nav";
 import { FoodCard } from "@/components/food-card";
 import { categories, combos, type FoodItem } from "@/lib/mock-data";
-import { fetchDbMenuItems, getCategoryDisplayName, subscribeToMenuItems } from "@/lib/supabase";
-import { useLiveOrders } from "@/lib/live-order-store";
+import { fetchDbMenuItems, getCategoryDisplayName, getOrdersBySession, subscribeToOrdersBySession, type DbOrder } from "@/lib/supabase";
 import { tableStore, useTable } from "@/lib/table-store";
 import { useCustomer } from "@/lib/customer-store";
 import { CustomerRegistration } from "@/components/customer-registration";
@@ -83,10 +82,10 @@ function Menu() {
   const [cat, setCat] = useState("Breakfast");
   const [q, setQ] = useState("");
   const [itemList, setItemList] = useState<FoodItem[]>([]);
+  const [sessionOrders, setSessionOrders] = useState<DbOrder[]>([]);
 
   const tableNumber = useTable();
   const customer = useCustomer(tableNumber);
-  const allLiveOrders = useLiveOrders();
 
   if (!customer) {
     return (
@@ -99,16 +98,30 @@ function Menu() {
     );
   }
 
+  useEffect(() => {
+    let unsubscribe = () => {};
+    async function loadSessionOrders() {
+      if (!customer?.sessionId) return;
+      const data = await getOrdersBySession(customer.sessionId);
+      setSessionOrders(data);
+
+      unsubscribe = subscribeToOrdersBySession(customer.sessionId, (updated) => {
+        setSessionOrders((prev) => {
+          const exists = prev.some((o) => o.id === updated.id);
+          if (exists) return prev.map((o) => (o.id === updated.id ? updated : o));
+          return [updated, ...prev];
+        });
+      });
+    }
+    loadSessionOrders();
+    return () => unsubscribe();
+  }, [customer?.sessionId]);
+
   const activeTableOrders = useMemo(() => {
-    const normDigits = tableNumber.replace(/\D/g, "");
-    const normStr = tableNumber.toLowerCase().replace(/\s+/g, "");
-    return allLiveOrders.filter((o) => {
-      const oDigits = o.table.replace(/\D/g, "");
-      const oStr = o.table.toLowerCase().replace(/\s+/g, "");
-      const isTableMatch = normDigits && oDigits ? normDigits === oDigits : normStr === oStr;
-      return isTableMatch && o.status !== "completed";
-    });
-  }, [allLiveOrders, tableNumber]);
+    return sessionOrders.filter(
+      (o) => o.status !== "completed" && o.status !== "served" && o.status !== "cancelled"
+    );
+  }, [sessionOrders]);
 
   useEffect(() => {
     async function loadMenu(force = false) {

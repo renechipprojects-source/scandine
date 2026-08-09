@@ -9,7 +9,7 @@ import { useCustomer, customerStore } from "@/lib/customer-store";
 import { CustomerRegistration } from "@/components/customer-registration";
 import { useTheme, themeStore } from "@/lib/theme-store";
 import { useLanguage, languageStore, LANGUAGES } from "@/lib/language-store";
-import { getOrdersByTable, subscribeToAllOrders, type DbOrder } from "@/lib/supabase";
+import { getOrdersBySession, subscribeToOrdersBySession, type DbOrder } from "@/lib/supabase";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/profile")({ component: Profile });
@@ -50,8 +50,6 @@ function Profile() {
   const [langModalOpen, setLangModalOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
-
-
   if (!customer) {
     return (
       <CustomerRegistration
@@ -66,29 +64,18 @@ function Profile() {
   useEffect(() => {
     let unsubscribe = () => {};
 
-    async function loadTableOrders() {
-      if (!customer) {
+    async function loadSessionOrders() {
+      if (!customer?.sessionId) {
         setOrders([]);
         setLoadingOrders(false);
         return;
       }
       setLoadingOrders(true);
-      const data = await getOrdersByTable(tableNumber, customer.fullName, customer.sessionId);
+      const data = await getOrdersBySession(customer.sessionId);
       setOrders(data);
       setLoadingOrders(false);
 
-      unsubscribe = subscribeToAllOrders(tableNumber, (updatedOrder) => {
-        // Priority 1: Strict Session ID matching if session_id exists on order update
-        if (updatedOrder.session_id && customer.sessionId) {
-          if (updatedOrder.session_id !== customer.sessionId) return;
-        } else {
-          const nameMatch = updatedOrder.customer_name && customer.fullName && 
-            updatedOrder.customer_name.trim().toLowerCase() === customer.fullName.trim().toLowerCase();
-          const phoneMatch = updatedOrder.customer_phone && customer.phone &&
-            updatedOrder.customer_phone.replace(/\D/g, "") === customer.phone.replace(/\D/g, "");
-          if (!nameMatch && !phoneMatch) return;
-        }
-
+      unsubscribe = subscribeToOrdersBySession(customer.sessionId, (updatedOrder) => {
         setOrders((prev) => {
           const exists = prev.some((o) => o.id === updatedOrder.id);
           if (exists) {
@@ -99,20 +86,16 @@ function Profile() {
       });
     }
 
-    loadTableOrders();
+    loadSessionOrders();
     return () => unsubscribe();
-  }, [tableNumber, customer?.fullName, customer?.phone, customer?.sessionId]);
+  }, [customer?.sessionId]);
 
-  if (!customer) {
-    return (
-      <CustomerRegistration
-        tableNumber={tableNumber}
-        onSuccess={() => {
-          // Registered
-        }}
-      />
-    );
-  }
+  const activeOrders = orders.filter(
+    (o) => o.status === "pending" || o.status === "preparing" || o.status === "ready" || o.status === "accepted" || o.status === "received"
+  );
+  const historyOrders = orders.filter(
+    (o) => o.status === "completed" || o.status === "served" || o.status === "cancelled"
+  );
 
   return (
     <div className="min-h-screen bg-background pb-32">
@@ -137,16 +120,16 @@ function Profile() {
           </button>
         </div>
 
-        {/* Live My Orders Stage Tracker */}
-        <Section title={`${tableNumber} Orders & Live Status`} icon={<Utensils className="h-4 w-4" />}>
+        {/* Active Orders */}
+        <Section title="Active Orders & Live Status" icon={<Utensils className="h-4 w-4" />}>
           {loadingOrders ? (
             <div className="text-center py-6 glass rounded-2xl text-xs text-muted-foreground">
-              Syncing active table orders...
+              Syncing your session orders...
             </div>
-          ) : orders.length === 0 ? (
+          ) : activeOrders.length === 0 ? (
             <div className="text-center py-8 glass rounded-2xl border">
               <Utensils className="h-8 w-8 mx-auto text-muted-foreground mb-2 opacity-50" />
-              <div className="font-semibold text-sm">No active orders for {tableNumber}</div>
+              <div className="font-semibold text-sm">No active orders</div>
               <div className="text-xs text-muted-foreground mt-0.5">Explore the menu and place your first order!</div>
               <Link to="/menu" className="mt-3 inline-flex rounded-full gradient-primary text-white text-xs font-semibold px-4 py-2">
                 View Menu
@@ -154,13 +137,13 @@ function Profile() {
             </div>
           ) : (
             <div className="space-y-3">
-              {orders.map((o) => (
+              {activeOrders.map((o) => (
                 <div key={o.id} className="glass rounded-2xl p-4 border space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-bold text-sm">Order {o.order_number}</div>
+                      <div className="font-bold text-sm">Order #{o.order_number || o.id}</div>
                       <div className="text-xs text-muted-foreground">
-                        {o.items.length} items · ₹{o.total} · {o.payment_status === "paid" ? "✓ Paid" : "Unpaid"}
+                        {tableNumber} · {o.items.length} items · ₹{o.total} · {o.payment_status === "paid" ? "✓ Paid" : "Unpaid"}
                       </div>
                     </div>
                     <Link
@@ -201,6 +184,35 @@ function Profile() {
                       );
                     })}
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+
+        {/* Order History */}
+        <Section title="Order History" icon={<CheckCircle2 className="h-4 w-4" />}>
+          {historyOrders.length === 0 ? (
+            <div className="text-center py-6 glass rounded-2xl text-xs text-muted-foreground border">
+              No completed orders yet in this session.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {historyOrders.map((o) => (
+                <div key={o.id} className="glass rounded-2xl p-4 border flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-sm">Order #{o.order_number || o.id}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {o.items.length} items · ₹{o.total} · {o.created_at ? new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}
+                    </div>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase ${
+                    o.status === "completed" || o.status === "served"
+                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                      : "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                  }`}>
+                    {o.status}
+                  </span>
                 </div>
               ))}
             </div>

@@ -8,17 +8,19 @@ import { cart } from "@/lib/cart-store";
 import { useTable } from "@/lib/table-store";
 import { useCustomer } from "@/lib/customer-store";
 import { CustomerRegistration } from "@/components/customer-registration";
-import { getOrderById, getOrdersByTable, subscribeToOrder, type DbOrder } from "@/lib/supabase";
+import { getOrderById, getOrdersBySession, subscribeToOrdersBySession, type DbOrder } from "@/lib/supabase";
 
 export const Route = createFileRoute("/track")({
-  component: Track,
+  validateSearch: (search: Record<string, unknown>) => ({
+    orderId: (search.orderId as string) || "",
+  }),
+  component: TrackOrder,
 });
 
 function getStepFromStatus(status?: string): number {
   switch (status) {
     case "pending":
     case "received":
-      return 0;
     case "accepted":
       return 1;
     case "preparing":
@@ -26,31 +28,27 @@ function getStepFromStatus(status?: string): number {
     case "ready":
       return 3;
     case "served":
-      return 4;
     case "completed":
-      return 5;
+      return 4;
     default:
-      return 0;
+      return 1;
   }
 }
 
-function Track() {
+function TrackOrder() {
+  const { orderId: activeId } = Route.useSearch();
   const tableNumber = useTable();
   const customer = useCustomer(tableNumber);
-  const search = useSearch({ strict: false }) as { orderId?: string };
-  const activeId = search.orderId || cart.getActiveOrderId();
 
   const [order, setOrder] = useState<DbOrder | null>(null);
   const [loading, setLoading] = useState(true);
-
-
 
   if (!customer) {
     return (
       <CustomerRegistration
         tableNumber={tableNumber}
         onSuccess={() => {
-          window.location.href = "/";
+          window.location.reload();
         }}
       />
     );
@@ -60,31 +58,42 @@ function Track() {
     let unsubscribe = () => {};
 
     async function loadOrder() {
-      setLoading(true);
-      let targetId = activeId;
-      let fetchedOrder: DbOrder | null = null;
-
-      if (targetId) {
-        fetchedOrder = await getOrderById(targetId);
+      if (!customer?.sessionId) {
+        setOrder(null);
+        setLoading(false);
+        return;
       }
 
-      if (!fetchedOrder && tableNumber && customer?.sessionId) {
-        const myOrders = await getOrdersByTable(tableNumber, customer.fullName, customer.sessionId);
+      setLoading(true);
+      let fetchedOrder: DbOrder | null = null;
+
+      if (activeId) {
+        const byId = await getOrderById(activeId);
+        // Strict Session Isolation: ensure order belongs to current session
+        if (byId && (byId.session_id === customer.sessionId || !byId.session_id)) {
+          fetchedOrder = byId;
+        }
+      }
+
+      if (!fetchedOrder && customer?.sessionId) {
+        const myOrders = await getOrdersBySession(customer.sessionId);
         if (myOrders && myOrders.length > 0) {
-          const activeOrLatest = myOrders.find((o) => o.status !== "completed" && o.status !== "cancelled") || myOrders[0];
+          const activeOrLatest = myOrders.find((o) => o.status !== "completed" && o.status !== "served" && o.status !== "cancelled") || myOrders[0];
           fetchedOrder = activeOrLatest;
-          targetId = activeOrLatest.id;
         }
       }
 
       setOrder(fetchedOrder);
       setLoading(false);
 
-      if (targetId) {
-        unsubscribe = subscribeToOrder(targetId, (updatedOrder) => {
-          setOrder(updatedOrder);
+      unsubscribe = subscribeToOrdersBySession(customer.sessionId, (updatedOrder) => {
+        setOrder((prev) => {
+          if (!prev || prev.id === updatedOrder.id) {
+            return updatedOrder;
+          }
+          return prev;
         });
-      }
+      });
     }
 
     loadOrder();
@@ -92,18 +101,7 @@ function Track() {
     return () => {
       unsubscribe();
     };
-  }, [activeId, tableNumber, customer?.fullName, customer?.sessionId]);
-
-  if (!customer) {
-    return (
-      <CustomerRegistration
-        tableNumber={tableNumber}
-        onSuccess={() => {
-          // Registered
-        }}
-      />
-    );
-  }
+  }, [activeId, customer?.sessionId]);
 
   const step = getStepFromStatus(order?.status);
 

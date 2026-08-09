@@ -217,6 +217,8 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
 
       if (newOrder.session_id) {
         dbPayload.session_id = newOrder.session_id;
+      } else {
+        console.warn("⚠️ Warning: createOrder called without session_id!", newOrder);
       }
 
       let { data, error } = await supabase
@@ -247,7 +249,8 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
       } else if (data) {
         const mapped = mapRowToDbOrder(data);
         const updatedLocal = getLocalOrders();
-        saveLocalOrders(updatedLocal.map((o) => (o.id === mapped.id ? mapped : o)));
+        const filteredLocal = updatedLocal.filter((o) => o.id !== mapped.id);
+        saveLocalOrders([mapped, ...filteredLocal]);
         return mapped;
       }
     } catch (err) {
@@ -358,6 +361,71 @@ export async function getOrdersByTable(
     });
   }
   return tableLocal;
+}
+
+export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> {
+  if (!sessionId) return [];
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase
+        .from("sd_orders")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        return data.map(mapRowToDbOrder);
+      }
+
+      if (error && (error.code === "PGRST204" || error.message?.includes("session_id"))) {
+        const rawCust = typeof window !== "undefined" ? localStorage.getItem("scandine_current_customer") : null;
+        if (rawCust) {
+          const cust = JSON.parse(rawCust);
+          if (cust?.tableNumber) {
+            const tableOrders = await getOrdersByTable(cust.tableNumber, cust.fullName, sessionId);
+            if (tableOrders && tableOrders.length > 0) return tableOrders;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Supabase session orders fetch error:", err);
+    }
+  }
+
+  const localOrders = getLocalOrders();
+  return localOrders
+    .filter((o) => o.session_id === sessionId)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+export function subscribeToOrdersBySession(sessionId: string, onUpdate: (order: DbOrder) => void) {
+  if (!isSupabaseConfigured() || !sessionId) {
+    return () => {};
+  }
+
+  const channel = supabase
+    .channel(`orders-sub-session-${sessionId.replace(/[^a-zA-Z0-9]/g, "_")}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "sd_orders",
+      },
+      (payload) => {
+        if (payload.new) {
+          const mapped = mapRowToDbOrder(payload.new);
+          if (mapped.session_id === sessionId) {
+            onUpdate(mapped);
+          }
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
 
 export async function updateOrderPayment(orderId: string, paymentMethod: string): Promise<boolean> {
