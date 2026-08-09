@@ -377,7 +377,7 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
         return data.map(mapRowToDbOrder);
       }
 
-      if (error && (error.code === "PGRST204" || error.message?.includes("session_id"))) {
+      if (error && (error.code === "PGRST204" || error.code === "42703" || error.message?.includes("session_id") || error.message?.includes("column"))) {
         const rawCust = typeof window !== "undefined" ? localStorage.getItem("scandine_current_customer") : null;
         if (rawCust) {
           const cust = JSON.parse(rawCust);

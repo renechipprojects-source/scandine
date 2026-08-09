@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { CustomerNav } from "@/components/customer-nav";
 import { FoodCard } from "@/components/food-card";
 import { categories, combos, type FoodItem } from "@/lib/mock-data";
-import { fetchDbMenuItems, getCategoryDisplayName, getOrdersBySession, subscribeToOrdersBySession, type DbOrder } from "@/lib/supabase";
+import { fetchDbMenuItems, getCategoryDisplayName, getOrdersBySession, subscribeToOrdersBySession, subscribeToMenuItems, type DbOrder } from "@/lib/supabase";
 import { tableStore, useTable } from "@/lib/table-store";
 import { useCustomer } from "@/lib/customer-store";
 import { CustomerRegistration } from "@/components/customer-registration";
