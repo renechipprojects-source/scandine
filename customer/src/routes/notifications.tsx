@@ -4,7 +4,7 @@ import { useNotifications, notificationStore, type AppNotification } from "@/lib
 import { useTable, tableStore } from "@/lib/table-store";
 import { useCustomer } from "@/lib/customer-store";
 import { CustomerRegistration } from "@/components/customer-registration";
-import { subscribeToAllOrders, type DbOrder } from "@/lib/supabase";
+import { subscribeToOrdersBySession, type DbOrder } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Bell, CheckCircle2, Sparkles, Gift, Trash2, CheckCheck, Utensils } from "lucide-react";
@@ -29,38 +29,27 @@ function Notifs() {
   }
 
   useEffect(() => {
-    if (!customer?.phone && !customer?.sessionId) return;
+    if (!customer?.sessionId) return;
 
-    // Listen for live updates on orders for this table
-    const unsubscribe = subscribeToAllOrders(tableNumber, (updatedOrder: DbOrder) => {
-      // Priority 1: Strict Session ID isolation
-      if (updatedOrder.session_id && customer?.sessionId) {
-        if (updatedOrder.session_id !== customer.sessionId) return;
-      } else if (
-        customer?.phone &&
-        updatedOrder.customer_phone &&
-        updatedOrder.customer_phone.replace(/\D/g, "") !== customer.phone.replace(/\D/g, "")
-      ) {
-        return; // Ignore order updates belonging to other customer sessions
-      }
-
+    // Listen for live updates on orders for this session
+    const unsubscribe = subscribeToOrdersBySession(customer.sessionId, (updatedOrder: DbOrder) => {
       if (updatedOrder.status === "ready") {
         notificationStore.addNotification({
-          title: `Order ${updatedOrder.order_number} is READY! 🍽️`,
-          desc: `Your food is ready and being served to ${updatedOrder.table_number}. Enjoy!`,
+          title: `Order ${updatedOrder.order_number || updatedOrder.id} is READY! 🍽️`,
+          desc: `Your food is ready and being served to ${tableNumber}. Enjoy!`,
           type: "success",
           category: "orders",
         });
       } else if (updatedOrder.status === "preparing") {
         notificationStore.addNotification({
-          title: `Chef is Preparing Order ${updatedOrder.order_number}`,
+          title: `Chef is Preparing Order ${updatedOrder.order_number || updatedOrder.id}`,
           desc: `Your order is now being cooked with love in the kitchen.`,
           type: "info",
           category: "orders",
         });
       } else if (updatedOrder.status === "completed" || updatedOrder.status === "served") {
         notificationStore.addNotification({
-          title: `Order ${updatedOrder.order_number} Completed ✨`,
+          title: `Order ${updatedOrder.order_number || updatedOrder.id} Completed ✨`,
           desc: `Thank you for dining with us! Hope you enjoyed your meal.`,
           type: "success",
           category: "orders",
@@ -69,7 +58,7 @@ function Notifs() {
     });
 
     return () => unsubscribe();
-  }, [tableNumber, customer?.phone, customer?.sessionId]);
+  }, [tableNumber, customer?.sessionId]);
 
   return (
     <div className="min-h-screen bg-background pb-32">

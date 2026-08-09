@@ -24,13 +24,27 @@ let cachedCustomer: CustomerDetails | null = null;
 function loadCustomer(table: string): CustomerDetails | null {
   try {
     if (typeof window !== "undefined") {
-      const activeTable = table || (typeof localStorage !== "undefined" ? localStorage.getItem("aura_dine_table_number") || "" : "");
-      const key = activeTable ? getStorageKey(activeTable) : "";
-      const rawTable = key ? localStorage.getItem(key) : null;
+      const activeTable = table || localStorage.getItem("aura_dine_table_number") || "";
+      const normTable = activeTable ? activeTable.toLowerCase().replace(/\s+/g, "") : "";
+      
       const rawCurrent = localStorage.getItem("scandine_current_customer");
-      const raw = rawTable || rawCurrent;
+      let currentCust: CustomerDetails | null = null;
+      if (rawCurrent) {
+        try { currentCust = JSON.parse(rawCurrent); } catch {}
+      }
 
-      const composite = `${activeTable}|${raw || ""}`;
+      let tableCust: CustomerDetails | null = null;
+      if (normTable) {
+        const rawTable = localStorage.getItem(getStorageKey(activeTable));
+        if (rawTable) {
+          try { tableCust = JSON.parse(rawTable); } catch {}
+        }
+      }
+
+      // Priority 1: Current customer if table matches
+      const targetCust = currentCust || tableCust;
+
+      const composite = `${activeTable}|${targetCust?.sessionId || ""}|${targetCust?.registeredAt || ""}`;
 
       if (table === cachedTable && composite === cachedComposite) {
         return cachedCustomer;
@@ -38,11 +52,8 @@ function loadCustomer(table: string): CustomerDetails | null {
 
       cachedTable = table;
       cachedComposite = composite;
-
-      if (raw) {
-        cachedCustomer = JSON.parse(raw);
-        return cachedCustomer;
-      }
+      cachedCustomer = targetCust;
+      return cachedCustomer;
     }
   } catch {}
 
@@ -98,9 +109,9 @@ export const customerStore = {
     const sessionId = `session_${normTable || "guest"}_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
 
     const customer: CustomerDetails = {
-      fullName: details.fullName,
-      phone: details.phone,
-      email: details.email,
+      fullName: cleanName,
+      phone: cleanPhone,
+      email: details.email ? details.email.trim() : "",
       tableNumber: targetTable,
       registeredAt: new Date().toISOString(),
       sessionId,
@@ -124,37 +135,31 @@ export const customerStore = {
       console.error("Failed to save customer details locally:", e);
     }
 
+    // Optional Supabase sync wrapped safely without breaking registration
     if (isSupabaseConfigured() && targetTable) {
       try {
         const tblNum = parseInt(String(targetTable).replace(/\D/g, ""), 10);
         if (tblNum && !isNaN(tblNum)) {
-          // Deduplication in Supabase: Check if customer with same phone and table already registered recently
-          const { data: existingDb } = await supabase
-            .from("customers")
-            .select("id")
-            .eq("phone", details.phone)
-            .eq("table_number", tblNum)
-            .maybeSingle();
-
-          if (!existingDb) {
-            await supabase.from("customers").insert([
-              {
-                full_name: details.fullName,
-                phone: details.phone,
-                email: details.email || null,
-                table_number: tblNum,
-                created_at: customer.registeredAt,
-              },
-            ]);
-          }
+          // Attempt insert into sd_customers if table exists
+          await supabase.from("sd_customers").insert([
+            {
+              full_name: customer.fullName,
+              phone: customer.phone,
+              email: customer.email || null,
+              table_number: tblNum,
+              session_id: customer.sessionId,
+              created_at: customer.registeredAt,
+            },
+          ]);
         }
       } catch (err) {
-        console.warn("Supabase customer registration save error:", err);
+        console.warn("Non-blocking Supabase customer registration sync warning:", err);
       }
     }
 
     cachedTable = null;
     cachedComposite = null;
+    cachedCustomer = customer;
     emit();
     return customer;
   },
