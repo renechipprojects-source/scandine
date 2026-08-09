@@ -18,18 +18,22 @@ let cachedComposite: string | null = null;
 let cachedCustomer: CustomerDetails | null = null;
 
 function loadCustomer(table: string): CustomerDetails | null {
-  if (!table) return null;
   try {
     if (typeof window !== "undefined") {
-      const key = getStorageKey(table);
-      const raw = localStorage.getItem(key);
+      const activeTable = table || (typeof localStorage !== "undefined" ? localStorage.getItem("aura_dine_table_number") || "" : "");
+      const key = activeTable ? getStorageKey(activeTable) : "";
+      const rawTable = key ? localStorage.getItem(key) : null;
+      const rawCurrent = localStorage.getItem("scandine_current_customer");
+      const raw = rawTable || rawCurrent;
 
-      if (table === cachedTable && raw === cachedComposite) {
+      const composite = `${activeTable}|${raw || ""}`;
+
+      if (table === cachedTable && composite === cachedComposite) {
         return cachedCustomer;
       }
 
       cachedTable = table;
-      cachedComposite = raw;
+      cachedComposite = composite;
 
       if (raw) {
         cachedCustomer = JSON.parse(raw);
@@ -56,8 +60,9 @@ export const customerStore = {
     const cust = this.getCustomer(table);
     if (cust?.sessionId) return cust.sessionId;
     try {
-      const normTable = table.toLowerCase().replace(/\s+/g, "");
-      return localStorage.getItem(`scandine_session_${normTable}`) || undefined;
+      const targetTable = table || tableStore.getTableNumber() || "";
+      const normTable = targetTable ? targetTable.toLowerCase().replace(/\s+/g, "") : "";
+      return normTable ? (localStorage.getItem(`scandine_session_${normTable}`) || undefined) : undefined;
     } catch {
       return undefined;
     }
@@ -78,13 +83,18 @@ export const customerStore = {
       throw new Error("Full name is required.");
     }
 
-    const normTable = details.tableNumber.toLowerCase().replace(/\s+/g, "");
+    const targetTable = details.tableNumber || tableStore.getTableNumber() || "";
+    if (targetTable) {
+      tableStore.setTableNumber(targetTable);
+    }
+
+    const normTable = targetTable ? targetTable.toLowerCase().replace(/\s+/g, "") : "";
     
     // Check if existing customer profile matches (Deduplication by phone & table)
-    const existing = this.getCustomer(details.tableNumber);
+    const existing = targetTable ? this.getCustomer(targetTable) : null;
     let sessionId = existing?.sessionId;
 
-    if (!sessionId) {
+    if (!sessionId && normTable) {
       try {
         const savedSession = localStorage.getItem(`scandine_session_${normTable}`);
         if (savedSession) sessionId = savedSession;
@@ -92,49 +102,54 @@ export const customerStore = {
     }
 
     if (!sessionId) {
-      sessionId = `session_${normTable}_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+      sessionId = `session_${normTable || "guest"}_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
     const customer: CustomerDetails = {
       fullName: details.fullName,
       phone: details.phone,
       email: details.email,
-      tableNumber: details.tableNumber,
+      tableNumber: targetTable,
       registeredAt: existing?.registeredAt || new Date().toISOString(),
       sessionId,
     };
 
-    const key = getStorageKey(details.tableNumber);
+    const key = targetTable ? getStorageKey(targetTable) : "scandine_customer_guest";
     try {
-      localStorage.setItem(key, JSON.stringify(customer));
+      if (targetTable) {
+        localStorage.setItem(key, JSON.stringify(customer));
+      }
       localStorage.setItem("scandine_current_customer", JSON.stringify(customer));
-      localStorage.setItem(`scandine_session_${normTable}`, sessionId);
+      if (normTable) {
+        localStorage.setItem(`scandine_session_${normTable}`, sessionId);
+      }
     } catch (e) {
       console.error("Failed to save customer details locally:", e);
     }
 
-    if (isSupabaseConfigured()) {
+    if (isSupabaseConfigured() && targetTable) {
       try {
-        const tblNum = parseInt(String(details.tableNumber).replace(/\D/g, ""), 10) || 1;
-        
-        // Deduplication in Supabase: Check if customer with same phone and table already registered recently
-        const { data: existingDb } = await supabase
-          .from("customers")
-          .select("id")
-          .eq("phone", details.phone)
-          .eq("table_number", tblNum)
-          .maybeSingle();
+        const tblNum = parseInt(String(targetTable).replace(/\D/g, ""), 10);
+        if (tblNum && !isNaN(tblNum)) {
+          // Deduplication in Supabase: Check if customer with same phone and table already registered recently
+          const { data: existingDb } = await supabase
+            .from("customers")
+            .select("id")
+            .eq("phone", details.phone)
+            .eq("table_number", tblNum)
+            .maybeSingle();
 
-        if (!existingDb) {
-          await supabase.from("customers").insert([
-            {
-              full_name: details.fullName,
-              phone: details.phone,
-              email: details.email || null,
-              table_number: tblNum,
-              created_at: customer.registeredAt,
-            },
-          ]);
+          if (!existingDb) {
+            await supabase.from("customers").insert([
+              {
+                full_name: details.fullName,
+                phone: details.phone,
+                email: details.email || null,
+                table_number: tblNum,
+                created_at: customer.registeredAt,
+              },
+            ]);
+          }
         }
       } catch (err) {
         console.warn("Supabase customer registration save error:", err);
