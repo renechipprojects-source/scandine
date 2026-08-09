@@ -69,12 +69,11 @@ export type OrderStatus =
   | "completed";
 
 export const orderStatuses: { key: OrderStatus; label: string; desc: string }[] = [
-  { key: "received", label: "Order Received", desc: "We got your order" },
-  { key: "accepted", label: "Accepted", desc: "Chef confirmed" },
-  { key: "preparing", label: "Preparing", desc: "Cooking with love" },
-  { key: "ready", label: "Ready", desc: "Waiter is on the way" },
-  { key: "served", label: "Served", desc: "Enjoy your meal" },
-  { key: "completed", label: "Completed", desc: "Thanks for dining" },
+  { key: "pending", label: "Pending", desc: "Order received by kitchen" },
+  { key: "accepted", label: "Accepted", desc: "Chef accepted order" },
+  { key: "preparing", label: "Preparing", desc: "Cooking in kitchen" },
+  { key: "ready", label: "Ready", desc: "Ready to serve" },
+  { key: "completed", label: "Completed", desc: "Enjoy your meal!" },
 ];
 
 export const notifications = [

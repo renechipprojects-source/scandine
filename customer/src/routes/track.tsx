@@ -18,18 +18,19 @@ export const Route = createFileRoute("/track")({
 });
 
 function getStepFromStatus(status?: string): number {
-  switch (status) {
+  switch (status?.toLowerCase()) {
     case "pending":
     case "received":
-    case "accepted":
       return 1;
-    case "preparing":
+    case "accepted":
       return 2;
-    case "ready":
+    case "preparing":
       return 3;
+    case "ready":
+      return 4;
     case "served":
     case "completed":
-      return 4;
+      return 5;
     default:
       return 1;
   }

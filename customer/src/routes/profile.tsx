@@ -158,13 +158,14 @@ function Profile() {
                   {/* Stage Progress Bar */}
                   <div className="pt-2 border-t flex items-center justify-between text-[11px]">
                     {[
-                      { key: "pending", label: "Received" },
+                      { key: "pending", label: "Pending" },
+                      { key: "accepted", label: "Accepted" },
                       { key: "preparing", label: "Preparing" },
                       { key: "ready", label: "Ready" },
                       { key: "completed", label: "Served" },
                     ].map((step, idx) => {
                       const stages = ["pending", "received", "accepted", "preparing", "ready", "served", "completed"];
-                      const currentIdx = stages.indexOf(o.status);
+                      const currentIdx = stages.indexOf(o.status.toLowerCase());
                       const stepIdx = stages.indexOf(step.key);
                       const isDone = currentIdx >= stepIdx;
 
