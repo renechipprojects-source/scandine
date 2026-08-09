@@ -1,5 +1,6 @@
 import { useSyncExternalStore, useState, useEffect } from "react";
 import { supabase, isSupabaseConfigured } from "./supabase";
+import { tableStore } from "./table-store";
 
 export type CustomerDetails = {
   fullName: string;
