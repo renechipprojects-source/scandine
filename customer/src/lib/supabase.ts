@@ -381,21 +381,27 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
         .eq("session_id", sessionId)
         .order("created_at", { ascending: false });
 
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
         data.map(mapRowToDbOrder).forEach((o) => fetchedOrders.push(o));
-      } else if (error) {
-        console.warn("Supabase session query notice:", error.message || error);
+      } else {
+        if (error) {
+          console.error("[ME] getOrdersBySession error:", error);
+        }
         
-        // Fallback: If session_id column is not yet present on remote DB, filter by customer identity
+        // Fallback: If session_id column is missing or returned no rows, filter by customer identity
         const rawCust = typeof window !== "undefined" ? localStorage.getItem("scandine_current_customer") : null;
         if (rawCust) {
           try {
             const cust = JSON.parse(rawCust);
             if (cust?.phone || cust?.email || cust?.fullName) {
-              const { data: idData } = await supabase
+              const { data: idData, error: idErr } = await supabase
                 .from("sd_orders")
                 .select("*")
                 .order("created_at", { ascending: false });
+
+              if (idErr) {
+                console.error("[ME] Fallback sd_orders fetch error:", idErr);
+              }
 
               if (idData) {
                 const matches = idData
@@ -406,31 +412,55 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
                       o.customer_phone.replace(/\D/g, "") === cust.phone.replace(/\D/g, "");
                     const eMatch = cust.email && o.customer_email &&
                       o.customer_email.trim().toLowerCase() === cust.email.trim().toLowerCase();
-                    const nMatch = cust.fullName && o.customer &&
-                      o.customer.trim().toLowerCase() === cust.fullName.trim().toLowerCase();
+                    
+                    const nameA = (cust.fullName || "").trim().toLowerCase();
+                    const nameB = (o.customer_name || (o as any).customer || "").trim().toLowerCase();
+                    const nMatch = Boolean(nameA && nameB && (nameA === nameB || nameB.includes(nameA) || nameA.includes(nameB)));
+
                     return pMatch || eMatch || nMatch;
                   });
                 matches.forEach((m) => {
-                  if (!fetchedOrders.some((existing) => existing.id === m.id)) {
+                  if (!fetchedOrders.some((existing) => existing.id === m.id || existing.order_number === m.order_number)) {
                     fetchedOrders.push(m);
                   }
                 });
               }
             }
-          } catch {}
+          } catch (e) {
+            console.error("Error during customer identity fallback match:", e);
+          }
         }
       }
     } catch (err) {
-      console.warn("Supabase exception during session order fetch:", err);
+      console.error("Supabase exception during session order fetch:", err);
     }
   }
 
-  // Always merge local session orders so offline/newly created session orders appear immediately
+  // Also query active order ID from local storage if present (same order tracked on Track page)
+  try {
+    if (typeof window !== "undefined") {
+      const keysToTry = [
+        "scandine_active_order_id",
+        `scandine_active_order_${tableStore.getTableNumber().toLowerCase().replace(/\s+/g, "")}`,
+      ];
+      for (const k of keysToTry) {
+        const activeOrderId = localStorage.getItem(k);
+        if (activeOrderId && !fetchedOrders.some((o) => o.id === activeOrderId || o.order_number === activeOrderId)) {
+          const activeOrder = await getOrderById(activeOrderId);
+          if (activeOrder) {
+            fetchedOrders.push(activeOrder);
+          }
+        }
+      }
+    }
+  } catch {}
+
+  // Merge local session orders so offline/newly created session orders appear immediately
   const localOrders = getLocalOrders();
   localOrders
-    .filter((o) => o.session_id === sessionId)
+    .filter((o) => o.session_id === sessionId || !o.session_id)
     .forEach((o) => {
-      if (!fetchedOrders.some((existing) => existing.id === o.id)) {
+      if (!fetchedOrders.some((existing) => existing.id === o.id || existing.order_number === o.order_number)) {
         fetchedOrders.push(o);
       }
     });

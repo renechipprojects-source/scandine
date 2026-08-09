@@ -77,9 +77,9 @@ function Profile() {
 
       unsubscribe = subscribeToOrdersBySession(customer.sessionId, (updatedOrder) => {
         setOrders((prev) => {
-          const exists = prev.some((o) => o.id === updatedOrder.id);
+          const exists = prev.some((o) => o.id === updatedOrder.id || o.order_number === updatedOrder.order_number);
           if (exists) {
-            return prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o));
+            return prev.map((o) => (o.id === updatedOrder.id || o.order_number === updatedOrder.order_number ? updatedOrder : o));
           }
           return [updatedOrder, ...prev];
         });
@@ -90,12 +90,15 @@ function Profile() {
     return () => unsubscribe();
   }, [customer?.sessionId]);
 
-  const historyOrders = orders.filter(
-    (o) => o.status === "completed" || o.status === "served" || o.status === "cancelled"
-  );
-  const activeOrders = orders.filter(
-    (o) => !["completed", "served", "cancelled"].includes(o.status.toLowerCase())
-  );
+  const activeOrders = orders.filter((o) => {
+    const normalized = String(o.status || "").toLowerCase().trim();
+    return ["pending", "received", "accepted", "preparing", "ready"].includes(normalized) || (!["completed", "served", "cancelled"].includes(normalized));
+  });
+
+  const historyOrders = orders.filter((o) => {
+    const normalized = String(o.status || "").toLowerCase().trim();
+    return ["completed", "served", "cancelled"].includes(normalized);
+  });
 
   return (
     <div className="min-h-screen bg-background pb-32">
