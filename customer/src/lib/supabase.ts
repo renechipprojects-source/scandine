@@ -270,13 +270,15 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
 }
 
 export async function getOrderById(orderId: string): Promise<DbOrder | null> {
+  if (!orderId) return null;
   if (isSupabaseConfigured()) {
     try {
+      const cleanId = orderId.replace(/^#/, "").trim();
       const { data, error } = await supabase
         .from("sd_orders")
         .select("*")
-        .or(`id.eq.${orderId},order_id.eq.${orderId}`)
-        .single();
+        .or(`id.eq.${orderId},order_id.eq.${orderId},id.eq.${cleanId},order_id.eq.${cleanId}`)
+        .maybeSingle();
 
       if (!error && data) {
         return mapRowToDbOrder(data);
@@ -287,7 +289,16 @@ export async function getOrderById(orderId: string): Promise<DbOrder | null> {
   }
 
   const localOrders = getLocalOrders();
-  return localOrders.find((o) => o.id === orderId || o.order_number === orderId) || null;
+  const cleanId = orderId.replace(/^#/, "").trim();
+  return (
+    localOrders.find(
+      (o) =>
+        o.id === orderId ||
+        o.order_number === orderId ||
+        o.id.replace(/^#/, "").trim() === cleanId ||
+        o.order_number.replace(/^#/, "").trim() === cleanId
+    ) || null
+  );
 }
 
 export async function getOrdersByTable(
@@ -1005,5 +1016,192 @@ export async function getAllPaymentsFromDb() {
     }
   }
   return [];
+}
+
+// Category & Rating Helpers
+export type FoodRatingStats = {
+  avgRating: number;
+  reviewCount: number;
+};
+
+export type FoodRating = {
+  id: string;
+  food_id: string;
+  session_id: string;
+  customer_name?: string;
+  rating: number;
+  review?: string;
+  created_at: string;
+};
+
+const ID_TO_CAT_MAP: Record<string, string> = {
+  cat_1: "Breakfast",
+  cat_2: "Lunch",
+  cat_3: "Dinner",
+  cat_4: "Starters",
+  cat_5: "Desserts",
+  cat_6: "Drinks",
+};
+
+export function getCategoryDisplayName(item: any): string {
+  if (!item) return "General";
+  const rawCat = item.category || item.category_name || item.category_title || item.category_label;
+  if (typeof rawCat === "string" && rawCat.trim() && !rawCat.toLowerCase().startsWith("cat_")) {
+    return rawCat.trim();
+  }
+  const catId = (item.category_id || (typeof rawCat === "string" ? rawCat : "")).toLowerCase();
+  if (catId && ID_TO_CAT_MAP[catId]) {
+    return ID_TO_CAT_MAP[catId];
+  }
+  return typeof rawCat === "string" && rawCat.trim() ? rawCat.trim() : "General";
+}
+
+export async function fetchFoodRatingStats(foodId: string): Promise<FoodRatingStats> {
+  if (!foodId) return { avgRating: 4.5, reviewCount: 0 };
+
+  let ratings: number[] = [];
+
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase
+        .from("sd_food_ratings")
+        .select("rating")
+        .eq("food_id", String(foodId));
+
+      if (!error && data && data.length > 0) {
+        ratings = data.map((r: any) => Number(r.rating)).filter((r) => r >= 1 && r <= 5);
+      }
+    } catch (err) {
+      console.warn("Supabase fetch food ratings error:", err);
+    }
+  }
+
+  try {
+    const rawLocal = typeof localStorage !== "undefined" ? localStorage.getItem(`scandine_food_ratings_${foodId}`) : null;
+    if (rawLocal) {
+      const parsedLocal: any[] = JSON.parse(rawLocal);
+      if (Array.isArray(parsedLocal)) {
+        const localRatings = parsedLocal.map((r) => Number(r.rating)).filter((r) => r >= 1 && r <= 5);
+        if (ratings.length === 0) {
+          ratings = localRatings;
+        }
+      }
+    }
+  } catch {}
+
+  if (ratings.length === 0) {
+    return { avgRating: 4.5, reviewCount: 0 };
+  }
+
+  const sum = ratings.reduce((acc, curr) => acc + curr, 0);
+  const avg = Math.round((sum / ratings.length) * 10) / 10;
+
+  return {
+    avgRating: avg,
+    reviewCount: ratings.length,
+  };
+}
+
+export async function fetchFoodReviews(foodId: string): Promise<FoodRating[]> {
+  if (!foodId) return [];
+  let list: FoodRating[] = [];
+
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase
+        .from("sd_food_ratings")
+        .select("*")
+        .eq("food_id", String(foodId))
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        list = data.map((r: any) => ({
+          id: String(r.id),
+          food_id: String(r.food_id),
+          session_id: String(r.session_id),
+          customer_name: r.customer_name || "Guest",
+          rating: Number(r.rating),
+          review: r.review || undefined,
+          created_at: r.created_at || new Date().toISOString(),
+        }));
+      }
+    } catch {}
+  }
+
+  try {
+    const rawLocal = typeof localStorage !== "undefined" ? localStorage.getItem(`scandine_food_ratings_${foodId}`) : null;
+    if (rawLocal) {
+      const parsedLocal: any[] = JSON.parse(rawLocal);
+      if (Array.isArray(parsedLocal)) {
+        const existingIds = new Set(list.map((l) => l.id));
+        for (const loc of parsedLocal) {
+          if (!existingIds.has(loc.id)) {
+            list.push(loc);
+          }
+        }
+      }
+    }
+  } catch {}
+
+  return list;
+}
+
+export async function submitFoodRating(payload: {
+  food_id: string;
+  session_id: string;
+  customer_name?: string;
+  rating: number;
+  review?: string;
+}): Promise<FoodRatingStats> {
+  const newRating: FoodRating = {
+    id: `rat_${payload.food_id}_${payload.session_id}`,
+    food_id: String(payload.food_id),
+    session_id: String(payload.session_id),
+    customer_name: payload.customer_name || "Guest",
+    rating: Number(payload.rating),
+    review: payload.review || "",
+    created_at: new Date().toISOString(),
+  };
+
+  try {
+    const key = `scandine_food_ratings_${payload.food_id}`;
+    const rawLocal = typeof localStorage !== "undefined" ? localStorage.getItem(key) : null;
+    let list: FoodRating[] = rawLocal ? JSON.parse(rawLocal) : [];
+    if (!Array.isArray(list)) list = [];
+    const existingIndex = list.findIndex((r) => r.session_id === payload.session_id);
+    if (existingIndex >= 0) {
+      list[existingIndex] = newRating;
+    } else {
+      list.push(newRating);
+    }
+    localStorage.setItem(key, JSON.stringify(list));
+  } catch {}
+
+  if (isSupabaseConfigured()) {
+    try {
+      let { error } = await supabase.from("sd_food_ratings").upsert(
+        [
+          {
+            id: newRating.id,
+            food_id: newRating.food_id,
+            session_id: newRating.session_id,
+            customer_name: newRating.customer_name,
+            rating: newRating.rating,
+            review: newRating.review,
+            updated_at: newRating.created_at,
+          },
+        ],
+        { onConflict: "id" }
+      );
+
+      if (error && error.code === "PGRST204") {
+        console.warn("sd_food_ratings table not created yet in Supabase. Using persistent local rating cache.");
+      }
+    } catch (err) {
+      console.warn("Supabase submit rating error:", err);
+    }
+  }
+
+  return fetchFoodRatingStats(payload.food_id);
 }
 

@@ -1,20 +1,27 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { type FoodItem } from "@/lib/mock-data";
-import { fetchDbMenuItems } from "@/lib/supabase";
+import {
+  fetchDbMenuItems,
+  getCategoryDisplayName,
+  fetchFoodRatingStats,
+  fetchFoodReviews,
+  submitFoodRating,
+  type FoodRating,
+  type FoodRatingStats,
+} from "@/lib/supabase";
 import { cart } from "@/lib/cart-store";
 import { motion } from "framer-motion";
-import { ArrowLeft, Star, Clock, Flame, Heart, Minus, Plus, ShoppingBag, Utensils } from "lucide-react";
+import { ArrowLeft, Star, Clock, Flame, Heart, Minus, Plus, ShoppingBag, Utensils, Send } from "lucide-react";
 import { VegDot, getKitchenImageUrl } from "@/components/food-card";
 import { toast } from "sonner";
+import { useTable } from "@/lib/table-store";
+import { useCustomer } from "@/lib/customer-store";
+import { CustomerRegistration } from "@/components/customer-registration";
 
 export const Route = createFileRoute("/food/$id")({
   component: FoodDetail,
 });
-
-import { useTable } from "@/lib/table-store";
-import { useCustomer } from "@/lib/customer-store";
-import { CustomerRegistration } from "@/components/customer-registration";
 
 function FoodDetail() {
   const tableNumber = useTable();
@@ -27,22 +34,30 @@ function FoodDetail() {
   const [note, setNote] = useState("");
   const [fav, setFav] = useState(false);
 
+  // Dynamic Rating State
+  const [ratingStats, setRatingStats] = useState<FoodRatingStats>({ avgRating: 4.5, reviewCount: 0 });
+  const [reviewsList, setReviewsList] = useState<FoodRating[]>([]);
+  const [selectedRating, setSelectedRating] = useState<number>(5);
+  const [reviewText, setReviewText] = useState<string>("");
+  const [isSubmittingRating, setIsSubmittingRating] = useState<boolean>(false);
+
   useEffect(() => {
     async function loadItem() {
       const dbItems = await fetchDbMenuItems();
       const item = dbItems.find((f: any) => String(f.id) === String(id));
       if (item) {
         const rawImg = item.image || item.image_url || item.photo || item.imageUrl || item.img || "";
+        const catName = getCategoryDisplayName(item);
         setFood({
           id: String(item.id),
           name: item.name,
           description: item.description || "Freshly prepared by our chef.",
           price: Number(item.price),
           image: rawImg,
-          category: (item.category || "Lunch") as any,
+          category: catName as any,
           category_id: item.category_id || "cat_2",
-          rating: item.rating || 4.8,
-          reviews: item.reviews || 120,
+          rating: 4.5,
+          reviews: 0,
           veg: item.veg ?? true,
           prepTime: item.prep_time || item.preparation_time || item.prepTime || 15,
           calories: item.calories || 350,
@@ -50,10 +65,42 @@ function FoodDetail() {
           available: item.available ?? true,
           ingredients: item.ingredients || ["Fresh Produce", "Herbs", "Olive Oil"],
         });
+
+        // Load DB-backed dynamic rating stats & reviews
+        const stats = await fetchFoodRatingStats(String(item.id));
+        setRatingStats(stats);
+
+        const revs = await fetchFoodReviews(String(item.id));
+        setReviewsList(revs);
       }
     }
     loadItem();
   }, [id]);
+
+  const handleSubmitRating = async () => {
+    if (!food || !customer?.sessionId) return;
+    setIsSubmittingRating(true);
+    try {
+      const newStats = await submitFoodRating({
+        food_id: food.id,
+        session_id: customer.sessionId,
+        customer_name: customer.fullName,
+        rating: selectedRating,
+        review: reviewText.trim(),
+      });
+      setRatingStats(newStats);
+
+      const updatedRevs = await fetchFoodReviews(food.id);
+      setReviewsList(updatedRevs);
+
+      setReviewText("");
+      toast.success("Thank you for your rating!");
+    } catch (err) {
+      toast.error("Failed to submit rating");
+    } finally {
+      setIsSubmittingRating(false);
+    }
+  };
 
   if (!customer) {
     return (

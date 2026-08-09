@@ -8,7 +8,7 @@ import { cart } from "@/lib/cart-store";
 import { useTable } from "@/lib/table-store";
 import { useCustomer } from "@/lib/customer-store";
 import { CustomerRegistration } from "@/components/customer-registration";
-import { getOrderById, subscribeToOrder, type DbOrder } from "@/lib/supabase";
+import { getOrderById, getOrdersByTable, subscribeToOrder, type DbOrder } from "@/lib/supabase";
 
 export const Route = createFileRoute("/track")({
   component: Track,
@@ -60,18 +60,31 @@ function Track() {
     let unsubscribe = () => {};
 
     async function loadOrder() {
-      if (!activeId) {
-        setLoading(false);
-        return;
-      }
       setLoading(true);
-      const data = await getOrderById(activeId);
-      setOrder(data);
+      let targetId = activeId;
+      let fetchedOrder: DbOrder | null = null;
+
+      if (targetId) {
+        fetchedOrder = await getOrderById(targetId);
+      }
+
+      if (!fetchedOrder && tableNumber && customer?.sessionId) {
+        const myOrders = await getOrdersByTable(tableNumber, customer.fullName, customer.sessionId);
+        if (myOrders && myOrders.length > 0) {
+          const activeOrLatest = myOrders.find((o) => o.status !== "completed" && o.status !== "cancelled") || myOrders[0];
+          fetchedOrder = activeOrLatest;
+          targetId = activeOrLatest.id;
+        }
+      }
+
+      setOrder(fetchedOrder);
       setLoading(false);
 
-      unsubscribe = subscribeToOrder(activeId, (updatedOrder) => {
-        setOrder(updatedOrder);
-      });
+      if (targetId) {
+        unsubscribe = subscribeToOrder(targetId, (updatedOrder) => {
+          setOrder(updatedOrder);
+        });
+      }
     }
 
     loadOrder();
@@ -79,7 +92,7 @@ function Track() {
     return () => {
       unsubscribe();
     };
-  }, [activeId]);
+  }, [activeId, tableNumber, customer?.fullName, customer?.sessionId]);
 
   if (!customer) {
     return (

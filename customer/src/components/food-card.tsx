@@ -2,9 +2,10 @@ import type { FoodItem } from "@/lib/mock-data";
 import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
 import { Star, Plus, Heart, Clock, Flame, Utensils } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cart } from "@/lib/cart-store";
 import { toast } from "sonner";
+import { fetchFoodRatingStats } from "@/lib/supabase";
 
 export function getKitchenImageUrl(url?: string): string {
   if (!url || typeof url !== "string") return "";
@@ -29,8 +30,21 @@ export function getKitchenImageUrl(url?: string): string {
 export function FoodCard({ food, layout = "grid" }: { food: FoodItem; layout?: "grid" | "row" }) {
   const [fav, setFav] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [ratingStats, setRatingStats] = useState({ avgRating: food.rating || 4.5, reviewCount: food.reviews || 0 });
   const rawUrl = getKitchenImageUrl(food.image);
   const showImage = Boolean(rawUrl && !imgError);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchFoodRatingStats(String(food.id)).then((stats) => {
+      if (isMounted && stats) {
+        setRatingStats(stats);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [food.id]);
 
   if (layout === "row") {
     return (
@@ -112,7 +126,7 @@ export function FoodCard({ food, layout = "grid" }: { food: FoodItem; layout?: "
             <VegDot veg={food.veg} />
             <div className="flex items-center gap-1 rounded-full glass px-2 py-0.5 text-[10px] font-semibold">
               <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-              {food.rating}
+              {ratingStats.avgRating}
             </div>
             <div className="flex items-center gap-1 rounded-full glass px-2 py-0.5 text-[10px]">
               <Clock className="h-3 w-3" /> {food.prepTime}m

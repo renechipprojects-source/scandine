@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { CustomerNav } from "@/components/customer-nav";
 import { FoodCard } from "@/components/food-card";
 import { categories, combos, type FoodItem } from "@/lib/mock-data";
-import { fetchDbMenuItems, subscribeToMenuItems } from "@/lib/supabase";
+import { fetchDbMenuItems, getCategoryDisplayName, subscribeToMenuItems } from "@/lib/supabase";
 import { useLiveOrders } from "@/lib/live-order-store";
 import { tableStore, useTable } from "@/lib/table-store";
 import { useCustomer } from "@/lib/customer-store";
@@ -120,8 +120,8 @@ function Menu() {
       );
 
       const mapped: FoodItem[] = availableDbItems.map((item: any) => {
-        const normCat = normalizeCategory(item.category || item.category_name, item.category_id);
-        const catId = item.category_id || CATEGORY_TO_ID[normCat];
+        const normCat = (getCategoryDisplayName(item) || "Lunch") as any;
+        const catId = item.category_id || CATEGORY_TO_ID[normCat] || "cat_2";
         const rawImg = item.image || item.image_url || item.photo || item.imageUrl || item.img || "";
         return {
           id: String(item.id),
