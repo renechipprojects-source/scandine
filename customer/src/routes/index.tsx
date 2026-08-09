@@ -29,21 +29,41 @@ function Welcome() {
     let unsubscribe = () => {};
 
     async function loadActiveOrder() {
-      if (!tableNumber) return;
+      if (!tableNumber || !customer?.phone) {
+        setActiveOrder(null);
+        return;
+      }
       const orders = await getOrdersByTable(tableNumber);
       if (orders && orders.length > 0) {
-        const latest = orders.find((o) => o.status !== "completed") || orders[0];
-        setActiveOrder(latest);
+        const myOrders = orders.filter((o) => {
+          if (!o.customer_phone || !customer.phone) return true;
+          return o.customer_phone.replace(/\D/g, "") === customer.phone.replace(/\D/g, "");
+        });
+        if (myOrders.length > 0) {
+          const latest = myOrders.find((o) => o.status !== "completed") || myOrders[0];
+          setActiveOrder(latest);
+        } else {
+          setActiveOrder(null);
+        }
+      } else {
+        setActiveOrder(null);
       }
 
       unsubscribe = subscribeToAllOrders(tableNumber, (updated) => {
+        if (
+          customer?.phone &&
+          updated.customer_phone &&
+          updated.customer_phone.replace(/\D/g, "") !== customer.phone.replace(/\D/g, "")
+        ) {
+          return;
+        }
         setActiveOrder(updated);
       });
     }
 
     loadActiveOrder();
     return () => unsubscribe();
-  }, [tableNumber]);
+  }, [tableNumber, customer?.phone, customer?.sessionId]);
 
   // If customer details are not saved for the active table, show Customer Registration Page first
   if (!customer) {

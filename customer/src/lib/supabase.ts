@@ -17,6 +17,7 @@ export type DbOrder = {
   order_number: string;
   table_number: string;
   customer_name?: string;
+  customer_phone?: string;
   items: DbOrderItem[];
   subtotal: number;
   discount: number;
@@ -133,6 +134,7 @@ export function mapRowToDbOrder(row: any): DbOrder {
     order_number: row.order_id || row.order_number || row.id,
     table_number: String(row.table_number || "1"),
     customer_name: row.customer || row.customer_name || "Guest",
+    customer_phone: row.phone || row.customer_phone || row.mobile || undefined,
     items: itemsArr,
     subtotal: Number(row.total || 0),
     discount: 0,

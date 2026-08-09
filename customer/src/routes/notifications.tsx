@@ -30,8 +30,19 @@ function Notifs() {
   }
 
   useEffect(() => {
-    // Listen for live updates on all orders for this table
+    if (!customer?.phone) return;
+
+    // Listen for live updates on orders for this table
     const unsubscribe = subscribeToAllOrders(tableNumber, (updatedOrder: DbOrder) => {
+      // Isolate notifications to current customer session / phone
+      if (
+        customer?.phone &&
+        updatedOrder.customer_phone &&
+        updatedOrder.customer_phone.replace(/\D/g, "") !== customer.phone.replace(/\D/g, "")
+      ) {
+        return; // Ignore order updates belonging to other customer sessions
+      }
+
       if (updatedOrder.status === "ready") {
         notificationStore.addNotification({
           title: `Order ${updatedOrder.order_number} is READY! 🍽️`,
@@ -50,7 +61,7 @@ function Notifs() {
     });
 
     return () => unsubscribe();
-  }, [tableNumber]);
+  }, [tableNumber, customer?.phone, customer?.sessionId]);
 
   const filteredNotifs = notifs.filter((n) => {
     if (filter === "all") return true;

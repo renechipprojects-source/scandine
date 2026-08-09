@@ -15,35 +15,63 @@ export type AppNotification = {
   createdAt: string;
 };
 
-const NOTIFS_STORAGE_KEY = "aura_dine_notifications";
+const getNotifsStorageKey = () => {
+  try {
+    if (typeof window !== "undefined") {
+      const rawCurrent = localStorage.getItem("scandine_current_customer");
+      if (rawCurrent) {
+        const current = JSON.parse(rawCurrent);
+        if (current?.sessionId) {
+          return `scandine_notifications_${current.sessionId}`;
+        }
+      }
+    }
+  } catch {}
+  return "scandine_notifications_guest";
+};
+
+let currentKey = getNotifsStorageKey();
 
 let notifList: AppNotification[] = ((): AppNotification[] => {
   try {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(NOTIFS_STORAGE_KEY);
+      const stored = localStorage.getItem(currentKey);
       if (stored) return JSON.parse(stored);
     }
   } catch {}
-  return initialNotifications.map((n) => ({
-    ...n,
-    read: false,
-    type: n.type as NotificationType,
-    category: n.type === "offer" ? "offers" : "orders",
-    createdAt: new Date().toISOString(),
-  }));
+  return [];
 })();
 
 const listeners = new Set<() => void>();
 const emit = () => {
   try {
-    localStorage.setItem(NOTIFS_STORAGE_KEY, JSON.stringify(notifList));
+    currentKey = getNotifsStorageKey();
+    localStorage.setItem(currentKey, JSON.stringify(notifList));
   } catch {}
   listeners.forEach((l) => l());
 };
 
 export const notificationStore = {
   getNotifications(): AppNotification[] {
+    const key = getNotifsStorageKey();
+    if (key !== currentKey) {
+      currentKey = key;
+      try {
+        const stored = localStorage.getItem(currentKey);
+        notifList = stored ? JSON.parse(stored) : [];
+      } catch {
+        notifList = [];
+      }
+    }
     return notifList;
+  },
+  resetForNewSession(sessionId: string) {
+    notifList = [];
+    currentKey = `scandine_notifications_${sessionId}`;
+    try {
+      localStorage.setItem(currentKey, JSON.stringify([]));
+    } catch {}
+    listeners.forEach((l) => l());
   },
   addNotification(n: Omit<AppNotification, "id" | "time" | "read" | "createdAt"> & { id?: string }) {
     const item: AppNotification = {

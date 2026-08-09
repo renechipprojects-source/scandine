@@ -113,6 +113,17 @@ export const cart = {
     state = { items: [], activeOrderId: currentActiveOrder };
     emit();
   },
+  clearCartForNewSession() {
+    state = { items: [], activeOrderId: undefined };
+    cachedCartKey = null;
+    cachedCartRaw = null;
+    try {
+      const key = getCartStorageKey();
+      localStorage.removeItem(key);
+      localStorage.removeItem(`scandine_active_order_${tableStore.getTableNumber().toLowerCase().replace(/\s+/g, "")}`);
+    } catch {}
+    listeners.forEach((l) => l());
+  },
 };
 
 const SERVER_CART_STATE: State = { items: [] };

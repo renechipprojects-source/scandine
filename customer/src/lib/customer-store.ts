@@ -1,6 +1,9 @@
 import { useSyncExternalStore, useState, useEffect } from "react";
 import { supabase, isSupabaseConfigured } from "./supabase";
 import { tableStore } from "./table-store";
+import { cart } from "./cart-store";
+import { notificationStore } from "./notification-store";
+import { liveOrderStore } from "./live-order-store";
 
 export type CustomerDetails = {
   fullName: string;
@@ -91,29 +94,22 @@ export const customerStore = {
 
     const normTable = targetTable ? targetTable.toLowerCase().replace(/\s+/g, "") : "";
     
-    // Check if existing customer profile matches (Deduplication by phone & table)
-    const existing = targetTable ? this.getCustomer(targetTable) : null;
-    let sessionId = existing?.sessionId;
-
-    if (!sessionId && normTable) {
-      try {
-        const savedSession = localStorage.getItem(`scandine_session_${normTable}`);
-        if (savedSession) sessionId = savedSession;
-      } catch {}
-    }
-
-    if (!sessionId) {
-      sessionId = `session_${normTable || "guest"}_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
-    }
+    // Always generate a unique session ID for every new customer registration
+    const sessionId = `session_${normTable || "guest"}_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
 
     const customer: CustomerDetails = {
       fullName: details.fullName,
       phone: details.phone,
       email: details.email,
       tableNumber: targetTable,
-      registeredAt: existing?.registeredAt || new Date().toISOString(),
+      registeredAt: new Date().toISOString(),
       sessionId,
     };
+
+    // Reset cart, notifications, and live order caches for the new session
+    cart.clearCartForNewSession();
+    notificationStore.resetForNewSession(sessionId);
+    liveOrderStore.resetForNewSession();
 
     const key = targetTable ? getStorageKey(targetTable) : "scandine_customer_guest";
     try {

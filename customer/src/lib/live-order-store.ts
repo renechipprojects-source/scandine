@@ -111,6 +111,15 @@ function persistServices(newReq?: LiveServiceRequest) {
 }
 
 export const liveOrderStore = {
+  resetForNewSession() {
+    cachedOrders = [];
+    cachedServices = [];
+    try {
+      localStorage.removeItem(ORDERS_KEY);
+      localStorage.removeItem(SERVICES_KEY);
+    } catch {}
+    listeners.forEach((l) => l());
+  },
   getOrders(): LiveOrder[] {
     return cachedOrders;
   },
