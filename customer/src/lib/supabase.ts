@@ -529,9 +529,12 @@ export function subscribeToOrdersBySession(
         }
       }
     )
-    .subscribe((status) => {
+    .subscribe((status, err) => {
+      console.log("[TRACK] Realtime status:", status);
       if (status === "SUBSCRIBED" && onSubscribed) {
-        onSubscribed();
+        onSubscribed(status);
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        console.error("[TRACK] Realtime subscription error:", status, err);
       }
     });
 

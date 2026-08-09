@@ -146,8 +146,10 @@ function TrackOrder() {
             return updatedOrder;
           });
         },
-        () => {
-          console.log("[TRACK] Realtime SUBSCRIBED");
+        (status) => {
+          if (status === "SUBSCRIBED") {
+            console.log("[TRACK] Realtime SUBSCRIBED");
+          }
         }
       );
     }
