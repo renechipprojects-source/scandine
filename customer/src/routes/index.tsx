@@ -33,11 +33,17 @@ function Welcome() {
         setActiveOrder(null);
         return;
       }
-      const orders = await getOrdersByTable(tableNumber);
+      const orders = await getOrdersByTable(tableNumber, customer.fullName, customer.sessionId);
       if (orders && orders.length > 0) {
         const myOrders = orders.filter((o) => {
-          if (!o.customer_phone || !customer.phone) return true;
-          return o.customer_phone.replace(/\D/g, "") === customer.phone.replace(/\D/g, "");
+          if (o.session_id && customer.sessionId) {
+            return o.session_id === customer.sessionId;
+          }
+          const nameMatch = o.customer_name && customer.fullName &&
+            o.customer_name.trim().toLowerCase() === customer.fullName.trim().toLowerCase();
+          const phoneMatch = o.customer_phone && customer.phone &&
+            o.customer_phone.replace(/\D/g, "") === customer.phone.replace(/\D/g, "");
+          return nameMatch || phoneMatch;
         });
         if (myOrders.length > 0) {
           const latest = myOrders.find((o) => o.status !== "completed") || myOrders[0];
@@ -50,7 +56,9 @@ function Welcome() {
       }
 
       unsubscribe = subscribeToAllOrders(tableNumber, (updated) => {
-        if (
+        if (updated.session_id && customer?.sessionId) {
+          if (updated.session_id !== customer.sessionId) return;
+        } else if (
           customer?.phone &&
           updated.customer_phone &&
           updated.customer_phone.replace(/\D/g, "") !== customer.phone.replace(/\D/g, "")

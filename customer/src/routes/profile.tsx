@@ -67,12 +67,28 @@ function Profile() {
     let unsubscribe = () => {};
 
     async function loadTableOrders() {
+      if (!customer) {
+        setOrders([]);
+        setLoadingOrders(false);
+        return;
+      }
       setLoadingOrders(true);
-      const data = await getOrdersByTable(tableNumber);
+      const data = await getOrdersByTable(tableNumber, customer.fullName, customer.sessionId);
       setOrders(data);
       setLoadingOrders(false);
 
       unsubscribe = subscribeToAllOrders(tableNumber, (updatedOrder) => {
+        // Priority 1: Strict Session ID matching if session_id exists on order update
+        if (updatedOrder.session_id && customer.sessionId) {
+          if (updatedOrder.session_id !== customer.sessionId) return;
+        } else {
+          const nameMatch = updatedOrder.customer_name && customer.fullName && 
+            updatedOrder.customer_name.trim().toLowerCase() === customer.fullName.trim().toLowerCase();
+          const phoneMatch = updatedOrder.customer_phone && customer.phone &&
+            updatedOrder.customer_phone.replace(/\D/g, "") === customer.phone.replace(/\D/g, "");
+          if (!nameMatch && !phoneMatch) return;
+        }
+
         setOrders((prev) => {
           const exists = prev.some((o) => o.id === updatedOrder.id);
           if (exists) {
@@ -85,7 +101,7 @@ function Profile() {
 
     loadTableOrders();
     return () => unsubscribe();
-  }, [tableNumber]);
+  }, [tableNumber, customer?.fullName, customer?.phone, customer?.sessionId]);
 
   if (!customer) {
     return (

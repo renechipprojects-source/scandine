@@ -18,6 +18,7 @@ export type DbOrder = {
   table_number: string;
   customer_name?: string;
   customer_phone?: string;
+  session_id?: string;
   items: DbOrderItem[];
   subtotal: number;
   discount: number;
@@ -77,12 +78,25 @@ export const isSupabaseConfigured = () => Boolean(supabaseUrl && supabaseAnonKey
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 
-const MOCK_ORDERS_KEY = "aura_dine_orders";
-const MOCK_SERVICES_KEY = "aura_dine_services";
+const getLocalOrdersKey = () => {
+  try {
+    if (typeof window !== "undefined") {
+      const rawCurrent = localStorage.getItem("scandine_current_customer");
+      if (rawCurrent) {
+        const current = JSON.parse(rawCurrent);
+        if (current?.sessionId) {
+          return `aura_dine_orders_${current.sessionId}`;
+        }
+      }
+    }
+  } catch {}
+  return "aura_dine_orders_guest";
+};
 
 function getLocalOrders(): DbOrder[] {
   try {
-    const raw = localStorage.getItem(MOCK_ORDERS_KEY);
+    const key = getLocalOrdersKey();
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -91,7 +105,8 @@ function getLocalOrders(): DbOrder[] {
 
 function saveLocalOrders(orders: DbOrder[]) {
   try {
-    localStorage.setItem(MOCK_ORDERS_KEY, JSON.stringify(orders));
+    const key = getLocalOrdersKey();
+    localStorage.setItem(key, JSON.stringify(orders));
   } catch (err) {
     console.error("Failed to save local orders:", err);
   }
@@ -135,6 +150,7 @@ export function mapRowToDbOrder(row: any): DbOrder {
     table_number: String(row.table_number || "1"),
     customer_name: row.customer || row.customer_name || "Guest",
     customer_phone: row.phone || row.customer_phone || row.mobile || undefined,
+    session_id: row.session_id || undefined,
     items: itemsArr,
     subtotal: Number(row.total || 0),
     discount: 0,
@@ -186,7 +202,7 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         price: it.price,
       }));
 
-      const dbPayload = {
+      const dbPayload: any = {
         id: newOrder.id,
         order_id: orderIdStr,
         customer: newOrder.customer_name || `Table ${tblNum} Customer`,
@@ -199,11 +215,27 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         created_at: newOrder.created_at,
       };
 
-      const { data, error } = await supabase
+      if (newOrder.session_id) {
+        dbPayload.session_id = newOrder.session_id;
+      }
+
+      let { data, error } = await supabase
         .from("sd_orders")
         .insert([dbPayload])
         .select()
         .single();
+
+      if (error && error.code === "PGRST204" && dbPayload.session_id) {
+        // Fallback if session_id column is not yet added to Supabase table
+        delete dbPayload.session_id;
+        const retry = await supabase
+          .from("sd_orders")
+          .insert([dbPayload])
+          .select()
+          .single();
+        data = retry.data;
+        error = retry.error;
+      }
 
       if (error) {
         console.error("Supabase insert error, queuing for offline sync:", error);
@@ -258,7 +290,11 @@ export async function getOrderById(orderId: string): Promise<DbOrder | null> {
   return localOrders.find((o) => o.id === orderId || o.order_number === orderId) || null;
 }
 
-export async function getOrdersByTable(tableNumber: string): Promise<DbOrder[]> {
+export async function getOrdersByTable(
+  tableNumber: string,
+  customerFilter?: string,
+  sessionIdFilter?: string
+): Promise<DbOrder[]> {
   if (isSupabaseConfigured()) {
     try {
       const tblNum = parseInt(String(tableNumber).replace(/\D/g, ""), 10) || 1;
@@ -269,7 +305,24 @@ export async function getOrdersByTable(tableNumber: string): Promise<DbOrder[]> 
         .order("created_at", { ascending: false });
 
       if (!error && data) {
-        return data.map(mapRowToDbOrder);
+        const allMapped = data.map(mapRowToDbOrder);
+        if (sessionIdFilter || customerFilter) {
+          const cleanFilter = (customerFilter || "").trim().toLowerCase();
+          const digitsFilter = (customerFilter || "").replace(/\D/g, "");
+          return allMapped.filter((o) => {
+            if (sessionIdFilter && o.session_id) {
+              return o.session_id === sessionIdFilter;
+            }
+            if (sessionIdFilter && !o.session_id) {
+              // Historical orders without session_id are isolated from new customer visits
+              return false;
+            }
+            const nameMatch = cleanFilter && o.customer_name && o.customer_name.trim().toLowerCase() === cleanFilter;
+            const phoneMatch = digitsFilter.length === 10 && o.customer_phone && o.customer_phone.replace(/\D/g, "") === digitsFilter;
+            return Boolean(nameMatch || phoneMatch);
+          });
+        }
+        return allMapped;
       }
     } catch (err) {
       console.warn("Supabase table orders fetch error:", err);
@@ -277,7 +330,23 @@ export async function getOrdersByTable(tableNumber: string): Promise<DbOrder[]> 
   }
 
   const localOrders = getLocalOrders();
-  return localOrders.filter((o) => o.table_number.toLowerCase() === tableNumber.toLowerCase());
+  const tableLocal = localOrders.filter((o) => o.table_number.toLowerCase() === tableNumber.toLowerCase());
+  if (sessionIdFilter || customerFilter) {
+    const cleanFilter = (customerFilter || "").trim().toLowerCase();
+    const digitsFilter = (customerFilter || "").replace(/\D/g, "");
+    return tableLocal.filter((o) => {
+      if (sessionIdFilter && o.session_id) {
+        return o.session_id === sessionIdFilter;
+      }
+      if (sessionIdFilter && !o.session_id) {
+        return false;
+      }
+      const nameMatch = cleanFilter && o.customer_name && o.customer_name.trim().toLowerCase() === cleanFilter;
+      const phoneMatch = digitsFilter.length === 10 && o.customer_phone && o.customer_phone.replace(/\D/g, "") === digitsFilter;
+      return Boolean(nameMatch || phoneMatch);
+    });
+  }
+  return tableLocal;
 }
 
 export async function updateOrderPayment(orderId: string, paymentMethod: string): Promise<boolean> {

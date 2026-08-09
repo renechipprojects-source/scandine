@@ -73,6 +73,8 @@ function Cart() {
         order_number: orderNumber,
         table_number: activeTable,
         customer_name: custDisplayName,
+        customer_phone: registeredCust?.phone,
+        session_id: registeredCust?.sessionId,
         items: orderPayloadItems,
         subtotal: totals.subtotal,
         discount: totals.discount,
