@@ -206,6 +206,9 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         id: newOrder.id,
         order_id: orderIdStr,
         customer: newOrder.customer_name || `Table ${tblNum} Customer`,
+        customer_name: newOrder.customer_name || `Table ${tblNum} Customer`,
+        customer_email: newOrder.customer_email || "",
+        customer_phone: newOrder.customer_phone || "",
         table_number: tblNum,
         item: itemsPayload,
         total: Number(newOrder.total),
@@ -227,9 +230,12 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         .select()
         .single();
 
-      if (error && error.code === "PGRST204" && dbPayload.session_id) {
-        // Fallback if session_id column is not yet added to Supabase table
+      if (error && (error.code === "PGRST204" || error.code === "42703")) {
+        // Fallback if extra columns are not yet added to remote Supabase table
         delete dbPayload.session_id;
+        delete dbPayload.customer_name;
+        delete dbPayload.customer_email;
+        delete dbPayload.customer_phone;
         const retry = await supabase
           .from("sd_orders")
           .insert([dbPayload])
@@ -365,6 +371,8 @@ export async function getOrdersByTable(
 
 export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> {
   if (!sessionId) return [];
+  const fetchedOrders: DbOrder[] = [];
+
   if (isSupabaseConfigured()) {
     try {
       const { data, error } = await supabase
@@ -374,33 +382,71 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
         .order("created_at", { ascending: false });
 
       if (!error && data) {
-        return data.map(mapRowToDbOrder);
-      }
-
-      if (error && (error.code === "PGRST204" || error.code === "42703" || error.message?.includes("session_id") || error.message?.includes("column"))) {
+        data.map(mapRowToDbOrder).forEach((o) => fetchedOrders.push(o));
+      } else if (error) {
+        console.warn("Supabase session query notice:", error.message || error);
+        
+        // Fallback: If session_id column is not yet present on remote DB, filter by customer identity
         const rawCust = typeof window !== "undefined" ? localStorage.getItem("scandine_current_customer") : null;
         if (rawCust) {
-          const cust = JSON.parse(rawCust);
-          if (cust?.tableNumber) {
-            const tableOrders = await getOrdersByTable(cust.tableNumber, cust.fullName, sessionId);
-            if (tableOrders && tableOrders.length > 0) return tableOrders;
-          }
+          try {
+            const cust = JSON.parse(rawCust);
+            if (cust?.phone || cust?.email || cust?.fullName) {
+              const { data: idData } = await supabase
+                .from("sd_orders")
+                .select("*")
+                .order("created_at", { ascending: false });
+
+              if (idData) {
+                const matches = idData
+                  .map(mapRowToDbOrder)
+                  .filter((o) => {
+                    if (o.session_id === sessionId) return true;
+                    const pMatch = cust.phone && o.customer_phone &&
+                      o.customer_phone.replace(/\D/g, "") === cust.phone.replace(/\D/g, "");
+                    const eMatch = cust.email && o.customer_email &&
+                      o.customer_email.trim().toLowerCase() === cust.email.trim().toLowerCase();
+                    const nMatch = cust.fullName && o.customer &&
+                      o.customer.trim().toLowerCase() === cust.fullName.trim().toLowerCase();
+                    return pMatch || eMatch || nMatch;
+                  });
+                matches.forEach((m) => {
+                  if (!fetchedOrders.some((existing) => existing.id === m.id)) {
+                    fetchedOrders.push(m);
+                  }
+                });
+              }
+            }
+          } catch {}
         }
       }
     } catch (err) {
-      console.warn("Supabase session orders fetch error:", err);
+      console.warn("Supabase exception during session order fetch:", err);
     }
   }
 
+  // Always merge local session orders so offline/newly created session orders appear immediately
   const localOrders = getLocalOrders();
-  return localOrders
+  localOrders
     .filter((o) => o.session_id === sessionId)
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    .forEach((o) => {
+      if (!fetchedOrders.some((existing) => existing.id === o.id)) {
+        fetchedOrders.push(o);
+      }
+    });
+
+  return fetchedOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
 export function subscribeToOrdersBySession(sessionId: string, onUpdate: (order: DbOrder) => void) {
   if (!isSupabaseConfigured() || !sessionId) {
     return () => {};
+  }
+
+  const rawCust = typeof window !== "undefined" ? localStorage.getItem("scandine_current_customer") : null;
+  let currentCust: any = null;
+  if (rawCust) {
+    try { currentCust = JSON.parse(rawCust); } catch {}
   }
 
   const channel = supabase
@@ -415,8 +461,25 @@ export function subscribeToOrdersBySession(sessionId: string, onUpdate: (order: 
       (payload) => {
         if (payload.new) {
           const mapped = mapRowToDbOrder(payload.new);
-          if (mapped.session_id === sessionId) {
+          
+          // Match Priority 1: Exact session_id
+          if (mapped.session_id && mapped.session_id === sessionId) {
             onUpdate(mapped);
+            return;
+          }
+
+          // Match Priority 2: Customer Identity fallback (Phone / Email / Full Name)
+          if (currentCust) {
+            const phoneMatch = currentCust.phone && mapped.customer_phone &&
+              mapped.customer_phone.replace(/\D/g, "") === currentCust.phone.replace(/\D/g, "");
+            const emailMatch = currentCust.email && mapped.customer_email &&
+              mapped.customer_email.trim().toLowerCase() === currentCust.email.trim().toLowerCase();
+            const nameMatch = currentCust.fullName && mapped.customer &&
+              mapped.customer.trim().toLowerCase() === currentCust.fullName.trim().toLowerCase();
+
+            if (phoneMatch || emailMatch || nameMatch) {
+              onUpdate(mapped);
+            }
           }
         }
       }

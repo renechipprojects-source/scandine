@@ -80,6 +80,7 @@ function Cart() {
         table_number: activeTable,
         customer_name: custDisplayName,
         customer_phone: registeredCust.phone,
+        customer_email: registeredCust.email || "",
         session_id: registeredCust.sessionId,
         items: orderPayloadItems,
         subtotal: totals.subtotal,

@@ -90,11 +90,11 @@ function Profile() {
     return () => unsubscribe();
   }, [customer?.sessionId]);
 
-  const activeOrders = orders.filter(
-    (o) => o.status === "pending" || o.status === "preparing" || o.status === "ready" || o.status === "accepted" || o.status === "received"
-  );
   const historyOrders = orders.filter(
     (o) => o.status === "completed" || o.status === "served" || o.status === "cancelled"
+  );
+  const activeOrders = orders.filter(
+    (o) => !["completed", "served", "cancelled"].includes(o.status.toLowerCase())
   );
 
   return (
