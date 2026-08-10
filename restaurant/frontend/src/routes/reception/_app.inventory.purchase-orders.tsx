@@ -445,11 +445,11 @@ function POPage() {
                 <form onSubmit={handleCreatePO} className="space-y-4 mt-2">
                   <div className="space-y-1">
                     <Label>Supplier Name *</Label>
-                    <Select value={poSupplier || suppliers[0]?.name || ""} onValueChange={setPoSupplier}>
+                    <Select value={poSupplier || (suppliers.length > 0 ? suppliers[0].name : undefined)} onValueChange={setPoSupplier}>
                       <SelectTrigger><SelectValue placeholder="Select Supplier" /></SelectTrigger>
                       <SelectContent>
-                        {suppliers.map((s) => (
-                          <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                        {suppliers.filter((s) => s && s.name && s.name.trim()).map((s, idx) => (
+                          <SelectItem key={s.id || `sup_opt_${idx}`} value={s.name.trim()}>{s.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
