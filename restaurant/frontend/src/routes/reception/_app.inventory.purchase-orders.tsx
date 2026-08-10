@@ -549,10 +549,10 @@ function POPage() {
 
         {/* Tab 1: Purchase Orders Table */}
         <TabsContent value="purchase-orders" className="mt-4">
-          <Card className="p-4">
-            <div className="-mx-4 overflow-x-auto">
-              <Table>
-                <TableHeader>
+          <Card className="p-4 w-full border shadow-xs overflow-hidden">
+            <div className="w-full max-h-[450px] overflow-y-auto overflow-x-auto border rounded-lg scrollbar-thin">
+              <Table className="w-full">
+                <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-md">
                   <TableRow className="bg-muted/40">
                     <TableHead>PO No</TableHead>
                     <TableHead>Supplier</TableHead>
@@ -629,10 +629,10 @@ function POPage() {
 
         {/* Tab 2: Suppliers Table */}
         <TabsContent value="suppliers" className="mt-4">
-          <Card className="p-4">
-            <div className="-mx-4 overflow-x-auto">
-              <Table>
-                <TableHeader>
+          <Card className="p-4 w-full border shadow-xs overflow-hidden">
+            <div className="w-full max-h-[380px] overflow-y-auto overflow-x-auto border rounded-lg scrollbar-thin">
+              <Table className="w-full">
+                <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-md">
                   <TableRow className="bg-muted/40">
                     <TableHead>Supplier Name</TableHead>
                     <TableHead>Phone Number</TableHead>

@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { kpis, salesTrend, restaurantInfo } from "@/reception/lib/mock-data";
 import { useSupabaseTable, type TableItem, type Invoice, type Order } from "@/hooks/useSupabaseData";
-import { ServiceRequestsSection } from "@/kitchen/components/ServiceRequestsSection";
 import { exportToCSV } from "@/admin/lib/exportUtils";
 import { toast } from "sonner";
 import { useCallback } from "react";
@@ -107,10 +106,7 @@ function DashboardPage() {
         <MiniStat label="Completed" value={completedCount} tone="text-success" />
       </div>
 
-      {/* Realtime Service Requests Section for Reception */}
-      <div className="mt-6">
-        <ServiceRequestsSection />
-      </div>
+
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
