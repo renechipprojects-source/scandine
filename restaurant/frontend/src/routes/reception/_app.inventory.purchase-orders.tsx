@@ -320,7 +320,7 @@ function POPage() {
             {/* New Supplier Dialog */}
             <Dialog open={isCreateSupplierOpen} onOpenChange={setIsCreateSupplierOpen}>
               <DialogTrigger asChild>
-                <Button variant="secondary" size="sm">
+                <Button variant="secondary" size="sm" onClick={() => setIsCreateSupplierOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   New Supplier
                 </Button>
@@ -397,7 +397,7 @@ function POPage() {
             {/* New PO Dialog */}
             <Dialog open={isCreatePOOpen} onOpenChange={setIsCreatePOOpen}>
               <DialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" onClick={() => setIsCreatePOOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   New PO
                 </Button>
