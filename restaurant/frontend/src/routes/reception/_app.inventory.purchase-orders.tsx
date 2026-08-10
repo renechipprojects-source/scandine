@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/reception/components/layout/PageHeader";
-import { StatusBadge } from "@/reception/components/layout/StatusBadge";
 import { Card } from "@/reception/components/ui/card";
 import { Button } from "@/reception/components/ui/button";
 import { Input } from "@/reception/components/ui/input";
@@ -9,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/reception/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/reception/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/reception/components/ui/tabs";
-import { ClipboardList, Plus, Eye, Truck, Calendar, Building2, Phone, MapPin, Trash2, Loader2, RefreshCw } from "lucide-react";
+import { ClipboardList, Plus, Truck, Calendar, Building2, Phone, MapPin, Trash2, Loader2 } from "lucide-react";
 import { restaurantInfo } from "@/reception/lib/mock-data";
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect, useCallback } from "react";
@@ -40,7 +39,7 @@ export interface PurchaseOrderRecord {
   items: number;
   total: number;
   date?: string;
-  status: "pending" | "preparing" | "ready" | "completed" | "cancelled";
+  status: string;
   entry_type?: string;
   created_at?: string;
 }
@@ -85,6 +84,12 @@ function POPage() {
     { id: "sup_1", name: "Golden Gate Produce Co.", phone: "+1 415 555 0190", address: "San Francisco Wholesale Market, CA" },
     { id: "sup_2", name: "Pacific Seafood Distributors", phone: "+1 415 555 0191", address: "Pier 45, San Francisco, CA" },
     { id: "sup_3", name: "Bay Area Bakery Supplies", phone: "+1 415 555 0192", address: "Oakland, CA" },
+  ];
+
+  const DEFAULT_PURCHASE_ORDERS: PurchaseOrderRecord[] = [
+    { id: "#PO-1001", supplier: "Golden Gate Produce Co.", items: 8, total: 2450.0, status: "Prepaid", entry_type: "Direct Restock" },
+    { id: "#PO-1002", supplier: "Pacific Seafood Distributors", items: 4, total: 1890.5, status: "Pay on Delivery (POD)", entry_type: "Supplier Purchase Order" },
+    { id: "#PO-1003", supplier: "Bay Area Bakery Supplies", items: 12, total: 980.0, status: "Prepaid", entry_type: "Direct Restock" },
   ];
 
   // FETCH SUPPLIERS DIRECTLY FROM SUPABASE
@@ -145,7 +150,7 @@ function POPage() {
   // INSERT NEW SUPPLIER INTO SUPABASE DATABASE
   const handleCreateSupplier = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    console.log("[RECEPTION][SUPPLIER] submit triggered", { supName, supPhone, supAddress });
+    console.log("[SUPPLIER] submit triggered", { supName, supPhone, supAddress });
 
     if (!supName || !supName.trim()) {
       toast.error("Please enter Supplier Name");
@@ -170,7 +175,7 @@ function POPage() {
       email: email,
     };
 
-    console.log("[RECEPTION][SUPPLIER] payload", payload);
+    console.log("[SUPPLIER] payload:", payload);
 
     try {
       let { data, error } = await supabase
@@ -179,26 +184,26 @@ function POPage() {
         .select();
 
       if (error) {
-        console.error("[RECEPTION][SUPPLIER] INSERT ERROR", {
+        console.error("[SUPPLIER] INSERT ERROR:", {
           message: error?.message,
           code: error?.code,
           details: error?.details,
           hint: error?.hint,
         });
 
-        // Retry with text ID if suppliers table requires explicit string primary key
+        // Retry with string id if suppliers table requires explicit primary key text id
         const payloadWithId = {
           id: `sup_${Date.now()}`,
           ...payload,
         };
-        console.log("[RECEPTION][SUPPLIER] retrying with text id payload", payloadWithId);
+        console.log("[SUPPLIER] retrying with text id payload:", payloadWithId);
         const retryRes = await supabase
           .from("suppliers")
           .insert([payloadWithId])
           .select();
 
         if (retryRes.error) {
-          console.error("[RECEPTION][SUPPLIER] RETRY INSERT ERROR", {
+          console.error("[SUPPLIER] RETRY INSERT ERROR:", {
             message: retryRes.error?.message,
             code: retryRes.error?.code,
             details: retryRes.error?.details,
@@ -212,7 +217,7 @@ function POPage() {
         }
       }
 
-      console.log("[RECEPTION][SUPPLIER] INSERT SUCCESS", data);
+      console.log("[SUPPLIER] INSERT SUCCESS:", data);
       toast.success(`Supplier "${payload.name}" saved to database successfully!`);
       await fetchSuppliers();
       setPoSupplier(payload.name);
@@ -221,7 +226,7 @@ function POPage() {
       setSupAddress("");
       setIsCreateSupplierOpen(false);
     } catch (err: any) {
-      console.error("[RECEPTION][SUPPLIER] EXCEPTION", err);
+      console.error("[SUPPLIER] EXCEPTION:", err);
       toast.error(`Failed to insert supplier: ${err.message || String(err)}`);
     } finally {
       setIsSubmittingSupplier(false);
