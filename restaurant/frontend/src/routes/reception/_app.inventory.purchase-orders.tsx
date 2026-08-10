@@ -8,13 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/reception/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/reception/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/reception/components/ui/tabs";
-import { ClipboardList, Plus, Truck, Calendar, Building2, Phone, MapPin, Trash2, Loader2 } from "lucide-react";
+import { ClipboardList, Plus, Eye, Truck, Calendar, Building2, Phone, MapPin, Trash2, Loader2 } from "lucide-react";
 import { restaurantInfo } from "@/reception/lib/mock-data";
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/reception/_app/inventory/purchase-orders")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Purchase Orders & Suppliers — ScanDine" },
@@ -80,18 +81,6 @@ function POPage() {
   const [supPhone, setSupPhone] = useState("");
   const [supAddress, setSupAddress] = useState("");
 
-  const DEFAULT_SUPPLIERS: SupplierRecord[] = [
-    { id: "sup_1", name: "Golden Gate Produce Co.", phone: "+1 415 555 0190", address: "San Francisco Wholesale Market, CA" },
-    { id: "sup_2", name: "Pacific Seafood Distributors", phone: "+1 415 555 0191", address: "Pier 45, San Francisco, CA" },
-    { id: "sup_3", name: "Bay Area Bakery Supplies", phone: "+1 415 555 0192", address: "Oakland, CA" },
-  ];
-
-  const DEFAULT_PURCHASE_ORDERS: PurchaseOrderRecord[] = [
-    { id: "#PO-1001", supplier: "Golden Gate Produce Co.", items: 8, total: 2450.0, status: "Prepaid", entry_type: "Direct Restock" },
-    { id: "#PO-1002", supplier: "Pacific Seafood Distributors", items: 4, total: 1890.5, status: "Pay on Delivery (POD)", entry_type: "Supplier Purchase Order" },
-    { id: "#PO-1003", supplier: "Bay Area Bakery Supplies", items: 12, total: 980.0, status: "Prepaid", entry_type: "Direct Restock" },
-  ];
-
   // FETCH SUPPLIERS DIRECTLY FROM SUPABASE
   const fetchSuppliers = useCallback(async () => {
     setLoadingSuppliers(true);
@@ -103,15 +92,15 @@ function POPage() {
 
       if (error) {
         console.warn("Supabase suppliers table notice:", error.message);
-        setSuppliers(DEFAULT_SUPPLIERS);
+        setSuppliers([]);
       } else if (data && data.length > 0) {
         setSuppliers(data as SupplierRecord[]);
       } else {
-        setSuppliers(DEFAULT_SUPPLIERS);
+        setSuppliers([]);
       }
     } catch (err: any) {
       console.warn("Exception fetching suppliers:", err);
-      setSuppliers(DEFAULT_SUPPLIERS);
+      setSuppliers([]);
     } finally {
       setLoadingSuppliers(false);
     }
@@ -128,15 +117,15 @@ function POPage() {
 
       if (error) {
         console.warn("Supabase POs fetch notice:", error.message);
-        setPurchaseOrders(DEFAULT_PURCHASE_ORDERS);
+        setPurchaseOrders([]);
       } else if (data && data.length > 0) {
         setPurchaseOrders(data as PurchaseOrderRecord[]);
       } else {
-        setPurchaseOrders(DEFAULT_PURCHASE_ORDERS);
+        setPurchaseOrders([]);
       }
     } catch (err: any) {
       console.error("Exception fetching purchase orders from Supabase:", err);
-      setPurchaseOrders(DEFAULT_PURCHASE_ORDERS);
+      setPurchaseOrders([]);
     } finally {
       setLoadingPOs(false);
     }
@@ -238,7 +227,7 @@ function POPage() {
     if (e) e.preventDefault();
     console.log("[handleCreatePO triggered] poSupplier:", poSupplier, "itemsCount:", itemsCount, "totalAmount:", totalAmount);
 
-    const effectiveSupplier = (poSupplier && poSupplier.trim()) || (suppliers.length > 0 ? suppliers[0].name : "Golden Gate Produce Co.");
+    const effectiveSupplier = (poSupplier && poSupplier.trim()) || (suppliers.length > 0 ? suppliers[0].name : "");
     if (!effectiveSupplier) {
       toast.error("Please select a Supplier Name");
       return;
@@ -300,14 +289,7 @@ function POPage() {
     try {
       const { error } = await supabase.from("suppliers").delete().eq("id", id);
       if (error) {
-        console.warn("Supabase Delete Supplier Warning:", error.message);
-        // Fallback delete from local suppliers state
-        const stored = localStorage.getItem("sd_suppliers_local");
-        const list = stored ? JSON.parse(stored) : DEFAULT_SUPPLIERS;
-        const updated = list.filter((s: SupplierRecord) => s.id !== id);
-        localStorage.setItem("sd_suppliers_local", JSON.stringify(updated));
-        setSuppliers(updated);
-        toast.success(`Supplier "${name}" deleted`);
+        toast.error(`Supabase Delete Error: ${error.message}`);
         return;
       }
       toast.success(`Supplier "${name}" deleted from database`);
@@ -332,7 +314,7 @@ function POPage() {
     }
   };
 
-  const committedTotal = purchaseOrders.reduce((s, p) => s + Number(p.total), 0);
+  const committedTotal = (purchaseOrders || []).reduce((s, p) => s + (p && !isNaN(Number(p.total)) ? Number(p.total) : 0), 0);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "Today";
@@ -445,11 +427,27 @@ function POPage() {
                 <form onSubmit={handleCreatePO} className="space-y-4 mt-2">
                   <div className="space-y-1">
                     <Label>Supplier Name *</Label>
-                    <Select value={poSupplier || (suppliers.length > 0 ? suppliers[0].name : undefined)} onValueChange={setPoSupplier}>
-                      <SelectTrigger><SelectValue placeholder="Select Supplier" /></SelectTrigger>
+                    <Select
+                      value={poSupplier || undefined}
+                      onValueChange={setPoSupplier}
+                      disabled={loadingSuppliers || suppliers.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            loadingSuppliers
+                              ? "Loading suppliers..."
+                              : suppliers.length === 0
+                              ? "No suppliers available"
+                              : "Select Supplier"
+                          }
+                        />
+                      </SelectTrigger>
                       <SelectContent>
-                        {suppliers.filter((s) => s && s.name && s.name.trim()).map((s, idx) => (
-                          <SelectItem key={s.id || `sup_opt_${idx}`} value={s.name.trim()}>{s.name}</SelectItem>
+                        {suppliers.map((s) => (
+                          <SelectItem key={s.id} value={s.name}>
+                            {s.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -507,7 +505,7 @@ function POPage() {
                   </div>
 
                   <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-                    Creating this PO commits {restaurantInfo.currency}{Number(totalAmount || 0).toFixed(2)} to {poSupplier || suppliers[0]?.name || "selected vendor"}.
+                    Creating this PO commits {restaurantInfo.currency}{Number(totalAmount || 0).toFixed(2)} to {poSupplier || "selected vendor"}.
                   </div>
 
                   <div className="flex justify-end gap-2 pt-3 border-t">
