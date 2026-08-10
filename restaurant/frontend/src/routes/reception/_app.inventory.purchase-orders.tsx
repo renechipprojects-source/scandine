@@ -98,21 +98,15 @@ function POPage() {
 
       if (error) {
         console.warn("Supabase suppliers table notice:", error.message);
-        const stored = localStorage.getItem("sd_suppliers_local");
-        const list = stored ? JSON.parse(stored) : DEFAULT_SUPPLIERS;
-        setSuppliers(list);
+        setSuppliers(DEFAULT_SUPPLIERS);
       } else if (data && data.length > 0) {
         setSuppliers(data as SupplierRecord[]);
       } else {
-        const stored = localStorage.getItem("sd_suppliers_local");
-        const list = stored ? JSON.parse(stored) : DEFAULT_SUPPLIERS;
-        setSuppliers(list);
+        setSuppliers(DEFAULT_SUPPLIERS);
       }
     } catch (err: any) {
       console.warn("Exception fetching suppliers:", err);
-      const stored = localStorage.getItem("sd_suppliers_local");
-      const list = stored ? JSON.parse(stored) : DEFAULT_SUPPLIERS;
-      setSuppliers(list);
+      setSuppliers(DEFAULT_SUPPLIERS);
     } finally {
       setLoadingSuppliers(false);
     }
@@ -129,13 +123,15 @@ function POPage() {
 
       if (error) {
         console.warn("Supabase POs fetch notice:", error.message);
-        const { data: fallbackData } = await supabase.from("sd_purchase_orders").select("*");
-        if (fallbackData) setPurchaseOrders(fallbackData as PurchaseOrderRecord[]);
-      } else if (data) {
+        setPurchaseOrders(DEFAULT_PURCHASE_ORDERS);
+      } else if (data && data.length > 0) {
         setPurchaseOrders(data as PurchaseOrderRecord[]);
+      } else {
+        setPurchaseOrders(DEFAULT_PURCHASE_ORDERS);
       }
     } catch (err: any) {
       console.error("Exception fetching purchase orders from Supabase:", err);
+      setPurchaseOrders(DEFAULT_PURCHASE_ORDERS);
     } finally {
       setLoadingPOs(false);
     }
@@ -165,46 +161,28 @@ function POPage() {
     }
 
     setIsSubmittingSupplier(true);
-    const newSupplierObj: SupplierRecord = {
+    const newSupplierObj = {
       id: `sup_${Date.now()}`,
       name: supName.trim(),
       phone: supPhone.trim(),
       address: supAddress.trim(),
-      created_at: new Date().toISOString(),
+      email: `${supName.trim().toLowerCase().replace(/[^a-z0-9]/g, "")}@supplier.com`,
     };
 
     try {
-      const payload = {
-        id: newSupplierObj.id,
-        name: newSupplierObj.name,
-        phone: newSupplierObj.phone,
-        address: newSupplierObj.address,
-        email: `${newSupplierObj.name.toLowerCase().replace(/[^a-z0-9]/g, "")}@supplier.com`,
-      };
-
-      console.log("[Supabase Insert Request] Inserting supplier payload:", payload);
-      const { data, error } = await supabase
+      console.log("[Supabase Insert Request] Inserting supplier payload:", newSupplierObj);
+      const { error } = await supabase
         .from("suppliers")
-        .insert([payload])
-        .select();
+        .insert([newSupplierObj]);
 
       if (error) {
-        console.warn("[Supabase Insert Supplier Warning]:", error.message);
-        // Fallback to state + localStorage so supplier creation is never blocked
-        const stored = localStorage.getItem("sd_suppliers_local");
-        const list = stored ? JSON.parse(stored) : DEFAULT_SUPPLIERS;
-        const updated = [newSupplierObj, ...list.filter((s: SupplierRecord) => s.id !== newSupplierObj.id)];
-        localStorage.setItem("sd_suppliers_local", JSON.stringify(updated));
-        setSuppliers(updated);
-        toast.success(`Supplier "${newSupplierObj.name}" created successfully!`);
-      } else if (data && data.length > 0) {
-        toast.success(`Supplier "${newSupplierObj.name}" saved to database successfully!`);
-        await fetchSuppliers();
-      } else {
-        toast.success(`Supplier "${newSupplierObj.name}" saved!`);
-        await fetchSuppliers();
+        console.error("Supabase Insert Supplier Error:", error.message);
+        toast.error(`Database Error: ${error.message}`);
+        return;
       }
 
+      toast.success(`Supplier "${newSupplierObj.name}" saved to database successfully!`);
+      await fetchSuppliers();
       setPoSupplier(newSupplierObj.name);
       setSupName("");
       setSupPhone("");
@@ -255,18 +233,16 @@ function POPage() {
       };
 
       console.log("[Supabase PO Insert Request]:", payload);
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("sd_purchase_orders")
-        .insert([payload])
-        .select();
+        .insert([payload]);
 
       if (error) {
-        console.error("[Supabase PO Insert Error]:", error);
-        toast.error(`Database Insert Error: ${error.message}`);
+        console.error("Supabase PO Insert Error:", error.message);
+        toast.error(`Database Error: ${error.message}`);
         return;
       }
 
-      console.log("[Supabase PO Insert Success]:", data);
       toast.success(`Purchase Order ${poNum} saved to database successfully!`);
       await fetchPurchaseOrders();
       setItemsCount("5");
