@@ -202,13 +202,24 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         price: it.price,
       }));
 
+      const rawCust = typeof window !== "undefined" ? localStorage.getItem("scandine_current_customer") : null;
+      let custPhone: string | null = newOrder.customer_phone || null;
+      let custEmail: string | null = newOrder.customer_email || null;
+      if (rawCust && (!custPhone || !custEmail)) {
+        try {
+          const parsed = JSON.parse(rawCust);
+          if (!custPhone && parsed?.phone) custPhone = parsed.phone;
+          if (!custEmail && parsed?.email) custEmail = parsed.email;
+        } catch {}
+      }
+
       const dbPayload: any = {
         id: newOrder.id,
         order_id: orderIdStr,
         customer: newOrder.customer_name || `Table ${tblNum} Customer`,
         customer_name: newOrder.customer_name || `Table ${tblNum} Customer`,
-        customer_email: newOrder.customer_email || "",
-        customer_phone: newOrder.customer_phone || "",
+        customer_email: custEmail || null,
+        customer_phone: custPhone || null,
         table_number: tblNum,
         item: itemsPayload,
         total: Number(newOrder.total),
@@ -220,8 +231,6 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
 
       if (newOrder.session_id) {
         dbPayload.session_id = newOrder.session_id;
-      } else {
-        console.warn("⚠️ Warning: createOrder called without session_id!", newOrder);
       }
 
       let { data, error } = await supabase
@@ -234,8 +243,6 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         // Fallback if extra columns are not yet added to remote Supabase table
         delete dbPayload.session_id;
         delete dbPayload.customer_name;
-        delete dbPayload.customer_email;
-        delete dbPayload.customer_phone;
         const retry = await supabase
           .from("sd_orders")
           .insert([dbPayload])
