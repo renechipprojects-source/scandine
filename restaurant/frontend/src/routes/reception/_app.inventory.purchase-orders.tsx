@@ -84,22 +84,30 @@ function POPage() {
   // FETCH SUPPLIERS DIRECTLY FROM SUPABASE
   const fetchSuppliers = useCallback(async () => {
     setLoadingSuppliers(true);
+    console.log("[SUPPLIER DEBUG] FETCH START");
     try {
       const { data, error } = await supabase
         .from("suppliers")
         .select("*")
         .order("created_at", { ascending: false });
 
+      console.log("[SUPPLIER DEBUG] FETCH RESULT", { data, error });
+
       if (error) {
-        console.warn("Supabase suppliers table notice:", error.message);
+        console.error("[SUPPLIER DEBUG] FETCH ERROR", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
         setSuppliers([]);
-      } else if (data && data.length > 0) {
+      } else if (data) {
         setSuppliers(data as SupplierRecord[]);
       } else {
         setSuppliers([]);
       }
     } catch (err: any) {
-      console.warn("Exception fetching suppliers:", err);
+      console.error("[SUPPLIER DEBUG] FETCH EXCEPTION", err);
       setSuppliers([]);
     } finally {
       setLoadingSuppliers(false);
@@ -109,22 +117,30 @@ function POPage() {
   // FETCH PURCHASE ORDERS DIRECTLY FROM SUPABASE
   const fetchPurchaseOrders = useCallback(async () => {
     setLoadingPOs(true);
+    console.log("[PO DEBUG] FETCH START");
     try {
       const { data, error } = await supabase
         .from("sd_purchase_orders")
         .select("*")
         .order("created_at", { ascending: false });
 
+      console.log("[PO DEBUG] FETCH RESULT", { data, error });
+
       if (error) {
-        console.warn("Supabase POs fetch notice:", error.message);
+        console.error("[PO DEBUG] FETCH ERROR", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
         setPurchaseOrders([]);
-      } else if (data && data.length > 0) {
+      } else if (data) {
         setPurchaseOrders(data as PurchaseOrderRecord[]);
       } else {
         setPurchaseOrders([]);
       }
     } catch (err: any) {
-      console.error("Exception fetching purchase orders from Supabase:", err);
+      console.error("[PO DEBUG] FETCH EXCEPTION", err);
       setPurchaseOrders([]);
     } finally {
       setLoadingPOs(false);
@@ -139,7 +155,8 @@ function POPage() {
   // INSERT NEW SUPPLIER INTO SUPABASE DATABASE
   const handleCreateSupplier = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    console.log("[SUPPLIER] submit triggered", { supName, supPhone, supAddress });
+    console.log("[SUPPLIER DEBUG] BUTTON CLICKED");
+    console.log("[SUPPLIER DEBUG] HANDLER STARTED", { supName, supPhone, supAddress });
 
     if (!supName || !supName.trim()) {
       toast.error("Please enter Supplier Name");
@@ -154,45 +171,49 @@ function POPage() {
       return;
     }
 
+    console.log("[SUPPLIER DEBUG] VALIDATION PASSED");
     setIsSubmittingSupplier(true);
 
-    const email = `${supName.trim().toLowerCase().replace(/[^a-z0-9]/g, "")}@supplier.com`;
-    const payload: Record<string, any> = {
+    // Clean schema payload matching standard suppliers table
+    const cleanPayload: Record<string, any> = {
       name: supName.trim(),
       phone: supPhone.trim(),
       address: supAddress.trim(),
-      email: email,
     };
 
-    console.log("[SUPPLIER] payload:", payload);
+    console.log("[SUPPLIER DEBUG] INSERT PAYLOAD", cleanPayload);
 
     try {
       let { data, error } = await supabase
         .from("suppliers")
-        .insert([payload])
+        .insert([cleanPayload])
         .select();
 
+      console.log("[SUPPLIER DEBUG] INSERT RESULT", { data, error });
+
       if (error) {
-        console.error("[SUPPLIER] INSERT ERROR:", {
+        console.error("[SUPPLIER DEBUG] SUPABASE ERROR", {
           message: error?.message,
           code: error?.code,
           details: error?.details,
           hint: error?.hint,
         });
 
-        // Retry with string id if suppliers table requires explicit primary key text id
+        // Retry with text id if table requires explicit primary key
         const payloadWithId = {
           id: `sup_${Date.now()}`,
-          ...payload,
+          ...cleanPayload,
         };
-        console.log("[SUPPLIER] retrying with text id payload:", payloadWithId);
+        console.log("[SUPPLIER DEBUG] RETRYING WITH TEXT ID PAYLOAD", payloadWithId);
         const retryRes = await supabase
           .from("suppliers")
           .insert([payloadWithId])
           .select();
 
+        console.log("[SUPPLIER DEBUG] RETRY RESULT", { data: retryRes.data, error: retryRes.error });
+
         if (retryRes.error) {
-          console.error("[SUPPLIER] RETRY INSERT ERROR:", {
+          console.error("[SUPPLIER DEBUG] RETRY SUPABASE ERROR", {
             message: retryRes.error?.message,
             code: retryRes.error?.code,
             details: retryRes.error?.details,
@@ -206,16 +227,16 @@ function POPage() {
         }
       }
 
-      console.log("[SUPPLIER] INSERT SUCCESS:", data);
-      toast.success(`Supplier "${payload.name}" saved to database successfully!`);
+      console.log("[SUPPLIER DEBUG] INSERT SUCCESS", data);
+      toast.success(`Supplier "${cleanPayload.name}" saved to database successfully!`);
       await fetchSuppliers();
-      setPoSupplier(payload.name);
+      setPoSupplier(cleanPayload.name);
       setSupName("");
       setSupPhone("");
       setSupAddress("");
       setIsCreateSupplierOpen(false);
     } catch (err: any) {
-      console.error("[SUPPLIER] EXCEPTION:", err);
+      console.error("[SUPPLIER DEBUG] EXCEPTION", err);
       toast.error(`Failed to insert supplier: ${err.message || String(err)}`);
     } finally {
       setIsSubmittingSupplier(false);
@@ -225,7 +246,8 @@ function POPage() {
   // INSERT NEW PURCHASE ORDER INTO SUPABASE DATABASE
   const handleCreatePO = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    console.log("[handleCreatePO triggered] poSupplier:", poSupplier, "itemsCount:", itemsCount, "totalAmount:", totalAmount);
+    console.log("[PO DEBUG] BUTTON CLICKED");
+    console.log("[PO DEBUG] HANDLER STARTED", { poSupplier, entryType, itemsCount, totalAmount, poTerms });
 
     const effectiveSupplier = (poSupplier && poSupplier.trim()) || (suppliers.length > 0 ? suppliers[0].name : "");
     if (!effectiveSupplier) {
@@ -256,19 +278,58 @@ function POPage() {
         total: Number(totalAmount),
         date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
         status: poTerms,
+        entry_type: entryType,
       };
 
-      console.log("[Supabase PO Insert Request]:", payload);
-      const { error } = await supabase
+      console.log("[PO DEBUG] INSERT PAYLOAD", payload);
+      let { data, error } = await supabase
         .from("sd_purchase_orders")
-        .insert([payload]);
+        .insert([payload])
+        .select();
+
+      console.log("[PO DEBUG] INSERT RESULT", { data, error });
 
       if (error) {
-        console.error("Supabase PO Insert Error:", error.message);
-        toast.error(`Database Error: ${error.message}`);
-        return;
+        console.error("[PO DEBUG] SUPABASE ERROR", {
+          message: error?.message,
+          code: error?.code,
+          details: error?.details,
+          hint: error?.hint,
+        });
+
+        // Retry without entry_type if column doesn't exist in table schema
+        const fallbackPayload = {
+          id: poNum,
+          supplier: effectiveSupplier,
+          items: Number(itemsCount),
+          total: Number(totalAmount),
+          date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          status: poTerms,
+        };
+        console.log("[PO DEBUG] RETRYING WITH FALLBACK PAYLOAD", fallbackPayload);
+        const retryRes = await supabase
+          .from("sd_purchase_orders")
+          .insert([fallbackPayload])
+          .select();
+
+        console.log("[PO DEBUG] RETRY RESULT", { data: retryRes.data, error: retryRes.error });
+
+        if (retryRes.error) {
+          console.error("[PO DEBUG] RETRY SUPABASE ERROR", {
+            message: retryRes.error?.message,
+            code: retryRes.error?.code,
+            details: retryRes.error?.details,
+            hint: retryRes.error?.hint,
+          });
+          toast.error(`Database Error: ${retryRes.error.message}`);
+          return;
+        } else {
+          data = retryRes.data;
+          error = null;
+        }
       }
 
+      console.log("[PO DEBUG] INSERT SUCCESS", data);
       toast.success(`Purchase Order ${poNum} saved to database successfully!`);
       await fetchPurchaseOrders();
       setItemsCount("5");
@@ -277,7 +338,7 @@ function POPage() {
       setPoTerms("Prepaid");
       setIsCreatePOOpen(false);
     } catch (err: any) {
-      console.error("Exception in handleCreatePO:", err);
+      console.error("[PO DEBUG] EXCEPTION", err);
       toast.error(`Failed to create PO: ${err.message || String(err)}`);
     } finally {
       setIsSubmittingPO(false);
