@@ -89,7 +89,7 @@ const getLocalOrdersKey = () => {
         }
       }
     }
-  } catch {}
+  } catch { }
   return "aura_dine_orders_guest";
 };
 
@@ -135,14 +135,14 @@ export function mapRowToDbOrder(row: any): DbOrder {
   const itemsArr: DbOrderItem[] = Array.isArray(row.item)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ? row.item.map((it: any) => ({
-        id: it.id || it.name,
-        name: it.name || "Item",
-        price: Number(it.price || 0),
-        qty: Number(it.qty || 1),
-      }))
+      id: it.id || it.name,
+      name: it.name || "Item",
+      price: Number(it.price || 0),
+      qty: Number(it.qty || 1),
+    }))
     : Array.isArray(row.items)
-    ? row.items
-    : [];
+      ? row.items
+      : [];
 
   return {
     id: row.id || row.order_id,
@@ -210,7 +210,7 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
           const parsed = JSON.parse(rawCust);
           if (!custPhone && parsed?.phone) custPhone = parsed.phone;
           if (!custEmail && parsed?.email) custEmail = parsed.email;
-        } catch {}
+        } catch { }
       }
 
       const dbPayload: any = {
@@ -394,7 +394,7 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
         if (error) {
           console.error("[ME] getOrdersBySession error:", error);
         }
-        
+
         // Fallback: If session_id column is missing or returned no rows, filter by customer identity
         const rawCust = typeof window !== "undefined" ? localStorage.getItem("scandine_current_customer") : null;
         if (rawCust) {
@@ -419,7 +419,7 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
                       o.customer_phone.replace(/\D/g, "") === cust.phone.replace(/\D/g, "");
                     const eMatch = cust.email && o.customer_email &&
                       o.customer_email.trim().toLowerCase() === cust.email.trim().toLowerCase();
-                    
+
                     const nameA = (cust.fullName || "").trim().toLowerCase();
                     const nameB = (o.customer_name || (o as any).customer || "").trim().toLowerCase();
                     const nMatch = Boolean(nameA && nameB && (nameA === nameB || nameB.includes(nameA) || nameA.includes(nameB)));
@@ -460,7 +460,7 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
         }
       }
     }
-  } catch {}
+  } catch { }
 
   // Merge local session orders so offline/newly created session orders appear immediately
   const localOrders = getLocalOrders();
@@ -481,13 +481,13 @@ export function subscribeToOrdersBySession(
   onSubscribed?: () => void
 ) {
   if (!isSupabaseConfigured() || !sessionId) {
-    return () => {};
+    return () => { };
   }
 
   const rawCust = typeof window !== "undefined" ? localStorage.getItem("scandine_current_customer") : null;
   let currentCust: any = null;
   if (rawCust) {
-    try { currentCust = JSON.parse(rawCust); } catch {}
+    try { currentCust = JSON.parse(rawCust); } catch { }
   }
 
   const channel = supabase
@@ -502,7 +502,7 @@ export function subscribeToOrdersBySession(
       (payload) => {
         if (payload.new) {
           const mapped = mapRowToDbOrder(payload.new);
-          
+
           // Match Priority 1: Exact session_id
           if (mapped.session_id && mapped.session_id === sessionId) {
             onUpdate(mapped);
@@ -515,7 +515,7 @@ export function subscribeToOrdersBySession(
               mapped.customer_phone.replace(/\D/g, "") === currentCust.phone.replace(/\D/g, "");
             const emailMatch = currentCust.email && mapped.customer_email &&
               mapped.customer_email.trim().toLowerCase() === currentCust.email.trim().toLowerCase();
-            
+
             const nameA = (currentCust.fullName || "").trim().toLowerCase();
             const nameB = (mapped.customer_name || (payload.new as any).customer || "").trim().toLowerCase();
             const nameMatch = Boolean(nameA && nameB && (nameA === nameB || nameB.includes(nameA) || nameA.includes(nameB)));
@@ -532,7 +532,7 @@ export function subscribeToOrdersBySession(
             if (activeOrderId && (mapped.id === activeOrderId || mapped.order_number === activeOrderId)) {
               onUpdate(mapped);
             }
-          } catch {}
+          } catch { }
         }
       }
     )
@@ -598,7 +598,7 @@ export async function notifyKitchenOrderPaid(tableNumber: string, orderNumber: s
       const bc = new BroadcastChannel("aura_dine_sync_channel");
       bc.postMessage(payload);
     }
-  } catch {}
+  } catch { }
 }
 
 export async function notifyKitchenNewOrder(order: DbOrder) {
@@ -624,7 +624,7 @@ export async function notifyKitchenNewOrder(order: DbOrder) {
       const bc = new BroadcastChannel("aura_dine_sync_channel");
       bc.postMessage(payload);
     }
-  } catch {}
+  } catch { }
 }
 
 export async function notifyReceptionAdminPayment(details: {
@@ -668,7 +668,7 @@ export async function notifyReceptionAdminPayment(details: {
             created_at: details.payment_time,
           },
         ]);
-      } catch (e) {}
+      } catch (e) { }
     }
   } catch (err) {
     console.warn("Supabase reception/admin payment broadcast error:", err);
@@ -678,13 +678,13 @@ export async function notifyReceptionAdminPayment(details: {
       const bc = new BroadcastChannel("aura_dine_sync_channel");
       bc.postMessage(payload);
     }
-  } catch {}
+  } catch { }
 }
 
 
 export function subscribeToOrder(orderId: string, onUpdate: (order: DbOrder) => void) {
   if (!isSupabaseConfigured()) {
-    return () => {};
+    return () => { };
   }
 
   const channel = supabase
@@ -714,7 +714,7 @@ export function subscribeToOrder(orderId: string, onUpdate: (order: DbOrder) => 
 
 export function subscribeToAllOrders(tableNumber: string, onUpdate: (order: DbOrder) => void) {
   if (!isSupabaseConfigured()) {
-    return () => {};
+    return () => { };
   }
 
   const tblNum = parseInt(String(tableNumber).replace(/\D/g, ""), 10) || 1;
@@ -861,7 +861,7 @@ export async function notifyKitchenServiceRequest(serviceReq: ServiceRequest) {
       const bc = new BroadcastChannel("aura_dine_sync_channel");
       bc.postMessage(payload);
     }
-  } catch {}
+  } catch { }
 }
 
 export async function notifyCustomerServiceRequestStatus(serviceReq: Partial<ServiceRequest> & { id: string; table_number?: string; status: string }) {
@@ -888,7 +888,7 @@ export async function notifyCustomerServiceRequestStatus(serviceReq: Partial<Ser
       const bc = new BroadcastChannel("aura_dine_sync_channel");
       bc.postMessage(payload);
     }
-  } catch {}
+  } catch { }
 }
 
 export async function getAllServiceRequests(): Promise<ServiceRequest[]> {
@@ -935,7 +935,7 @@ export async function getServiceRequestsByTable(tableNumber: string): Promise<Se
 
 export function subscribeToServiceRequests(tableNumber: string, onUpdate: (req: ServiceRequest) => void) {
   if (!isSupabaseConfigured()) {
-    return () => {};
+    return () => { };
   }
 
   const normDigits = tableNumber.replace(/\D/g, "");
@@ -1057,7 +1057,7 @@ export async function fetchDbMenuItems(forceRefresh = false): Promise<DbMenuItem
 
 export function subscribeToMenuItems(onUpdate: () => void) {
   if (!isSupabaseConfigured()) {
-    return () => {};
+    return () => { };
   }
 
   const channel = supabase
@@ -1155,13 +1155,13 @@ export async function verifyPaymentRecordInDb(paymentId: string, verifiedBy: str
         payload,
       });
     }
-  } catch (err) {}
+  } catch (err) { }
   try {
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
       const bc = new BroadcastChannel("aura_dine_sync_channel");
       bc.postMessage(payload);
     }
-  } catch {}
+  } catch { }
 }
 
 export async function broadcastPaymentToReceptionAdmin(record: any) {
@@ -1187,7 +1187,7 @@ export async function broadcastPaymentToReceptionAdmin(record: any) {
       const bc = new BroadcastChannel("aura_dine_sync_channel");
       bc.postMessage(payload);
     }
-  } catch {}
+  } catch { }
 }
 
 export async function getAllPaymentsFromDb() {
@@ -1277,7 +1277,7 @@ export async function fetchFoodRatingStats(foodId: string): Promise<FoodRatingSt
         }
       }
     }
-  } catch {}
+  } catch { }
 
   if (ratings.length === 0) {
     return { avgRating: 4.5, reviewCount: 0 };
@@ -1315,7 +1315,7 @@ export async function fetchFoodReviews(foodId: string): Promise<FoodRating[]> {
           created_at: r.created_at || new Date().toISOString(),
         }));
       }
-    } catch {}
+    } catch { }
   }
 
   try {
@@ -1331,7 +1331,7 @@ export async function fetchFoodReviews(foodId: string): Promise<FoodRating[]> {
         }
       }
     }
-  } catch {}
+  } catch { }
 
   return list;
 }
@@ -1365,7 +1365,7 @@ export async function submitFoodRating(payload: {
       list.push(newRating);
     }
     localStorage.setItem(key, JSON.stringify(list));
-  } catch {}
+  } catch { }
 
   if (isSupabaseConfigured()) {
     try {
