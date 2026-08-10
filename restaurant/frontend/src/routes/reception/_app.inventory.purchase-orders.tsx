@@ -145,7 +145,7 @@ function POPage() {
   // INSERT NEW SUPPLIER INTO SUPABASE DATABASE
   const handleCreateSupplier = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    console.log("[handleCreateSupplier triggered] Name:", supName, "Phone:", supPhone, "Address:", supAddress);
+    console.log("[RECEPTION][SUPPLIER] submit triggered", { supName, supPhone, supAddress });
 
     if (!supName || !supName.trim()) {
       toast.error("Please enter Supplier Name");
@@ -161,35 +161,67 @@ function POPage() {
     }
 
     setIsSubmittingSupplier(true);
-    const newSupplierObj = {
-      id: `sup_${Date.now()}`,
+
+    const email = `${supName.trim().toLowerCase().replace(/[^a-z0-9]/g, "")}@supplier.com`;
+    const payload: Record<string, any> = {
       name: supName.trim(),
       phone: supPhone.trim(),
       address: supAddress.trim(),
-      email: `${supName.trim().toLowerCase().replace(/[^a-z0-9]/g, "")}@supplier.com`,
+      email: email,
     };
 
+    console.log("[RECEPTION][SUPPLIER] payload", payload);
+
     try {
-      console.log("[Supabase Insert Request] Inserting supplier payload:", newSupplierObj);
-      const { error } = await supabase
+      let { data, error } = await supabase
         .from("suppliers")
-        .insert([newSupplierObj]);
+        .insert([payload])
+        .select();
 
       if (error) {
-        console.error("Supabase Insert Supplier Error:", error.message);
-        toast.error(`Database Error: ${error.message}`);
-        return;
+        console.error("[RECEPTION][SUPPLIER] INSERT ERROR", {
+          message: error?.message,
+          code: error?.code,
+          details: error?.details,
+          hint: error?.hint,
+        });
+
+        // Retry with text ID if suppliers table requires explicit string primary key
+        const payloadWithId = {
+          id: `sup_${Date.now()}`,
+          ...payload,
+        };
+        console.log("[RECEPTION][SUPPLIER] retrying with text id payload", payloadWithId);
+        const retryRes = await supabase
+          .from("suppliers")
+          .insert([payloadWithId])
+          .select();
+
+        if (retryRes.error) {
+          console.error("[RECEPTION][SUPPLIER] RETRY INSERT ERROR", {
+            message: retryRes.error?.message,
+            code: retryRes.error?.code,
+            details: retryRes.error?.details,
+            hint: retryRes.error?.hint,
+          });
+          toast.error(`Database Error: ${retryRes.error.message}`);
+          return;
+        } else {
+          data = retryRes.data;
+          error = null;
+        }
       }
 
-      toast.success(`Supplier "${newSupplierObj.name}" saved to database successfully!`);
+      console.log("[RECEPTION][SUPPLIER] INSERT SUCCESS", data);
+      toast.success(`Supplier "${payload.name}" saved to database successfully!`);
       await fetchSuppliers();
-      setPoSupplier(newSupplierObj.name);
+      setPoSupplier(payload.name);
       setSupName("");
       setSupPhone("");
       setSupAddress("");
       setIsCreateSupplierOpen(false);
     } catch (err: any) {
-      console.error("Exception in handleCreateSupplier:", err);
+      console.error("[RECEPTION][SUPPLIER] EXCEPTION", err);
       toast.error(`Failed to insert supplier: ${err.message || String(err)}`);
     } finally {
       setIsSubmittingSupplier(false);
