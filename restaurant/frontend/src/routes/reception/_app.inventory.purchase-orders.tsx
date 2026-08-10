@@ -708,106 +708,110 @@ function POPage() {
 
       {/* View Purchase Order Modal Dialog */}
       <Dialog open={Boolean(selectedPO)} onOpenChange={(open) => !open && setSelectedPO(null)}>
-        {selectedPO && (
-          <DialogContent className="max-w-md rounded-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center justify-between text-base font-bold">
-                <span>Purchase Order {selectedPO.id}</span>
-                <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-semibold border">
-                  {formatPaymentTerms(selectedPO.status)}
-                </span>
-              </DialogTitle>
-            </DialogHeader>
+        <DialogContent className="max-w-md rounded-2xl">
+          {selectedPO && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center justify-between text-base font-bold">
+                  <span>Purchase Order {selectedPO.id}</span>
+                  <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-semibold border">
+                    {formatPaymentTerms(selectedPO.status)}
+                  </span>
+                </DialogTitle>
+              </DialogHeader>
 
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3 text-sm rounded-xl bg-muted/40 p-3.5 border">
-                <div>
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Truck className="h-3.5 w-3.5 text-primary" /> Supplier
-                  </span>
-                  <div className="font-bold mt-0.5 text-foreground">{selectedPO.supplier}</div>
+              <div className="space-y-4 py-2">
+                <div className="grid grid-cols-2 gap-3 text-sm rounded-xl bg-muted/40 p-3.5 border">
+                  <div>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Truck className="h-3.5 w-3.5 text-primary" /> Supplier
+                    </span>
+                    <div className="font-bold mt-0.5 text-foreground">{selectedPO.supplier}</div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5 text-primary" /> Date Placed
+                    </span>
+                    <div className="font-medium text-xs mt-0.5">{formatDate(selectedPO.created_at || selectedPO.date)}</div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Entry Type</span>
+                    <div className="font-semibold text-xs mt-0.5">{selectedPO.entry_type || "Direct Restock"}</div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Quantity / Items</span>
+                    <div className="font-semibold">{selectedPO.items} SKUs</div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Payment Terms</span>
+                    <div className="font-semibold text-xs text-emerald-600 mt-0.5">{formatPaymentTerms(selectedPO.status)}</div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Notes</span>
+                    <div className="font-medium text-xs text-muted-foreground mt-0.5">Verified inventory restock</div>
+                  </div>
+                  <div className="col-span-2 border-t pt-2.5 mt-1">
+                    <span className="text-xs text-muted-foreground">Order Total Amount</span>
+                    <div className="font-bold text-lg text-primary">{restaurantInfo.currency}{Number(selectedPO.total || 0).toFixed(2)}</div>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5 text-primary" /> Date Placed
-                  </span>
-                  <div className="font-medium text-xs mt-0.5">{formatDate(selectedPO.created_at || selectedPO.date)}</div>
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground">Entry Type</span>
-                  <div className="font-semibold text-xs mt-0.5">{selectedPO.entry_type || "Direct Restock"}</div>
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground">Quantity / Items</span>
-                  <div className="font-semibold">{selectedPO.items} SKUs</div>
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground">Payment Terms</span>
-                  <div className="font-semibold text-xs text-emerald-600 mt-0.5">{formatPaymentTerms(selectedPO.status)}</div>
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground">Notes</span>
-                  <div className="font-medium text-xs text-muted-foreground mt-0.5">Verified inventory restock</div>
-                </div>
-                <div className="col-span-2 border-t pt-2.5 mt-1">
-                  <span className="text-xs text-muted-foreground">Order Total Amount</span>
-                  <div className="font-bold text-lg text-primary">{restaurantInfo.currency}{Number(selectedPO.total).toFixed(2)}</div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t">
+                  <Button variant="outline" onClick={() => setSelectedPO(null)} className="w-full sm:w-auto">
+                    Close
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t">
-                <Button variant="outline" onClick={() => setSelectedPO(null)} className="w-full sm:w-auto">
-                  Close
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        )}
+            </>
+          )}
+        </DialogContent>
       </Dialog>
 
       {/* Supplier Contact Modal Dialog */}
       <Dialog open={Boolean(selectedContactSupplier)} onOpenChange={(open) => !open && setSelectedContactSupplier(null)}>
-        {selectedContactSupplier && (
-          <DialogContent className="max-w-sm rounded-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Phone className="h-5 w-5 text-primary" />
-                Contact {selectedContactSupplier.name}
-              </DialogTitle>
-            </DialogHeader>
+        <DialogContent className="max-w-sm rounded-2xl">
+          {selectedContactSupplier && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Phone className="h-5 w-5 text-primary" />
+                  Contact {selectedContactSupplier.name}
+                </DialogTitle>
+              </DialogHeader>
 
-            <div className="space-y-4 py-2">
-              <div className="rounded-xl bg-muted/50 p-4 space-y-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Supplier</span>
-                  <span className="font-bold">{selectedContactSupplier.name}</span>
+              <div className="space-y-4 py-2">
+                <div className="rounded-xl bg-muted/50 p-4 space-y-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Supplier</span>
+                    <span className="font-bold">{selectedContactSupplier.name}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-t pt-2">
+                    <span className="text-xs text-muted-foreground">Phone</span>
+                    <span className="font-mono text-xs font-semibold">{selectedContactSupplier.phone}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-t pt-2">
+                    <span className="text-xs text-muted-foreground">Address</span>
+                    <span className="text-xs">{selectedContactSupplier.address || "Main Warehouse"}</span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between border-t pt-2">
-                  <span className="text-xs text-muted-foreground">Phone</span>
-                  <span className="font-mono text-xs font-semibold">{selectedContactSupplier.phone}</span>
-                </div>
-                <div className="flex items-center justify-between border-t pt-2">
-                  <span className="text-xs text-muted-foreground">Address</span>
-                  <span className="text-xs">{selectedContactSupplier.address || "Main Warehouse"}</span>
+
+                <div className="flex gap-2">
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      if (selectedContactSupplier.phone && typeof window !== "undefined" && navigator?.clipboard) {
+                        navigator.clipboard.writeText(selectedContactSupplier.phone);
+                        toast.success("Phone number copied to clipboard!");
+                      }
+                    }}
+                  >
+                    Copy Phone Number
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex gap-2">
-                <Button
-                  className="w-full"
-                  onClick={() => {
-                    if (selectedContactSupplier.phone) {
-                      navigator.clipboard.writeText(selectedContactSupplier.phone);
-                      toast.success("Phone number copied to clipboard!");
-                    }
-                  }}
-                >
-                  Copy Phone Number
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        )}
+            </>
+          )}
+        </DialogContent>
       </Dialog>
     </div>
   );
