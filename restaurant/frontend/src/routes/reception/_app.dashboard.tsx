@@ -49,14 +49,19 @@ function DashboardPage() {
   useRealtimeTable("sd_orders", handleRealtimePayload);
   useRealtimeTable("sd_employees", handleRealtimePayload);
 
-  const totalTablesCount = dbTables.length;
-  const occupiedTablesCount = dbTables.filter((t) => t.status === "occupied").length;
+  const totalTablesCount = dbTables.length > 0 ? dbTables.length : Math.max(5, new Set(dbOrders.map((o) => String(o.table_number || "")).filter(Boolean)).size);
+  const occupiedTablesCount = new Set(
+    dbOrders
+      .filter((o) => ["pending", "accepted", "preparing", "ready"].includes(String(o.status || "").toLowerCase()))
+      .map((o) => String(o.table_number || ""))
+      .filter(Boolean)
+  ).size || dbTables.filter((t) => t.status === "occupied").length;
   const pendingBillsCount = dbInvoices.filter((i) => i.status === "unpaid" || i.status === "Unpaid" || i.status === "pending" || i.status === "Pending" || i.status === "partial").length;
 
   const pendingCount = dbOrders.filter((o) => o.status === "pending").length;
   const preparingCount = dbOrders.filter((o) => o.status === "preparing").length;
-  const readyCount = dbOrders.filter((o) => o.status === "ready").length;
-  const completedCount = dbOrders.filter((o) => o.status === "completed").length;
+  const readyCount = dbOrders.filter((o) => o.status === "ready" || o.status === "accepted").length;
+  const completedCount = dbOrders.filter((o) => o.status === "completed" || o.status === "served").length;
   const staffCount = dbEmployees.length;
 
   const statusPie = [

@@ -139,19 +139,18 @@ function CustomersPage() {
           </div>
         </div>
 
-        <div className="w-full max-h-[calc(100vh-250px)] min-h-[300px] overflow-y-auto overflow-x-auto border rounded-lg scrollbar-thin">
-          <Table className="w-full">
-            <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-md">
-              <TableRow className="bg-muted/40">
-                <TableHead>Customer</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Table</TableHead>
-                <TableHead className="text-right">Orders</TableHead>
-                <TableHead className="text-right">Total Spent (₹)</TableHead>
-                <TableHead>Latest Status</TableHead>
-              </TableRow>
-            </TableHeader>
+        <Table className="w-full min-w-[700px]" containerClassName="max-h-[calc(100vh-250px)] min-h-[300px] overflow-y-auto overflow-x-auto scrollbar-thin rounded-lg border border-border bg-card shadow-xs relative">
+          <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-md shadow-xs border-b">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="sticky top-0 z-30 bg-muted/95 font-semibold text-foreground">Customer</TableHead>
+              <TableHead className="sticky top-0 z-30 bg-muted/95 font-semibold text-foreground">Phone</TableHead>
+              <TableHead className="sticky top-0 z-30 bg-muted/95 font-semibold text-foreground">Email</TableHead>
+              <TableHead className="sticky top-0 z-30 bg-muted/95 font-semibold text-foreground">Table</TableHead>
+              <TableHead className="sticky top-0 z-30 bg-muted/95 text-right font-semibold text-foreground">Orders</TableHead>
+              <TableHead className="sticky top-0 z-30 bg-muted/95 text-right font-semibold text-foreground">Total Spent (₹)</TableHead>
+              <TableHead className="sticky top-0 z-30 bg-muted/95 font-semibold text-foreground">Latest Status</TableHead>
+            </TableRow>
+          </TableHeader>
             <TableBody>
               {filteredCustomers.length === 0 ? (
                 <TableRow>
@@ -200,7 +199,6 @@ function CustomersPage() {
               )}
             </TableBody>
           </Table>
-        </div>
       </Card>
     </div>
   );
