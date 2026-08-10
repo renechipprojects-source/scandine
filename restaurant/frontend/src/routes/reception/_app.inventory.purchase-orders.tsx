@@ -373,11 +373,7 @@ function POPage() {
                       Cancel
                     </Button>
                     <Button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleCreateSupplier();
-                      }}
+                      type="submit"
                       disabled={isSubmittingSupplier}
                     >
                       {isSubmittingSupplier ? (
