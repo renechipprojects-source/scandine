@@ -15,7 +15,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/reception/_app/inventory/purchase-orders")({
-  ssr: false,
   head: () => ({
     meta: [
       { title: "Purchase Orders & Suppliers — ScanDine" },
@@ -37,10 +36,6 @@ export interface SupplierRecord {
 export interface PurchaseOrderRecord {
   id: string;
   supplier: string;
-  supplier_id?: string;
-  supplier_name?: string;
-  supplier_phone?: string;
-  supplier_address?: string;
   items: number;
   total: number;
   date?: string;
@@ -77,18 +72,21 @@ function POPage() {
   const suppliers: SupplierRecord[] = useMemo(() => {
     const map = new Map<string, SupplierRecord>();
 
-    customSuppliers.forEach((s) => {
-      if (s.name) map.set(s.name.toLowerCase(), s);
+    (customSuppliers || []).forEach((s) => {
+      if (s && s.name && typeof s.name === "string") {
+        map.set(s.name.toLowerCase(), s);
+      }
     });
 
     (purchaseOrders || []).forEach((po) => {
-      const name = po.supplier_name || po.supplier;
-      if (name && !map.has(name.toLowerCase())) {
+      if (!po) return;
+      const name = po.supplier;
+      if (name && typeof name === "string" && !map.has(name.toLowerCase())) {
         map.set(name.toLowerCase(), {
-          id: po.supplier_id || `sup_${name.replace(/\s+/g, "_").toLowerCase()}`,
+          id: `sup_${name.replace(/\W+/g, "_").toLowerCase()}`,
           name: name,
-          phone: po.supplier_phone || "",
-          address: po.supplier_address || "",
+          phone: "",
+          address: "",
           created_at: po.created_at,
         });
       }
@@ -238,12 +236,9 @@ function POPage() {
     const poId = `po_${Date.now()}`;
 
     try {
-      const payload: Record<string, any> = {
+      const payload = {
         id: poId,
         supplier: supplierName,
-        supplier_name: supplierName,
-        supplier_phone: supplierPhone,
-        supplier_address: supplierAddress,
         items: Number(itemsCount),
         total: Number(totalAmount),
         date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -314,9 +309,7 @@ function POPage() {
     } catch (err: any) {
       toast.error(err.message || "Failed to delete Purchase Order");
     }
-  };
-
-  const committedTotal = (purchaseOrders || []).reduce((s, p) => s + (p && !isNaN(Number(p.total)) ? Number(p.total) : 0), 0);
+  };  const committedTotal = (purchaseOrders || []).reduce((s, p) => s + (p && !isNaN(Number(p.total)) ? Number(p.total) : 0), 0);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "Today";
@@ -334,7 +327,7 @@ function POPage() {
     <div className="space-y-6">
       <PageHeader
         title="Purchase Orders & Suppliers"
-        description={`${purchaseOrders.length} Purchase Orders · ${restaurantInfo.currency}${committedTotal.toLocaleString()} committed · ${suppliers.length} Suppliers in Database`}
+        description={`${(purchaseOrders || []).length} Purchase Orders · ${restaurantInfo?.currency || "₹"}${(committedTotal || 0).toLocaleString()} committed · ${(suppliers || []).length} Suppliers in Database`}
         icon={<ClipboardList className="h-5 w-5" />}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -433,26 +426,26 @@ function POPage() {
                       value={selectedSupplierId || undefined}
                       onValueChange={(val) => {
                         setSelectedSupplierId(val);
-                        const found = suppliers.find((s) => s.id === val);
+                        const found = (suppliers || []).find((s) => s && s.id === val);
                         if (found) setPoSupplier(found.name);
                       }}
-                      disabled={loadingPOs || suppliers.length === 0}
+                      disabled={loadingPOs || (suppliers || []).length === 0}
                     >
                       <SelectTrigger>
                         <SelectValue
                           placeholder={
                             loadingPOs
                               ? "Loading suppliers..."
-                              : suppliers.length === 0
+                              : (suppliers || []).length === 0
                               ? "No suppliers available"
                               : "Select Supplier"
                           }
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {suppliers.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.name}
+                        {(suppliers || []).map((s, idx) => (
+                          <SelectItem key={s?.id || `sup-item-${idx}`} value={s?.id || s?.name || `sup-${idx}`}>
+                            {s?.name || "Unnamed Supplier"}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -511,7 +504,7 @@ function POPage() {
                   </div>
 
                   <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-                    Creating this PO commits {restaurantInfo.currency}{Number(totalAmount || 0).toFixed(2)} to {poSupplier || "selected vendor"}.
+                    Creating this PO commits {restaurantInfo?.currency || "₹"}{Number(totalAmount || 0).toFixed(2)} to {poSupplier || "selected vendor"}.
                   </div>
 
                   <div className="flex justify-end gap-2 pt-3 border-t">
@@ -525,7 +518,7 @@ function POPage() {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={isSubmittingPO || loadingPOs || suppliers.length === 0}
+                      disabled={isSubmittingPO || loadingPOs || (suppliers || []).length === 0}
                     >
                       {isSubmittingPO ? (
                         <>
@@ -548,11 +541,11 @@ function POPage() {
         <TabsList className="grid w-full grid-cols-2 max-w-md">
           <TabsTrigger value="purchase-orders" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
-            <span>Purchase Orders ({purchaseOrders.length})</span>
+            <span>Purchase Orders ({(purchaseOrders || []).length})</span>
           </TabsTrigger>
           <TabsTrigger value="suppliers" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            <span>Suppliers ({suppliers.length})</span>
+            <span>Suppliers ({(suppliers || []).length})</span>
           </TabsTrigger>
         </TabsList>
 
@@ -583,52 +576,55 @@ function POPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ) : purchaseOrders.length === 0 ? (
+                  ) : (purchaseOrders || []).length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         No purchase orders found in database. Click "New PO" to add one.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    purchaseOrders.map((p, idx) => (
-                      <TableRow key={`${p.id}-${idx}`} className="hover:bg-muted/40">
-                        <TableCell className="font-mono text-xs font-bold text-primary">{p.id}</TableCell>
-                        <TableCell className="font-semibold">{p.supplier}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{p.entry_type || "Direct Restock"}</TableCell>
-                        <TableCell className="text-right font-medium">{p.items} SKUs</TableCell>
-                        <TableCell className="text-right font-bold text-emerald-600">
-                          {restaurantInfo.currency}{Number(p.total).toFixed(2)}
-                        </TableCell>
-                        <TableCell>
-                          <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-semibold border">
-                            {p.payment_terms || formatPaymentTerms(p.status)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{formatDate(p.created_at || p.date)}</TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedPO(p)}
-                              title="View PO Details"
-                            >
-                              <Eye className="h-3.5 w-3.5 mr-1" />
-                              View
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeletePO(p.id)}
-                              title="Delete PO"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    (purchaseOrders || []).map((p, idx) => {
+                      if (!p) return null;
+                      return (
+                        <TableRow key={`${p.id || 'po'}-${idx}`} className="hover:bg-muted/40">
+                          <TableCell className="font-mono text-xs font-bold text-primary">{p.id}</TableCell>
+                          <TableCell className="font-semibold">{p.supplier}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{p.entry_type || "Direct Restock"}</TableCell>
+                          <TableCell className="text-right font-medium">{p.items} SKUs</TableCell>
+                          <TableCell className="text-right font-bold text-emerald-600">
+                            {restaurantInfo?.currency || "₹"}{Number(p.total || 0).toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-semibold border">
+                              {p.payment_terms || formatPaymentTerms(p.status)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{formatDate(p.created_at || p.date)}</TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedPO(p)}
+                                title="View PO Details"
+                              >
+                                <Eye className="h-3.5 w-3.5 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeletePO(p.id)}
+                                title="Delete PO"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -651,53 +647,47 @@ function POPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loadingSuppliers ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                          Loading Suppliers from Supabase database...
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : suppliers.length === 0 ? (
+                  {(suppliers || []).length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         No suppliers found in database. Click "New Supplier" to add one.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    suppliers.map((s, idx) => (
-                      <TableRow key={`${s.id}-${idx}`} className="hover:bg-muted/40">
-                        <TableCell className="font-bold">{s.name}</TableCell>
-                        <TableCell className="font-mono text-xs">
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                            {s.phone}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate">{s.address || "Main Warehouse"}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{formatDate(s.created_at)}</TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeleteSupplier(s.id, s.name)}
-                              title="Delete Supplier"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    (suppliers || []).map((s, idx) => {
+                      if (!s) return null;
+                      return (
+                        <TableRow key={`${s.id || 'sup'}-${idx}`} className="hover:bg-muted/40">
+                          <TableCell className="font-bold">{s.name}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              {s.phone}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
+                            <div className="flex items-center gap-1.5">
+                              <MapPin className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{s.address || "Main Warehouse"}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{formatDate(s.created_at)}</TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteSupplier(s.id, s.name)}
+                                title="Delete Supplier"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>

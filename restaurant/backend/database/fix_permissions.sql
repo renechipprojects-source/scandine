@@ -72,8 +72,14 @@ CREATE TABLE IF NOT EXISTS sd_purchase_orders (
   total NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
   date TEXT DEFAULT 'Today',
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'preparing', 'ready', 'completed', 'cancelled')),
+  entry_type TEXT DEFAULT 'Direct Restock' CHECK (entry_type IN ('Direct Restock', 'Kitchen Raw Ingredients', 'Beverages & Dairy', 'Packaging & Consumables', 'Equipment & Maintenance')),
+  payment_terms TEXT DEFAULT 'Prepaid' CHECK (payment_terms IN ('Prepaid', 'Pay on Delivery (POD)')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.sd_purchase_orders DROP CONSTRAINT IF EXISTS sd_purchase_orders_entry_type_check;
+ALTER TABLE public.sd_purchase_orders ADD CONSTRAINT sd_purchase_orders_entry_type_check CHECK (entry_type IN ('Direct Restock', 'Kitchen Raw Ingredients', 'Beverages & Dairy', 'Packaging & Consumables', 'Equipment & Maintenance'));
+
 
 -- 3. Grant full table, sequence, and function privileges to public roles
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
