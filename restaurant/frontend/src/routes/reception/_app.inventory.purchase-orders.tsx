@@ -84,22 +84,17 @@ function POPage() {
   // FETCH SUPPLIERS DIRECTLY FROM SUPABASE
   const fetchSuppliers = useCallback(async () => {
     setLoadingSuppliers(true);
-    console.log("[SUPPLIER DEBUG] FETCH START");
+    console.log("[SUPPLIER] FETCH START");
     try {
       const { data, error } = await supabase
         .from("suppliers")
         .select("*")
         .order("created_at", { ascending: false });
 
-      console.log("[SUPPLIER DEBUG] FETCH RESULT", { data, error });
+      console.log("[SUPPLIER] FETCH RESULT", { data, error });
 
       if (error) {
-        console.error("[SUPPLIER DEBUG] FETCH ERROR", {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
-        });
+        console.error("[SUPPLIER] FETCH ERROR", error);
         setSuppliers([]);
       } else if (data) {
         setSuppliers(data as SupplierRecord[]);
@@ -107,7 +102,7 @@ function POPage() {
         setSuppliers([]);
       }
     } catch (err: any) {
-      console.error("[SUPPLIER DEBUG] FETCH EXCEPTION", err);
+      console.error("[SUPPLIER] FETCH ERROR", err);
       setSuppliers([]);
     } finally {
       setLoadingSuppliers(false);
@@ -117,22 +112,17 @@ function POPage() {
   // FETCH PURCHASE ORDERS DIRECTLY FROM SUPABASE
   const fetchPurchaseOrders = useCallback(async () => {
     setLoadingPOs(true);
-    console.log("[PO DEBUG] FETCH START");
+    console.log("[PO] FETCH START");
     try {
       const { data, error } = await supabase
         .from("sd_purchase_orders")
         .select("*")
         .order("created_at", { ascending: false });
 
-      console.log("[PO DEBUG] FETCH RESULT", { data, error });
+      console.log("[PO] FETCH RESULT", { data, error });
 
       if (error) {
-        console.error("[PO DEBUG] FETCH ERROR", {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
-        });
+        console.error("[PO] FETCH ERROR", error);
         setPurchaseOrders([]);
       } else if (data) {
         setPurchaseOrders(data as PurchaseOrderRecord[]);
@@ -140,7 +130,7 @@ function POPage() {
         setPurchaseOrders([]);
       }
     } catch (err: any) {
-      console.error("[PO DEBUG] FETCH EXCEPTION", err);
+      console.error("[PO] FETCH ERROR", err);
       setPurchaseOrders([]);
     } finally {
       setLoadingPOs(false);
@@ -155,88 +145,60 @@ function POPage() {
   // INSERT NEW SUPPLIER INTO SUPABASE DATABASE
   const handleCreateSupplier = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    console.log("[SUPPLIER DEBUG] BUTTON CLICKED");
-    console.log("[SUPPLIER DEBUG] HANDLER STARTED", { supName, supPhone, supAddress });
+    console.log("[SUPPLIER] BUTTON CLICK");
+    console.log("[SUPPLIER] SAVE START", { supName, supPhone, supAddress });
 
-    if (!supName || !supName.trim()) {
+    const trimmedName = supName.trim();
+    const trimmedPhone = supPhone.trim();
+    const trimmedAddress = supAddress.trim();
+
+    if (!trimmedName) {
       toast.error("Please enter Supplier Name");
       return;
     }
-    if (!supPhone || !supPhone.trim()) {
+    if (!trimmedPhone) {
       toast.error("Please enter Phone Number");
       return;
     }
-    if (!supAddress || !supAddress.trim()) {
+    if (!trimmedAddress) {
       toast.error("Please enter Address");
       return;
     }
 
-    console.log("[SUPPLIER DEBUG] VALIDATION PASSED");
     setIsSubmittingSupplier(true);
 
-    // Clean schema payload matching standard suppliers table
-    const cleanPayload: Record<string, any> = {
-      name: supName.trim(),
-      phone: supPhone.trim(),
-      address: supAddress.trim(),
+    const payload = {
+      name: trimmedName,
+      phone: trimmedPhone,
+      address: trimmedAddress,
     };
 
-    console.log("[SUPPLIER DEBUG] INSERT PAYLOAD", cleanPayload);
+    console.log("[SUPPLIER] INSERT PAYLOAD", payload);
 
     try {
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from("suppliers")
-        .insert([cleanPayload])
+        .insert([payload])
         .select();
 
-      console.log("[SUPPLIER DEBUG] INSERT RESULT", { data, error });
+      console.log("[SUPPLIER] INSERT RESULT", { data, error });
 
       if (error) {
-        console.error("[SUPPLIER DEBUG] SUPABASE ERROR", {
-          message: error?.message,
-          code: error?.code,
-          details: error?.details,
-          hint: error?.hint,
-        });
-
-        // Retry with text id if table requires explicit primary key
-        const payloadWithId = {
-          id: `sup_${Date.now()}`,
-          ...cleanPayload,
-        };
-        console.log("[SUPPLIER DEBUG] RETRYING WITH TEXT ID PAYLOAD", payloadWithId);
-        const retryRes = await supabase
-          .from("suppliers")
-          .insert([payloadWithId])
-          .select();
-
-        console.log("[SUPPLIER DEBUG] RETRY RESULT", { data: retryRes.data, error: retryRes.error });
-
-        if (retryRes.error) {
-          console.error("[SUPPLIER DEBUG] RETRY SUPABASE ERROR", {
-            message: retryRes.error?.message,
-            code: retryRes.error?.code,
-            details: retryRes.error?.details,
-            hint: retryRes.error?.hint,
-          });
-          toast.error(`Database Error: ${retryRes.error.message}`);
-          return;
-        } else {
-          data = retryRes.data;
-          error = null;
-        }
+        console.error("[SUPPLIER] INSERT ERROR", error);
+        toast.error(`Database Error: ${error.message}`);
+        return;
       }
 
-      console.log("[SUPPLIER DEBUG] INSERT SUCCESS", data);
-      toast.success(`Supplier "${cleanPayload.name}" saved to database successfully!`);
+      console.log("[SUPPLIER] INSERT SUCCESS", data);
+      toast.success(`Supplier "${trimmedName}" saved to database successfully!`);
       await fetchSuppliers();
-      setPoSupplier(cleanPayload.name);
+      setPoSupplier(trimmedName);
       setSupName("");
       setSupPhone("");
       setSupAddress("");
       setIsCreateSupplierOpen(false);
     } catch (err: any) {
-      console.error("[SUPPLIER DEBUG] EXCEPTION", err);
+      console.error("[SUPPLIER] INSERT ERROR", err);
       toast.error(`Failed to insert supplier: ${err.message || String(err)}`);
     } finally {
       setIsSubmittingSupplier(false);
@@ -246,10 +208,10 @@ function POPage() {
   // INSERT NEW PURCHASE ORDER INTO SUPABASE DATABASE
   const handleCreatePO = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    console.log("[PO DEBUG] BUTTON CLICKED");
-    console.log("[PO DEBUG] HANDLER STARTED", { poSupplier, entryType, itemsCount, totalAmount, poTerms });
+    console.log("[PO] BUTTON CLICK");
+    console.log("[PO] SAVE START", { poSupplier, entryType, itemsCount, totalAmount, poTerms });
 
-    const effectiveSupplier = (poSupplier && poSupplier.trim()) || (suppliers.length > 0 ? suppliers[0].name : "");
+    const effectiveSupplier = poSupplier ? poSupplier.trim() : "";
     if (!effectiveSupplier) {
       toast.error("Please select a Supplier Name");
       return;
@@ -266,71 +228,42 @@ function POPage() {
       toast.error("Please enter a valid Total Amount");
       return;
     }
+    if (!poTerms || !poTerms.trim()) {
+      toast.error("Please select Payment Terms");
+      return;
+    }
 
     setIsSubmittingPO(true);
-    const poNum = `#PO-${Math.floor(1000 + Math.random() * 9000)}`;
+    const poId = `po_${Date.now()}`;
 
     try {
       const payload = {
-        id: poNum,
+        id: poId,
         supplier: effectiveSupplier,
         items: Number(itemsCount),
         total: Number(totalAmount),
         date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-        status: poTerms,
-        entry_type: entryType,
+        status: "pending",
+        entry_type: entryType.trim(),
+        payment_terms: poTerms.trim(),
       };
 
-      console.log("[PO DEBUG] INSERT PAYLOAD", payload);
-      let { data, error } = await supabase
+      console.log("[PO] INSERT PAYLOAD", payload);
+      const { data, error } = await supabase
         .from("sd_purchase_orders")
         .insert([payload])
         .select();
 
-      console.log("[PO DEBUG] INSERT RESULT", { data, error });
+      console.log("[PO] INSERT RESULT", { data, error });
 
       if (error) {
-        console.error("[PO DEBUG] SUPABASE ERROR", {
-          message: error?.message,
-          code: error?.code,
-          details: error?.details,
-          hint: error?.hint,
-        });
-
-        // Retry without entry_type if column doesn't exist in table schema
-        const fallbackPayload = {
-          id: poNum,
-          supplier: effectiveSupplier,
-          items: Number(itemsCount),
-          total: Number(totalAmount),
-          date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-          status: poTerms,
-        };
-        console.log("[PO DEBUG] RETRYING WITH FALLBACK PAYLOAD", fallbackPayload);
-        const retryRes = await supabase
-          .from("sd_purchase_orders")
-          .insert([fallbackPayload])
-          .select();
-
-        console.log("[PO DEBUG] RETRY RESULT", { data: retryRes.data, error: retryRes.error });
-
-        if (retryRes.error) {
-          console.error("[PO DEBUG] RETRY SUPABASE ERROR", {
-            message: retryRes.error?.message,
-            code: retryRes.error?.code,
-            details: retryRes.error?.details,
-            hint: retryRes.error?.hint,
-          });
-          toast.error(`Database Error: ${retryRes.error.message}`);
-          return;
-        } else {
-          data = retryRes.data;
-          error = null;
-        }
+        console.error("[PO] INSERT ERROR", error);
+        toast.error(`Database Error: ${error.message}`);
+        return;
       }
 
-      console.log("[PO DEBUG] INSERT SUCCESS", data);
-      toast.success(`Purchase Order ${poNum} saved to database successfully!`);
+      console.log("[PO] INSERT SUCCESS", data);
+      toast.success(`Purchase Order ${poId} saved to database successfully!`);
       await fetchPurchaseOrders();
       setItemsCount("5");
       setTotalAmount("4500");
@@ -338,7 +271,7 @@ function POPage() {
       setPoTerms("Prepaid");
       setIsCreatePOOpen(false);
     } catch (err: any) {
-      console.error("[PO DEBUG] EXCEPTION", err);
+      console.error("[PO] INSERT ERROR", err);
       toast.error(`Failed to create PO: ${err.message || String(err)}`);
     } finally {
       setIsSubmittingPO(false);
@@ -417,7 +350,7 @@ function POPage() {
                     <Label htmlFor="supplier-name">Supplier Name *</Label>
                     <Input
                       id="supplier-name"
-                      placeholder="e.g. Golden Gate Produce Co."
+                      placeholder="e.g. ABC Foods Supplier"
                       value={supName}
                       onChange={(e) => setSupName(e.target.value)}
                     />
@@ -427,7 +360,7 @@ function POPage() {
                     <Label htmlFor="supplier-phone">Phone Number *</Label>
                     <Input
                       id="supplier-phone"
-                      placeholder="e.g. +1 415 555 0190"
+                      placeholder="e.g. +91 98765 43210"
                       value={supPhone}
                       onChange={(e) => setSupPhone(e.target.value)}
                     />
@@ -437,7 +370,7 @@ function POPage() {
                     <Label htmlFor="supplier-address">Address *</Label>
                     <Input
                       id="supplier-address"
-                      placeholder="e.g. San Francisco Wholesale Market, CA"
+                      placeholder="e.g. Chennai, Tamil Nadu"
                       value={supAddress}
                       onChange={(e) => setSupAddress(e.target.value)}
                     />
@@ -660,7 +593,7 @@ function POPage() {
                         </TableCell>
                         <TableCell>
                           <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-semibold border">
-                            {formatPaymentTerms(p.status)}
+                            {p.payment_terms || formatPaymentTerms(p.status)}
                           </span>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{formatDate(p.created_at || p.date)}</TableCell>
@@ -774,7 +707,7 @@ function POPage() {
                 <DialogTitle className="flex items-center justify-between text-base font-bold">
                   <span>Purchase Order {selectedPO.id}</span>
                   <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-semibold border">
-                    {formatPaymentTerms(selectedPO.status)}
+                    {selectedPO.payment_terms || formatPaymentTerms(selectedPO.status)}
                   </span>
                 </DialogTitle>
               </DialogHeader>
@@ -803,7 +736,7 @@ function POPage() {
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground">Payment Terms</span>
-                    <div className="font-semibold text-xs text-emerald-600 mt-0.5">{formatPaymentTerms(selectedPO.status)}</div>
+                    <div className="font-semibold text-xs text-emerald-600 mt-0.5">{selectedPO.payment_terms || formatPaymentTerms(selectedPO.status)}</div>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground">Notes</span>
