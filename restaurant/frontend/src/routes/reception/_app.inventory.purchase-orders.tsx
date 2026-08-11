@@ -37,11 +37,16 @@ export interface SupplierRecord {
 export interface PurchaseOrderRecord {
   id: string;
   supplier: string;
+  supplier_id?: string;
+  supplier_name?: string;
+  supplier_phone?: string;
+  supplier_address?: string;
   items: number;
   total: number;
   date?: string;
   status: string;
   entry_type?: string;
+  payment_terms?: string;
   created_at?: string;
 }
 
@@ -70,6 +75,7 @@ function POPage() {
   };
 
   // New PO form state
+  const [selectedSupplierId, setSelectedSupplierId] = useState("");
   const [poSupplier, setPoSupplier] = useState("");
   const [entryType, setEntryType] = useState("Direct Restock");
   const [itemsCount, setItemsCount] = useState("5");
@@ -94,7 +100,13 @@ function POPage() {
       console.log("[SUPPLIER] FETCH RESULT", { data, error });
 
       if (error) {
-        console.error("[SUPPLIER] FETCH ERROR", error);
+        console.error("[SUPPLIER FETCH ERROR]", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          error,
+        });
         setSuppliers([]);
       } else if (data) {
         setSuppliers(data as SupplierRecord[]);
@@ -102,7 +114,7 @@ function POPage() {
         setSuppliers([]);
       }
     } catch (err: any) {
-      console.error("[SUPPLIER] FETCH ERROR", err);
+      console.error("[SUPPLIER FETCH ERROR]", err);
       setSuppliers([]);
     } finally {
       setLoadingSuppliers(false);
@@ -122,7 +134,13 @@ function POPage() {
       console.log("[PO] FETCH RESULT", { data, error });
 
       if (error) {
-        console.error("[PO] FETCH ERROR", error);
+        console.error("[PO FETCH ERROR]", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          error,
+        });
         setPurchaseOrders([]);
       } else if (data) {
         setPurchaseOrders(data as PurchaseOrderRecord[]);
@@ -130,7 +148,7 @@ function POPage() {
         setPurchaseOrders([]);
       }
     } catch (err: any) {
-      console.error("[PO] FETCH ERROR", err);
+      console.error("[PO FETCH ERROR]", err);
       setPurchaseOrders([]);
     } finally {
       setLoadingPOs(false);
@@ -184,7 +202,13 @@ function POPage() {
       console.log("[SUPPLIER] INSERT RESULT", { data, error });
 
       if (error) {
-        console.error("[SUPPLIER] INSERT ERROR", error);
+        console.error("[SUPPLIER INSERT ERROR]", {
+          message: error?.message,
+          code: error?.code,
+          details: error?.details,
+          hint: error?.hint,
+          error,
+        });
         toast.error(`Database Error: ${error.message}`);
         return;
       }
@@ -192,13 +216,20 @@ function POPage() {
       console.log("[SUPPLIER] INSERT SUCCESS", data);
       toast.success(`Supplier "${trimmedName}" saved to database successfully!`);
       await fetchSuppliers();
-      setPoSupplier(trimmedName);
+
+      if (data && data[0]) {
+        setSelectedSupplierId(data[0].id);
+        setPoSupplier(data[0].name);
+      } else {
+        setPoSupplier(trimmedName);
+      }
+
       setSupName("");
       setSupPhone("");
       setSupAddress("");
       setIsCreateSupplierOpen(false);
     } catch (err: any) {
-      console.error("[SUPPLIER] INSERT ERROR", err);
+      console.error("[SUPPLIER INSERT ERROR]", err);
       toast.error(`Failed to insert supplier: ${err.message || String(err)}`);
     } finally {
       setIsSubmittingSupplier(false);
@@ -209,13 +240,19 @@ function POPage() {
   const handleCreatePO = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     console.log("[PO] BUTTON CLICK");
-    console.log("[PO] SAVE START", { poSupplier, entryType, itemsCount, totalAmount, poTerms });
+    console.log("[PO] SAVE START", { selectedSupplierId, poSupplier, entryType, itemsCount, totalAmount, poTerms });
 
-    const effectiveSupplier = poSupplier ? poSupplier.trim() : "";
-    if (!effectiveSupplier) {
-      toast.error("Please select a Supplier Name");
+    const selectedSupplier = suppliers.find((s) => s.id === selectedSupplierId || (poSupplier && s.name === poSupplier.trim()));
+
+    if (!selectedSupplier) {
+      toast.error("Please select a valid Supplier from the list");
       return;
     }
+
+    const supplierName = selectedSupplier.name;
+    const supplierId = selectedSupplier.id;
+    const supplierPhone = selectedSupplier.phone || "";
+    const supplierAddress = selectedSupplier.address || "";
     if (!entryType || !entryType.trim()) {
       toast.error("Please select an Entry Type");
       return;
@@ -237,9 +274,13 @@ function POPage() {
     const poId = `po_${Date.now()}`;
 
     try {
-      const payload = {
+      const payload: Record<string, any> = {
         id: poId,
-        supplier: effectiveSupplier,
+        supplier: supplierName,
+        supplier_id: supplierId,
+        supplier_name: supplierName,
+        supplier_phone: supplierPhone || "",
+        supplier_address: supplierAddress || "",
         items: Number(itemsCount),
         total: Number(totalAmount),
         date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -257,7 +298,13 @@ function POPage() {
       console.log("[PO] INSERT RESULT", { data, error });
 
       if (error) {
-        console.error("[PO] INSERT ERROR", error);
+        console.error("[PO INSERT ERROR]", {
+          message: error?.message,
+          code: error?.code,
+          details: error?.details,
+          hint: error?.hint,
+          error,
+        });
         toast.error(`Database Error: ${error.message}`);
         return;
       }
@@ -271,7 +318,7 @@ function POPage() {
       setPoTerms("Prepaid");
       setIsCreatePOOpen(false);
     } catch (err: any) {
-      console.error("[PO] INSERT ERROR", err);
+      console.error("[PO INSERT ERROR]", err);
       toast.error(`Failed to create PO: ${err.message || String(err)}`);
     } finally {
       setIsSubmittingPO(false);
@@ -422,8 +469,12 @@ function POPage() {
                   <div className="space-y-1">
                     <Label>Supplier Name *</Label>
                     <Select
-                      value={poSupplier || undefined}
-                      onValueChange={setPoSupplier}
+                      value={selectedSupplierId || undefined}
+                      onValueChange={(val) => {
+                        setSelectedSupplierId(val);
+                        const found = suppliers.find((s) => s.id === val);
+                        if (found) setPoSupplier(found.name);
+                      }}
                       disabled={loadingSuppliers || suppliers.length === 0}
                     >
                       <SelectTrigger>
@@ -439,7 +490,7 @@ function POPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {suppliers.map((s) => (
-                          <SelectItem key={s.id} value={s.name}>
+                          <SelectItem key={s.id} value={s.id}>
                             {s.name}
                           </SelectItem>
                         ))}
@@ -512,12 +563,8 @@ function POPage() {
                       Cancel
                     </Button>
                     <Button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleCreatePO();
-                      }}
-                      disabled={isSubmittingPO}
+                      type="submit"
+                      disabled={isSubmittingPO || loadingSuppliers || suppliers.length === 0}
                     >
                       {isSubmittingPO ? (
                         <>
