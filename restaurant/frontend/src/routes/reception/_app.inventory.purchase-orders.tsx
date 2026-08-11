@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/reception/components
 import { ClipboardList, Plus, Eye, Truck, Calendar, Building2, Phone, MapPin, Trash2, Loader2 } from "lucide-react";
 import { restaurantInfo } from "@/reception/lib/mock-data";
 import { supabase } from "@/lib/supabase";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/reception/_app/inventory/purchase-orders")({
@@ -51,9 +51,8 @@ export interface PurchaseOrderRecord {
 }
 
 function POPage() {
-  const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderRecord[]>([]);
-  const [loadingSuppliers, setLoadingSuppliers] = useState(true);
+  const [customSuppliers, setCustomSuppliers] = useState<SupplierRecord[]>([]);
   const [loadingPOs, setLoadingPOs] = useState(true);
 
   const [selectedPO, setSelectedPO] = useState<PurchaseOrderRecord | null>(null);
@@ -74,6 +73,30 @@ function POPage() {
     return "Prepaid";
   };
 
+  // Dynamic suppliers list compiled from sd_purchase_orders and customSuppliers
+  const suppliers: SupplierRecord[] = useMemo(() => {
+    const map = new Map<string, SupplierRecord>();
+
+    customSuppliers.forEach((s) => {
+      if (s.name) map.set(s.name.toLowerCase(), s);
+    });
+
+    (purchaseOrders || []).forEach((po) => {
+      const name = po.supplier_name || po.supplier;
+      if (name && !map.has(name.toLowerCase())) {
+        map.set(name.toLowerCase(), {
+          id: po.supplier_id || `sup_${name.replace(/\s+/g, "_").toLowerCase()}`,
+          name: name,
+          phone: po.supplier_phone || "",
+          address: po.supplier_address || "",
+          created_at: po.created_at,
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [purchaseOrders, customSuppliers]);
+
   // New PO form state
   const [selectedSupplierId, setSelectedSupplierId] = useState("");
   const [poSupplier, setPoSupplier] = useState("");
@@ -87,41 +110,7 @@ function POPage() {
   const [supPhone, setSupPhone] = useState("");
   const [supAddress, setSupAddress] = useState("");
 
-  // FETCH SUPPLIERS DIRECTLY FROM SUPABASE
-  const fetchSuppliers = useCallback(async () => {
-    setLoadingSuppliers(true);
-    console.log("[SUPPLIER] FETCH START");
-    try {
-      const { data, error } = await supabase
-        .from("suppliers")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      console.log("[SUPPLIER] FETCH RESULT", { data, error });
-
-      if (error) {
-        console.error("[SUPPLIER FETCH ERROR]", {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
-          error,
-        });
-        setSuppliers([]);
-      } else if (data) {
-        setSuppliers(data as SupplierRecord[]);
-      } else {
-        setSuppliers([]);
-      }
-    } catch (err: any) {
-      console.error("[SUPPLIER FETCH ERROR]", err);
-      setSuppliers([]);
-    } finally {
-      setLoadingSuppliers(false);
-    }
-  }, []);
-
-  // FETCH PURCHASE ORDERS DIRECTLY FROM SUPABASE
+  // FETCH PURCHASE ORDERS DIRECTLY FROM SUPABASE SD TABLE
   const fetchPurchaseOrders = useCallback(async () => {
     setLoadingPOs(true);
     console.log("[PO] FETCH START");
@@ -156,11 +145,10 @@ function POPage() {
   }, []);
 
   useEffect(() => {
-    fetchSuppliers();
     fetchPurchaseOrders();
-  }, [fetchSuppliers, fetchPurchaseOrders]);
+  }, [fetchPurchaseOrders]);
 
-  // INSERT NEW SUPPLIER INTO SUPABASE DATABASE
+  // ADD NEW SUPPLIER TO LOCAL STATE / DROPDOWN
   const handleCreateSupplier = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     console.log("[SUPPLIER] BUTTON CLICK");
@@ -185,52 +173,27 @@ function POPage() {
 
     setIsSubmittingSupplier(true);
 
-    const payload = {
-      name: trimmedName,
-      phone: trimmedPhone,
-      address: trimmedAddress,
-    };
-
-    console.log("[SUPPLIER] INSERT PAYLOAD", payload);
-
     try {
-      const { data, error } = await supabase
-        .from("suppliers")
-        .insert([payload])
-        .select();
+      const newSup: SupplierRecord = {
+        id: `sup_${Date.now()}`,
+        name: trimmedName,
+        phone: trimmedPhone,
+        address: trimmedAddress,
+        created_at: new Date().toISOString(),
+      };
 
-      console.log("[SUPPLIER] INSERT RESULT", { data, error });
+      setCustomSuppliers((prev) => [newSup, ...prev]);
+      setSelectedSupplierId(newSup.id);
+      setPoSupplier(newSup.name);
 
-      if (error) {
-        console.error("[SUPPLIER INSERT ERROR]", {
-          message: error?.message,
-          code: error?.code,
-          details: error?.details,
-          hint: error?.hint,
-          error,
-        });
-        toast.error(`Database Error: ${error.message}`);
-        return;
-      }
-
-      console.log("[SUPPLIER] INSERT SUCCESS", data);
-      toast.success(`Supplier "${trimmedName}" saved to database successfully!`);
-      await fetchSuppliers();
-
-      if (data && data[0]) {
-        setSelectedSupplierId(data[0].id);
-        setPoSupplier(data[0].name);
-      } else {
-        setPoSupplier(trimmedName);
-      }
-
+      toast.success(`Supplier "${trimmedName}" added successfully!`);
       setSupName("");
       setSupPhone("");
       setSupAddress("");
       setIsCreateSupplierOpen(false);
     } catch (err: any) {
       console.error("[SUPPLIER INSERT ERROR]", err);
-      toast.error(`Failed to insert supplier: ${err.message || String(err)}`);
+      toast.error(`Failed to add supplier: ${err.message || String(err)}`);
     } finally {
       setIsSubmittingSupplier(false);
     }
@@ -239,10 +202,10 @@ function POPage() {
   // INSERT NEW PURCHASE ORDER INTO SUPABASE DATABASE
   const handleCreatePO = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    console.log("[PO] BUTTON CLICK");
-    console.log("[PO] SAVE START", { selectedSupplierId, poSupplier, entryType, itemsCount, totalAmount, poTerms });
+    console.log("[PO UI] BUTTON CLICKED");
+    console.log("[PO UI] SUBMIT START", { selectedSupplierId, poSupplier, entryType, itemsCount, totalAmount, poTerms });
 
-    const selectedSupplier = suppliers.find((s) => s.id === selectedSupplierId || (poSupplier && s.name === poSupplier.trim()));
+    const selectedSupplier = suppliers.find((s) => s.id === selectedSupplierId || (poSupplier && s.name.toLowerCase() === poSupplier.trim().toLowerCase()));
 
     if (!selectedSupplier) {
       toast.error("Please select a valid Supplier from the list");
@@ -250,9 +213,9 @@ function POPage() {
     }
 
     const supplierName = selectedSupplier.name;
-    const supplierId = selectedSupplier.id;
     const supplierPhone = selectedSupplier.phone || "";
     const supplierAddress = selectedSupplier.address || "";
+
     if (!entryType || !entryType.trim()) {
       toast.error("Please select an Entry Type");
       return;
@@ -270,6 +233,7 @@ function POPage() {
       return;
     }
 
+    console.log("[PO UI] VALIDATION PASSED");
     setIsSubmittingPO(true);
     const poId = `po_${Date.now()}`;
 
@@ -277,10 +241,9 @@ function POPage() {
       const payload: Record<string, any> = {
         id: poId,
         supplier: supplierName,
-        supplier_id: supplierId,
         supplier_name: supplierName,
-        supplier_phone: supplierPhone || "",
-        supplier_address: supplierAddress || "",
+        supplier_phone: supplierPhone,
+        supplier_address: supplierAddress,
         items: Number(itemsCount),
         total: Number(totalAmount),
         date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -289,55 +252,53 @@ function POPage() {
         payment_terms: poTerms.trim(),
       };
 
-      console.log("[PO] INSERT PAYLOAD", payload);
+      console.log("[PO UI] INSERT PAYLOAD", payload);
+      console.log("[PO UI] INSERT START");
+
       const { data, error } = await supabase
         .from("sd_purchase_orders")
         .insert([payload])
         .select();
 
-      console.log("[PO] INSERT RESULT", { data, error });
+      console.log("[PO UI] INSERT RESULT", { data, error });
 
       if (error) {
-        console.error("[PO INSERT ERROR]", {
+        console.error("[PO UI] INSERT ERROR", {
           message: error?.message,
           code: error?.code,
           details: error?.details,
           hint: error?.hint,
           error,
         });
+        console.error("[PO INSERT ERROR]", error);
         toast.error(`Database Error: ${error.message}`);
         return;
       }
 
-      console.log("[PO] INSERT SUCCESS", data);
+      console.log("[PO UI] INSERT SUCCESS", data);
       toast.success(`Purchase Order ${poId} saved to database successfully!`);
+
+      console.log("[PO UI] REFRESH START");
       await fetchPurchaseOrders();
+      console.log("[PO UI] REFRESH SUCCESS");
+
       setItemsCount("5");
       setTotalAmount("4500");
       setEntryType("Direct Restock");
       setPoTerms("Prepaid");
       setIsCreatePOOpen(false);
     } catch (err: any) {
-      console.error("[PO INSERT ERROR]", err);
+      console.error("[PO UI] INSERT ERROR", err);
       toast.error(`Failed to create PO: ${err.message || String(err)}`);
     } finally {
       setIsSubmittingPO(false);
     }
   };
 
-  // DELETE SUPPLIER FROM SUPABASE
-  const handleDeleteSupplier = async (id: string, name: string) => {
-    try {
-      const { error } = await supabase.from("suppliers").delete().eq("id", id);
-      if (error) {
-        toast.error(`Supabase Delete Error: ${error.message}`);
-        return;
-      }
-      toast.success(`Supplier "${name}" deleted from database`);
-      await fetchSuppliers();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete supplier");
-    }
+  // REMOVE SUPPLIER FROM LOCAL LIST
+  const handleDeleteSupplier = (id: string, name: string) => {
+    setCustomSuppliers((prev) => prev.filter((s) => s.id !== id));
+    toast.success(`Supplier "${name}" removed`);
   };
 
   // DELETE PURCHASE ORDER FROM SUPABASE
@@ -475,12 +436,12 @@ function POPage() {
                         const found = suppliers.find((s) => s.id === val);
                         if (found) setPoSupplier(found.name);
                       }}
-                      disabled={loadingSuppliers || suppliers.length === 0}
+                      disabled={loadingPOs || suppliers.length === 0}
                     >
                       <SelectTrigger>
                         <SelectValue
                           placeholder={
-                            loadingSuppliers
+                            loadingPOs
                               ? "Loading suppliers..."
                               : suppliers.length === 0
                               ? "No suppliers available"
@@ -564,7 +525,7 @@ function POPage() {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={isSubmittingPO || loadingSuppliers || suppliers.length === 0}
+                      disabled={isSubmittingPO || loadingPOs || suppliers.length === 0}
                     >
                       {isSubmittingPO ? (
                         <>
