@@ -26,25 +26,7 @@ const methods = [
 
 export const Route = createFileRoute("/payment")({ component: Payment });
 
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
 
-function loadRazorpayScript(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (window.Razorpay) {
-      resolve(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
 
 import { CustomerRegistration } from "@/components/customer-registration";
 import { InvalidQrScreen } from "@/components/invalid-qr";
@@ -186,125 +168,27 @@ function Payment() {
       return;
     }
 
-    // UPI / Razorpay Gateway Integration
-    setState("processing");
-    const loaded = await loadRazorpayScript();
-    if (!loaded || !window.Razorpay) {
-      toast.error("Failed to load Razorpay Payment Gateway. Please check internet connection.");
+    // Online / Razorpay Payment Page Integration
+    const paymentPageUrl = (
+      import.meta.env.VITE_RAZORPAY_PAYMENT_PAGE_URL ||
+      (import.meta.env.VITE_RAZORPAY_KEY_ID?.startsWith("http") ? import.meta.env.VITE_RAZORPAY_KEY_ID : "")
+    )?.trim();
+
+    if (!paymentPageUrl) {
+      toast.error("Razorpay Payment Page URL is not configured. Please set VITE_RAZORPAY_PAYMENT_PAGE_URL in .env.");
       setState("idle");
       return;
     }
 
-    const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TI7XNrxQP5GRTJ";
-    const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    setState("processing");
+    toast.info("Redirecting to Razorpay Payment Page...");
 
-    try {
-      // 1. Create Razorpay Order via Backend API
-      let razorpayOrderId = "";
-      try {
-        const orderRes = await fetch(`${backendUrl}/api/razorpay/create-order`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: totalAmount,
-            currency: "INR",
-            receipt: `order_${orderNum}_${Date.now()}`,
-          }),
-        });
+    // Record payment submission for Table & Reception tracking
+    const transactionId = `TXN_RZP_${Date.now()}`;
+    const payMethodName = "Razorpay Online Payment";
+    await handlePaymentSubmission("upi", payMethodName, transactionId, false);
 
-        const orderData = await orderRes.json();
-        if (orderData.success && orderData.order_id) {
-          razorpayOrderId = orderData.order_id;
-        }
-      } catch (err) {
-        console.warn("Backend order creation unavailable, continuing with client checkout:", err);
-      }
-
-      // 2. Open Razorpay Checkout Modal
-      const options: any = {
-        key: keyId,
-        amount: Math.round(totalAmount * 100),
-        currency: "INR",
-        name: "ScanDine Restaurant",
-        description: `Payment for Order ${orderNum}`,
-        image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=200&q=80",
-        prefill: {
-          name: custName.trim(),
-          email: custEmail.trim() || "customer@scandine.com",
-          contact: custPhone.trim(),
-        },
-        theme: {
-          color: "#ea580c",
-        },
-        handler: async function (response: any) {
-          try {
-            const pId = response.razorpay_payment_id;
-            const rOrderId = response.razorpay_order_id || razorpayOrderId;
-            const rSig = response.razorpay_signature;
-
-            // 3. Verify Payment Signature via Backend API
-            let isVerified = false;
-            if (rOrderId && pId && rSig) {
-              try {
-                const verifyRes = await fetch(`${backendUrl}/api/razorpay/verify`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    razorpay_order_id: rOrderId,
-                    razorpay_payment_id: pId,
-                    razorpay_signature: rSig,
-                  }),
-                });
-
-                const verifyData = await verifyRes.json();
-                if (verifyData.success) {
-                  isVerified = true;
-                }
-              } catch (vErr) {
-                console.warn("Backend verification call failed, verifying signature locally:", vErr);
-                isVerified = true; // Fallback verification
-              }
-            } else if (pId) {
-              isVerified = true;
-            }
-
-            if (isVerified) {
-              const payMethodName = `Razorpay (${pId})`;
-              await handlePaymentSubmission("upi", payMethodName, pId, true);
-            } else {
-              toast.error("Payment Signature Verification Failed! Order not marked as paid.");
-              setState("failed");
-            }
-          } catch (err: any) {
-            console.error("Payment handler error:", err);
-            toast.error("Failed to complete payment processing.");
-            setState("failed");
-          }
-        },
-        modal: {
-          ondismiss: function () {
-            setState("idle");
-            toast.info("Payment window closed.");
-          },
-        },
-      };
-
-      if (razorpayOrderId) {
-        options.order_id = razorpayOrderId;
-      }
-
-      const rzp = new window.Razorpay(options);
-      rzp.on("payment.failed", function (resp: any) {
-        console.error("Razorpay failure:", resp);
-        setState("failed");
-        toast.error(`Payment Failed: ${resp.error?.description || "Transaction declined"}`);
-      });
-      rzp.open();
-    } catch (err: any) {
-      console.error("Razorpay init error:", err);
-      toast.error(err.message || "Failed to initialize payment gateway.");
-      setState("idle");
-    }
+    window.location.href = paymentPageUrl;
   };
 
   const invoiceItems = order?.items || [
