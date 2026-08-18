@@ -205,7 +205,11 @@ function Payment() {
     toast.info("Initiating secure Razorpay checkout...");
 
     try {
-      const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
+      const backendBaseUrl = (
+        import.meta.env.VITE_API_URL ||
+        import.meta.env.VITE_BACKEND_URL ||
+        "http://localhost:5000"
+      ).replace(/\/$/, "");
 
       // 1. Create Razorpay Order on Backend
       const createOrderRes = await fetch(`${backendBaseUrl}/api/razorpay/create-order`, {
