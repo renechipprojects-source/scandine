@@ -204,7 +204,6 @@ function AdminQrPageRedesigned() {
   };
 
   const handleCopyUrl = (url: string) => {
-    checkEnvOrNotify();
     navigator.clipboard.writeText(url);
     setCopied(true);
     toast.success("Customer QR Link copied to clipboard!");

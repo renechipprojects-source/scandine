@@ -18,6 +18,7 @@ export type DbOrder = {
   table_number: string;
   customer_name?: string;
   customer_phone?: string;
+  customer_email?: string;
   session_id?: string;
   items: DbOrderItem[];
   subtotal: number;
@@ -111,6 +112,8 @@ function saveLocalOrders(orders: DbOrder[]) {
     console.error("Failed to save local orders:", err);
   }
 }
+
+const MOCK_SERVICES_KEY = "aura_dine_service_requests_v2";
 
 function getLocalServices(): ServiceRequest[] {
   try {
@@ -478,7 +481,7 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
 export function subscribeToOrdersBySession(
   sessionId: string,
   onUpdate: (order: DbOrder) => void,
-  onSubscribed?: () => void
+  onSubscribed?: (status?: string) => void
 ) {
   if (!isSupabaseConfigured() || !sessionId) {
     return () => { };

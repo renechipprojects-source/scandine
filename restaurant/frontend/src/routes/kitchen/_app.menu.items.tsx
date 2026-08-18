@@ -149,7 +149,7 @@ function KitchenItemsPage() {
       };
       const categoryId = CATEGORY_MAP[category] || "cat_2";
 
-      const newItem: Partial<MenuItem> = {
+      const newItem: any = {
         name: name.trim(),
         category: category,
         category_name: category,

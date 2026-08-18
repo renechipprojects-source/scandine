@@ -71,7 +71,7 @@ function PaymentsPage() {
           customer: inv.customer || "Customer",
           method: inv.method || "Cash",
           amount: Number(inv.amount) || 0,
-          status: inv.status || "unpaid",
+          status: (inv.status || "unpaid") as any,
           date: inv.date || new Date().toISOString(),
           transaction_id: inv.transaction_id,
         });

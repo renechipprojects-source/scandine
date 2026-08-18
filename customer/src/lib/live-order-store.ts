@@ -205,11 +205,6 @@ export const liveOrderStore = {
     serviceListeners.add(cb);
     return () => serviceListeners.delete(cb);
   },
-
-  resetForNewSession() {
-    cachedOrders = [];
-    persistOrders();
-  },
 };
 
 const SERVER_ORDERS: LiveOrder[] = [];

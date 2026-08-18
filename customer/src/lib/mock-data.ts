@@ -61,6 +61,7 @@ export const offers = [
 ];
 
 export type OrderStatus =
+  | "pending"
   | "received"
   | "accepted"
   | "preparing"

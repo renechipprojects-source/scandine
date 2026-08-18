@@ -61,7 +61,7 @@ function DashboardPage() {
   const pendingCount = dbOrders.filter((o) => o.status === "pending").length;
   const preparingCount = dbOrders.filter((o) => o.status === "preparing").length;
   const readyCount = dbOrders.filter((o) => o.status === "ready" || o.status === "accepted").length;
-  const completedCount = dbOrders.filter((o) => o.status === "completed" || o.status === "served").length;
+  const completedCount = dbOrders.filter((o) => o.status === "completed" || (o.status as string) === "served").length;
   const staffCount = dbEmployees.length;
 
   const statusPie = [

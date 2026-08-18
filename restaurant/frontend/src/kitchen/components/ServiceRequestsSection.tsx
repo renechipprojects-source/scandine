@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/kitchen/components/ui/card";
 import { Button } from "@/kitchen/components/ui/button";
 import { Badge } from "@/kitchen/components/ui/badge";
-import { ConciergeBell, Clock, User, Check, CheckCircle2, Droplet, Receipt, Utensils, HelpCircle, XCircle } from "lucide-react";
+import { ConciergeBell, Clock, User, Check, CheckCircle2, Droplet, Receipt, Utensils, HelpCircle, XCircle, Sparkles } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { playServiceRequestAlertSound } from "@/hooks/useRealtime";
 import { toast } from "sonner";

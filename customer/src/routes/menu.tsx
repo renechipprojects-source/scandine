@@ -261,7 +261,7 @@ function Menu() {
               <div className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
                 <Flame className="h-5 w-5 text-primary animate-pulse" /> Live Orders for {tableNumber} ({activeTableOrders.length})
               </div>
-              <Link to="/track" className="text-xs font-semibold text-primary flex items-center hover:underline">
+              <Link to="/track" search={{ orderId: "" }} className="text-xs font-semibold text-primary flex items-center hover:underline">
                 View Tracking <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
               </Link>
             </div>
@@ -281,7 +281,7 @@ function Menu() {
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{ord.id}</div>
-                        <div className="font-display text-base font-bold mt-0.5">{ord.table}</div>
+                        <div className="font-display text-base font-bold mt-0.5">{(ord as any).table || ord.table_number}</div>
                       </div>
                       <span className={`text-xs font-bold px-3 py-1 rounded-full ${info.color}`}>
                         {info.label}

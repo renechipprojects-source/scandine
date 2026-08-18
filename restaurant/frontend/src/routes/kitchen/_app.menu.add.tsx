@@ -1,4 +1,16 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/admin/components/ui/card";
+import { Label } from "@/admin/components/ui/label";
+import { Input } from "@/admin/components/ui/input";
+import { Button } from "@/admin/components/ui/button";
+import { Textarea } from "@/admin/components/ui/textarea";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/admin/components/ui/select";
+import { PageHeader } from "@/admin/components/layout/PageHeader";
+import { X, PlusSquare, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { useSupabaseTable, type MenuItem } from "@/hooks/useSupabaseData";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
 export const Route = createFileRoute("/kitchen/_app/menu/add")({
   beforeLoad: () => {

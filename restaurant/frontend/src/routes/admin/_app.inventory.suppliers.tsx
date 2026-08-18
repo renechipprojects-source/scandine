@@ -13,7 +13,7 @@ export const Route = createFileRoute("/admin/_app/inventory/suppliers")({
 });
 
 function SuppliersPage() {
-  const { data: suppliersList } = useSupabaseTable<Supplier>("suppliers", mockSuppliers);
+  const { data: suppliersList } = useSupabaseTable<Supplier>("suppliers", mockSuppliers as any);
 
   return (
     <div>

@@ -83,7 +83,7 @@ function DashboardPage() {
 
   const activeTablesCount = dbTables.filter((t) => t.status === "occupied").length;
   const availableTablesCount = dbTables.filter(
-    (t) => t.status === "available" || t.status === "vacant" || t.status === "cleaning"
+    (t) => t.status === "available" || (t.status as string) === "vacant" || (t.status as string) === "cleaning"
   ).length;
 
   const menuItemsCount = dbMenuItems.length;

@@ -14,7 +14,7 @@ export const Route = createFileRoute("/admin/_app/inventory/purchase-orders")({
 });
 
 function POPage() {
-  const { data: poList } = useSupabaseTable<PurchaseOrder>("sd_purchase_orders", mockPurchaseOrders);
+  const { data: poList } = useSupabaseTable<PurchaseOrder>("sd_purchase_orders", mockPurchaseOrders as any);
 
   const committedTotal = poList.reduce((s, p) => s + Number(p.total || 0), 0);
 
