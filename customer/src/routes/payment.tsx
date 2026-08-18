@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import { Wallet, Smartphone, CreditCard, Banknote, CheckCircle2, XCircle, Loader2, Download } from "lucide-react";
+import { Wallet, Smartphone, Banknote, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { CustomerNav } from "@/components/customer-nav";
 import { cart } from "@/lib/cart-store";
 import { tableStore, useTable } from "@/lib/table-store";
@@ -18,29 +18,23 @@ import { paymentStore, useLivePayments } from "@/lib/payment-store";
 import { toast } from "sonner";
 
 const methods = [
-  { id: "upi", label: "UPI", icon: Smartphone, sub: "Pay via GPay, PhonePe, Paytm" },
-  { id: "card", label: "Card", icon: CreditCard, sub: "Credit / Debit card" },
-  { id: "razor", label: "Razorpay", icon: Wallet, sub: "One-tap secure checkout" },
-  { id: "cash", label: "Cash", icon: Banknote, sub: "Pay at counter" },
+  { id: "upi", label: "UPI / Online Payment", icon: Smartphone, sub: "Pay via GPay, PhonePe, Paytm, Cards & Netbanking" },
+  { id: "cash", label: "Cash at Counter", icon: Banknote, sub: "Pay cash directly to restaurant staff" },
 ];
 
 export const Route = createFileRoute("/payment")({ component: Payment });
 
-
-
 import { CustomerRegistration } from "@/components/customer-registration";
-import { InvalidQrScreen } from "@/components/invalid-qr";
 
 function Payment() {
   const tableNumber = useTable();
   const search = useSearch({ strict: false }) as { orderId?: string };
   const activeId = search.orderId || cart.getActiveOrderId();
 
-
-
   const [order, setOrder] = useState<DbOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [sel, setSel] = useState("upi");
+  const [gstRate, setGstRateState] = useState(5);
   
   const savedCustomer = customerStore.getCustomer(tableNumber);
   const [custName, setCustName] = useState(savedCustomer?.fullName || "");
@@ -49,6 +43,19 @@ function Payment() {
 
   const [state, setState] = useState<"idle" | "processing" | "success" | "failed">("idle");
   const nav = useNavigate();
+
+  useEffect(() => {
+    const handleGstUpdate = () => {
+      const stored = localStorage.getItem("sd_gst_rate");
+      if (stored) {
+        const val = Number(stored);
+        if (!isNaN(val) && val >= 0) setGstRateState(val);
+      }
+    };
+    handleGstUpdate();
+    window.addEventListener("sd_gst_rate_updated", handleGstUpdate);
+    return () => window.removeEventListener("sd_gst_rate_updated", handleGstUpdate);
+  }, []);
 
   if (!savedCustomer) {
     return (
@@ -75,11 +82,45 @@ function Payment() {
       }
       setLoading(true);
       const data = await getOrderById(activeId);
-      setOrder(data);
+      if (data) {
+        const items = data.items || [];
+        const calcSubtotal = data.subtotal && data.subtotal > 0
+          ? data.subtotal
+          : (items.length > 0 ? items.reduce((s, i) => s + i.price * i.qty, 0) : 0);
+        const calcGst = data.gst !== undefined && data.gst >= 0
+          ? data.gst
+          : Number((calcSubtotal * (gstRate / 100)).toFixed(2));
+        const calcTotal = data.total !== undefined && data.total > 0
+          ? data.total
+          : Number((calcSubtotal + calcGst).toFixed(2));
+
+        setOrder({
+          ...data,
+          subtotal: calcSubtotal,
+          gst: calcGst,
+          total: calcTotal,
+        });
+      } else {
+        setOrder(null);
+      }
       setLoading(false);
     }
     load();
-  }, [activeId]);
+  }, [activeId, gstRate]);
+
+  // Exact Order Calculations — order.total is single source of truth
+  const invoiceItems = order?.items || [];
+
+  const subtotal = order?.subtotal ?? (invoiceItems.length > 0 ? invoiceItems.reduce((s, i) => s + i.price * i.qty, 0) : 0);
+  const gst = order?.gst !== undefined && order.gst >= 0
+    ? order.gst
+    : Number((subtotal * (gstRate / 100)).toFixed(2));
+  const total = order?.total !== undefined && order.total > 0
+    ? order.total
+    : Number((subtotal + gst).toFixed(2));
+
+  const tableName = order?.table_number ?? tableNumber;
+  const orderNum = order?.order_number ?? (activeId ? `#${activeId.slice(-4)}` : "");
 
   const handlePaymentSubmission = async (
     payCategory: "upi" | "cash" | "card",
@@ -87,25 +128,24 @@ function Payment() {
     transactionId: string,
     isAutoPaid: boolean
   ) => {
-    const totalAmount = order?.total ?? 1617;
-    const orderNum = order?.order_number ?? "#4821";
+    const totalAmount = Number(order?.total ?? total);
     const activeTable = order?.table_number || tableNumber;
     const orderIdStr = order?.id || `ord_${Date.now()}`;
     const invoiceId = `INV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
-    const subtotal = order?.subtotal ?? 1540;
-    const gst = order?.gst ?? 77;
+    const currentSubtotal = subtotal;
+    const currentGst = gst;
     const paymentTimestamp = new Date().toISOString();
     const status: "paid" | "pending_verification" = isAutoPaid ? "paid" : "pending_verification";
 
     const paymentRecord = {
       id: `pay_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
       order_id: orderIdStr,
-      order_number: orderNum,
+      order_number: orderNum || "#0000",
       invoice_id: invoiceId,
       table_number: activeTable,
       customer_name: custName.trim() || "Guest",
-      subtotal,
-      gst,
+      subtotal: currentSubtotal,
+      gst: currentGst,
       total: totalAmount,
       payment_method: payMethodName,
       payment_category: payCategory,
@@ -116,10 +156,7 @@ function Payment() {
       verified_by: isAutoPaid ? "System (Auto-Verified UPI)" : undefined,
     };
 
-    // Save locally to payment store
     paymentStore.addPaymentRecord(paymentRecord);
-
-    // Save permanently in Supabase & broadcast to Reception/Admin
     await createPaymentRecordInDb(paymentRecord);
 
     if (isAutoPaid) {
@@ -127,13 +164,10 @@ function Payment() {
         await updateOrderPayment(order.id, payMethodName);
         setOrder((prev) => (prev ? { ...prev, payment_status: "paid", payment_method: payMethodName } : null));
       }
-      // Notify Kitchen: ONLY "Order Paid" notification with order_number & table_number. NO payment details.
-      await notifyKitchenOrderPaid(activeTable, orderNum);
-
+      await notifyKitchenOrderPaid(activeTable, orderNum || "#0000");
       setState("success");
       toast.success(`Payment Successful! Invoice: ${invoiceId}`);
     } else {
-      // Pending Cash or Card verification by Reception/Admin
       setState("pending_approval" as any);
       toast.info(`Payment submitted for Table ${activeTable}. Awaiting Reception verification.`);
     }
@@ -149,9 +183,7 @@ function Payment() {
       return;
     }
 
-    const totalAmount = order?.total ?? 1617;
-    const orderNum = order?.order_number ?? "#4821";
-
+    // Cash at Counter Flow
     if (sel === "cash") {
       setState("processing");
       const transactionId = `TXN_CASH_${Date.now()}`;
@@ -160,66 +192,200 @@ function Payment() {
       return;
     }
 
-    if (sel === "card") {
-      setState("processing");
-      const transactionId = `TXN_CARD_${Date.now()}`;
-      const payMethodName = "Card at Terminal";
-      await handlePaymentSubmission("card", payMethodName, transactionId, false);
-      return;
-    }
+    // UPI / Online Payment Flow -> SECURE RAZORPAY CHECKOUT.JS (UPI INTENT FIRST)
+    const finalTotal = Number(order?.total);
 
-    // Online / Razorpay Payment Page Integration
-    const paymentPageUrl = (
-      import.meta.env.VITE_RAZORPAY_PAYMENT_PAGE_URL ||
-      (import.meta.env.VITE_RAZORPAY_KEY_ID?.startsWith("http") ? import.meta.env.VITE_RAZORPAY_KEY_ID : "")
-    )?.trim();
-
-    if (!paymentPageUrl) {
-      toast.error("Razorpay Payment Page URL is not configured. Please set VITE_RAZORPAY_PAYMENT_PAGE_URL in .env.");
+    if (!Number.isFinite(finalTotal) || finalTotal <= 0) {
+      toast.error("Invalid order total. Cannot proceed with payment.");
       setState("idle");
       return;
     }
 
     setState("processing");
-    toast.info("Redirecting to Razorpay Payment Page...");
+    toast.info("Initiating secure Razorpay checkout...");
 
-    // Record payment submission for Table & Reception tracking
-    const transactionId = `TXN_RZP_${Date.now()}`;
-    const payMethodName = "Razorpay Online Payment";
-    await handlePaymentSubmission("upi", payMethodName, transactionId, false);
+    try {
+      const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 
-    window.location.href = paymentPageUrl;
+      // 1. Create Razorpay Order on Backend
+      const createOrderRes = await fetch(`${backendBaseUrl}/api/razorpay/create-order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: finalTotal, // in Rupees (e.g. 284, 525, 1617)
+          currency: "INR",
+          receipt: `receipt_${orderNum ? orderNum.replace("#", "") : Date.now()}`,
+        }),
+      });
+
+      const orderData = await createOrderRes.json();
+
+      const formatError = (err: any): string => {
+        if (!err) return "An unknown error occurred.";
+        if (typeof err === "string") return err;
+        if (typeof err.error === "string") return err.error;
+        if (err.error && typeof err.error.description === "string") return err.error.description;
+        if (err.description && typeof err.description === "string") return err.description;
+        if (err.message && typeof err.message === "string") return err.message;
+        try {
+          return JSON.stringify(err);
+        } catch {
+          return String(err);
+        }
+      };
+
+      if (!createOrderRes.ok || !orderData.success || !orderData.order_id) {
+        const errorMsg = formatError(orderData.error || orderData);
+        console.error("Razorpay order creation failed:", orderData);
+        toast.error(`Order Creation Failed: ${errorMsg}`);
+        setState("idle");
+        return;
+      }
+
+      // 2. Critical Security Check: Verify returned amount in paise matches expected order total
+      const expectedAmountPaise = Math.round(finalTotal * 100);
+      if (orderData.amount !== expectedAmountPaise) {
+        toast.error("Payment amount verification failed.");
+        console.error("Amount Mismatch:", { expectedAmountPaise, receivedAmount: orderData.amount });
+        setState("idle");
+        return;
+      }
+
+      console.log("[RAZORPAY CHECKOUT INIT]", {
+        orderNumber: orderNum,
+        tableNumber: tableName,
+        subtotal,
+        gst,
+        orderTotalInRupees: finalTotal,
+        razorpayOrderId: orderData.order_id,
+        razorpayAmountInPaise: orderData.amount,
+        customerName: custName.trim(),
+        customerPhone: custPhone.trim(),
+        customerEmail: custEmail.trim() || undefined,
+      });
+
+      // Helper function to launch Razorpay Checkout modal
+      const launchCheckout = () => {
+        const keyId = orderData.key_id || import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TI7XNrxQP5GRTJ";
+
+        const options = {
+          key: keyId,
+          amount: orderData.amount, // locked amount from backend order (paise)
+          currency: orderData.currency || "INR",
+          name: "ScanDine Restaurant",
+          description: `Payment for Order ${orderNum || "#0000"} (${tableName})`,
+          order_id: orderData.order_id,
+          prefill: {
+            name: custName.trim(),
+            contact: custPhone.trim(),
+            ...(custEmail.trim() ? { email: custEmail.trim() } : {}),
+            method: "upi",
+          },
+          config: {
+            display: {
+              preferences: {
+                show_default_blocks: true,
+              },
+              sequence: ["upi"],
+            },
+          },
+          theme: {
+            color: "#ea580c",
+          },
+          modal: {
+            ondismiss: function () {
+              toast.info("Payment process cancelled.");
+              setState("idle");
+            },
+          },
+          handler: async function (response: {
+            razorpay_payment_id: string;
+            razorpay_order_id: string;
+            razorpay_signature: string;
+          }) {
+            try {
+              setState("processing");
+              toast.info("Verifying payment security signature...");
+
+              // 3. Backend Signature Verification
+              const verifyRes = await fetch(`${backendBaseUrl}/api/razorpay/verify`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              });
+
+              const verifyData = await verifyRes.json();
+
+              if (!verifyRes.ok || !verifyData.success) {
+                const verifyErr = formatError(verifyData.message || verifyData.error || verifyData);
+                toast.error(`Verification Failed: ${verifyErr}`);
+                setState("failed");
+                return;
+              }
+
+              // 4. Mark Order as Paid in Supabase DB & notify Kitchen/Reception
+              const transactionId = response.razorpay_payment_id || `TXN_RZP_${Date.now()}`;
+              const payMethodName = "Razorpay Online Payment (UPI / Cards)";
+              await handlePaymentSubmission("upi", payMethodName, transactionId, true);
+            } catch (err: any) {
+              console.error("Verification error:", err);
+              toast.error(`Error verifying payment signature: ${formatError(err)}`);
+              setState("failed");
+            }
+          },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on("payment.failed", function (resp: any) {
+          const failReason = formatError(resp.error?.description || resp.error || "Transaction declined");
+          toast.error(`Payment Failed: ${failReason}`);
+          setState("failed");
+        });
+        rzp.open();
+      };
+
+      // Ensure Razorpay Checkout script is loaded
+      if (typeof (window as any).Razorpay === "undefined") {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.onload = launchCheckout;
+        script.onerror = () => {
+          toast.error("Failed to load Razorpay Checkout script. Check your connection.");
+          setState("idle");
+        };
+        document.body.appendChild(script);
+      } else {
+        launchCheckout();
+      }
+    } catch (err: any) {
+      console.error("Razorpay Checkout Error:", err);
+      const catchErr = typeof err === "string" ? err : err?.message || JSON.stringify(err);
+      toast.error(`Checkout Error: ${catchErr}`);
+      setState("idle");
+    }
   };
 
-  const invoiceItems = order?.items || [
-    { id: "1", name: "Truffle Mushroom Risotto", qty: 1, price: 480 },
-    { id: "2", name: "Wagyu Smash Burger", qty: 1, price: 620 },
-    { id: "3", name: "Iced Matcha Latte", qty: 2, price: 220 },
-  ];
-
-  const subtotal = order?.subtotal ?? 1540;
-  const gst = order?.gst ?? 77;
-  const total = order?.total ?? 1617;
-  const tableName = order?.table_number ?? tableNumber;
-  const orderNum = order?.order_number ?? "#4821";
-
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-32 overflow-x-hidden">
       <CustomerNav />
-      <div className="max-w-3xl mx-auto px-4 md:px-8 pt-6">
+      <div className="max-w-3xl mx-auto px-3.5 sm:px-6 md:px-8 pt-4 sm:pt-6">
         <div className="text-xs uppercase tracking-widest text-muted-foreground">{tableName} Checkout</div>
-        <h1 className="font-display text-3xl md:text-4xl font-bold">Payment</h1>
+        <h1 className="font-display text-2.5xl sm:text-3xl md:text-4xl font-bold mt-0.5">Payment</h1>
 
         {loading ? (
-          <div className="mt-12 text-center py-16 glass rounded-3xl">
+          <div className="mt-8 text-center py-16 glass rounded-3xl">
             <Loader2 className="h-10 w-10 mx-auto text-primary animate-spin mb-3" />
             <div className="font-semibold text-sm">Loading Order Invoice...</div>
           </div>
         ) : (
-          <div className="mt-6 grid md:grid-cols-[1fr_320px] gap-6">
-            <div>
+          <div className="mt-5 grid md:grid-cols-[1fr_320px] gap-5 md:gap-6">
+            <div className="space-y-5">
               {/* Customer Contact Details Card */}
-              <div className="glass rounded-3xl p-5 mb-5 space-y-3 shadow-sm border border-primary/20">
+              <div className="glass rounded-3xl p-4 sm:p-5 space-y-3 shadow-sm border border-primary/20">
                 <div className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-1.5">
                   👤 Customer Contact Details
                 </div>
@@ -234,7 +400,7 @@ function Payment() {
                       value={custName}
                       onChange={(e) => setCustName(e.target.value)}
                       placeholder="e.g. Rahul Sharma"
-                      className="w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+                      className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"
                     />
                   </div>
                   <div>
@@ -247,7 +413,7 @@ function Payment() {
                       value={custPhone}
                       onChange={(e) => setCustPhone(e.target.value)}
                       placeholder="e.g. 9876543210"
-                      className="w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+                      className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"
                     />
                   </div>
                 </div>
@@ -260,28 +426,29 @@ function Payment() {
                     value={custEmail}
                     onChange={(e) => setCustEmail(e.target.value)}
                     placeholder="e.g. rahul@example.com"
-                    className="w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+                    className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"
                   />
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-3">
+              {/* Simplified 2 Payment Options */}
+              <div className="grid grid-cols-1 gap-3">
                 {methods.map((m) => {
                   const on = sel === m.id;
                   return (
                     <button
                       key={m.id}
                       onClick={() => setSel(m.id)}
-                      className={`relative text-left rounded-2xl border p-4 bg-card transition ${on ? "border-primary shadow-float" : ""}`}
+                      className={`relative text-left rounded-2xl border p-4 bg-card transition cursor-pointer ${on ? "border-primary shadow-float" : ""}`}
                     >
                       {on && <motion.span layoutId="pay-glow" className="absolute inset-0 rounded-2xl ring-2 ring-primary/40 pointer-events-none" />}
-                      <div className="flex items-center gap-3">
-                        <div className={`h-10 w-10 rounded-xl grid place-items-center ${on ? "gradient-primary text-white" : "bg-muted"}`}>
-                          <m.icon className="h-4 w-4" />
+                      <div className="flex items-center gap-3.5">
+                        <div className={`h-11 w-11 shrink-0 rounded-xl grid place-items-center ${on ? "gradient-primary text-white" : "bg-muted"}`}>
+                          <m.icon className="h-5 w-5" />
                         </div>
-                        <div>
-                          <div className="font-semibold text-sm">{m.label}</div>
-                          <div className="text-xs text-muted-foreground">{m.sub}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-sm sm:text-base truncate">{m.label}</div>
+                          <div className="text-xs text-muted-foreground truncate">{m.sub}</div>
                         </div>
                       </div>
                     </button>
@@ -289,52 +456,66 @@ function Payment() {
                 })}
               </div>
 
-              <div className="mt-5 rounded-3xl border bg-card p-5">
-                <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Invoice details</div>
-                {invoiceItems.map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-sm py-1">
-                    <span className="text-muted-foreground">{item.name} × {item.qty}</span>
-                    <span>₹{item.price * item.qty}</span>
-                  </div>
-                ))}
+              {/* Invoice Breakdown Details */}
+              <div className="rounded-3xl border bg-card p-4 sm:p-5">
+                <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Invoice Details</div>
+                {invoiceItems.length > 0 ? (
+                  invoiceItems.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-sm py-1.5 border-b border-border/40 last:border-0">
+                      <span className="text-muted-foreground truncate pr-2">{item.name} × {item.qty}</span>
+                      <span className="font-medium shrink-0">₹{(item.price * item.qty).toFixed(2)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-muted-foreground py-2">Order summary loaded</div>
+                )}
                 <div className="h-px bg-border my-3" />
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>₹{subtotal}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">GST 5%</span><span>₹{gst}</span></div>
-                <div className="flex justify-between mt-2 font-bold"><span>Total</span><span className="text-gradient font-display text-lg">₹{total}</span></div>
+                <div className="flex justify-between items-center text-sm py-1">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm py-1">
+                  <span className="text-muted-foreground">GST ({gstRate}%)</span>
+                  <span className="font-medium">₹{gst.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center mt-2 pt-2 border-t font-bold">
+                  <span>Grand Total</span>
+                  <span className="text-gradient font-display text-lg sm:text-xl">₹{total.toFixed(2)}</span>
+                </div>
                 {order?.payment_status === "paid" && (
                   <div className="mt-3 bg-emerald-500/10 text-emerald-600 rounded-xl p-2.5 text-xs text-center font-semibold">
                     ✓ Paid via {order.payment_method?.toUpperCase() || "ONLINE"}
                   </div>
                 )}
-                <button className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-primary">
-                  <Download className="h-3.5 w-3.5" /> Download invoice PDF
-                </button>
               </div>
             </div>
 
-            <div className="glass rounded-3xl p-5 h-fit shadow-glass sticky top-4">
-              <div className="text-xs uppercase tracking-widest text-muted-foreground">Amount</div>
-              <div className="text-4xl font-display font-bold text-gradient">₹{total}</div>
-              <div className="text-xs text-muted-foreground mt-1">{tableName} · Order {orderNum}</div>
+            {/* Pay Action Card */}
+            <div className="glass rounded-3xl p-4 sm:p-5 h-fit shadow-glass md:sticky md:top-4 border border-primary/20">
+              <div className="text-xs uppercase tracking-widest text-muted-foreground">Total Amount</div>
+              <div className="text-3.5xl sm:text-4xl font-display font-bold text-gradient mt-0.5">₹{total.toFixed(2)}</div>
+              <div className="text-xs text-muted-foreground mt-1 truncate">{tableName} {orderNum ? `· Order ${orderNum}` : ""}</div>
               <motion.button
-                whileTap={{ scale: 0.97 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={pay}
                 disabled={state === "processing" || order?.payment_status === "paid"}
-                className="mt-4 w-full rounded-2xl gradient-primary text-white font-semibold py-4 shadow-float disabled:opacity-75"
+                className="mt-4 w-full min-h-[52px] rounded-2xl gradient-primary text-white font-semibold py-3.5 px-4 text-base shadow-float disabled:opacity-75 transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 {order?.payment_status === "paid"
                   ? "Already Paid"
                   : state === "processing"
                   ? "Processing…"
-                  : `Pay ₹${total}`}
+                  : sel === "cash"
+                  ? "Submit Cash Payment"
+                  : `Pay ₹${total.toFixed(2)} with Razorpay`}
               </motion.button>
-              <div className="mt-3 text-[10px] text-muted-foreground text-center">Secured with 256-bit encryption</div>
+              <div className="mt-3 text-[10px] text-muted-foreground text-center">Secured with Razorpay SSL encryption</div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Status overlay */}
+      {/* Status Overlay */}
       <AnimatePresence>
         {state !== "idle" && (
           <motion.div
@@ -343,13 +524,13 @@ function Payment() {
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
-              className="glass rounded-3xl p-8 text-center max-w-sm w-full shadow-glass"
+              className="glass rounded-3xl p-6 sm:p-8 text-center max-w-sm w-full shadow-glass"
             >
               {state === "processing" && (
                 <>
-                  <Loader2 className="h-14 w-14 mx-auto text-primary animate-spin" />
+                  <Loader2 className="h-12 w-12 sm:h-14 sm:w-14 mx-auto text-primary animate-spin" />
                   <div className="font-display text-xl font-bold mt-4">Processing payment…</div>
-                  <div className="text-xs text-muted-foreground">Finalizing order payment</div>
+                  <div className="text-xs text-muted-foreground mt-1">Connecting to Razorpay Payment Page</div>
                 </>
               )}
               {state === "success" && (
@@ -357,8 +538,8 @@ function Payment() {
                   <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring" }}>
                     <CheckCircle2 className="h-14 w-14 mx-auto text-emerald-500" />
                   </motion.div>
-                  <div className="font-display text-xl font-bold mt-4">Payment successful</div>
-                  <div className="text-xs text-muted-foreground mt-1">₹{total} paid via {sel.toUpperCase()}</div>
+                  <div className="font-display text-xl font-bold mt-4">Payment submitted</div>
+                  <div className="text-xs text-muted-foreground mt-1">₹{total.toFixed(2)} via {sel.toUpperCase()}</div>
                   <div className="mt-5 flex gap-2 justify-center">
                     <button onClick={() => nav({ to: "/feedback" })} className="rounded-full gradient-primary text-white text-sm font-semibold px-4 py-2">Rate your meal</button>
                     <button onClick={() => setState("idle")} className="rounded-full border text-sm font-semibold px-4 py-2">Close</button>
@@ -380,3 +561,5 @@ function Payment() {
     </div>
   );
 }
+
+
