@@ -285,14 +285,6 @@ function Payment() {
             ...(custEmail.trim() ? { email: custEmail.trim() } : {}),
             method: "upi",
           },
-          config: {
-            display: {
-              preferences: {
-                show_default_blocks: true,
-              },
-              sequence: ["upi"],
-            },
-          },
           theme: {
             color: "#ea580c",
           },
