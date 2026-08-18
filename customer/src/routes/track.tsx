@@ -78,7 +78,7 @@ function TrackOrder() {
         localStorage.getItem("scandine_active_order_id");
 
       if (targetOrderId) {
-        const byId = await getOrderById(targetOrderId);
+        const byId = await getOrderById(targetOrderId, customer.sessionId);
         // Strict Session Isolation: ensure order belongs to current customer session
         if (byId && (byId.session_id === customer.sessionId || !byId.session_id)) {
           fetchedOrder = byId;

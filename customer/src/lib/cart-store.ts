@@ -107,8 +107,11 @@ export const cart = {
     if (state.activeOrderId) return state.activeOrderId;
     try {
       const rawCust = localStorage.getItem("scandine_current_customer");
-      const sid = rawCust ? JSON.parse(rawCust)?.sessionId : "guest";
-      return localStorage.getItem(`scandine_active_order_${sid}`) || localStorage.getItem("scandine_active_order_id") || undefined;
+      const sid = rawCust ? JSON.parse(rawCust)?.sessionId : null;
+      if (sid) {
+        return localStorage.getItem(`scandine_active_order_${sid}`) || undefined;
+      }
+      return localStorage.getItem("scandine_active_order_id") || undefined;
     } catch {
       return undefined;
     }

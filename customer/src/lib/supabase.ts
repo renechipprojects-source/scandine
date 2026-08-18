@@ -76,7 +76,31 @@ export const supabaseAnonKey = envKey;
 
 export const isSupabaseConfigured = () => Boolean(supabaseUrl && supabaseAnonKey);
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const getSessionIdHeader = (): string => {
+  try {
+    if (typeof window !== "undefined") {
+      const rawCurrent = localStorage.getItem("scandine_current_customer");
+      if (rawCurrent) {
+        const current = JSON.parse(rawCurrent);
+        if (current?.sessionId) return String(current.sessionId).trim();
+      }
+    }
+  } catch { }
+  return "";
+};
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: {
+    fetch: (url, options = {}) => {
+      const sessionId = getSessionIdHeader();
+      const headers = new Headers(options.headers || {});
+      if (sessionId) {
+        headers.set("x-session-id", sessionId);
+      }
+      return fetch(url, { ...options, headers });
+    },
+  },
+});
 
 
 const getLocalOrdersKey = () => {
@@ -288,8 +312,13 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
   return newOrder;
 }
 
-export async function getOrderById(orderId: string): Promise<DbOrder | null> {
+export async function getOrderById(
+  orderId: string,
+  expectedSessionId?: string
+): Promise<DbOrder | null> {
   if (!orderId) return null;
+  let order: DbOrder | null = null;
+
   if (isSupabaseConfigured()) {
     try {
       const cleanId = orderId.replace(/^#/, "").trim();
@@ -300,24 +329,33 @@ export async function getOrderById(orderId: string): Promise<DbOrder | null> {
         .maybeSingle();
 
       if (!error && data) {
-        return mapRowToDbOrder(data);
+        order = mapRowToDbOrder(data);
       }
     } catch (err) {
       console.warn("Supabase fetch error:", err);
     }
   }
 
-  const localOrders = getLocalOrders();
-  const cleanId = orderId.replace(/^#/, "").trim();
-  return (
-    localOrders.find(
-      (o) =>
-        o.id === orderId ||
-        o.order_number === orderId ||
-        o.id.replace(/^#/, "").trim() === cleanId ||
-        o.order_number.replace(/^#/, "").trim() === cleanId
-    ) || null
-  );
+  if (!order) {
+    const localOrders = getLocalOrders();
+    const cleanId = orderId.replace(/^#/, "").trim();
+    order =
+      localOrders.find(
+        (o) =>
+          o.id === orderId ||
+          o.order_number === orderId ||
+          o.id.replace(/^#/, "").trim() === cleanId ||
+          o.order_number.replace(/^#/, "").trim() === cleanId
+      ) || null;
+  }
+
+  // Strict Session Isolation: If expectedSessionId is provided, ONLY return order if order.session_id matches expectedSessionId
+  if (expectedSessionId && order && order.session_id && order.session_id !== expectedSessionId) {
+    console.warn(`[SECURITY] Access denied for order ${orderId}. Session mismatch: order session (${order.session_id}) != current session (${expectedSessionId})`);
+    return null;
+  }
+
+  return order;
 }
 
 export async function getOrdersByTable(
@@ -328,29 +366,21 @@ export async function getOrdersByTable(
   if (isSupabaseConfigured()) {
     try {
       const tblNum = parseInt(String(tableNumber).replace(/\D/g, ""), 10) || 1;
-      const { data, error } = await supabase
+      let query = supabase
         .from("sd_orders")
         .select("*")
-        .eq("table_number", tblNum)
-        .order("created_at", { ascending: false });
+        .eq("table_number", tblNum);
+
+      if (sessionIdFilter) {
+        query = query.eq("session_id", sessionIdFilter);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (!error && data) {
         const allMapped = data.map(mapRowToDbOrder);
-        if (sessionIdFilter || customerFilter) {
-          const cleanFilter = (customerFilter || "").trim().toLowerCase();
-          const digitsFilter = (customerFilter || "").replace(/\D/g, "");
-          return allMapped.filter((o) => {
-            if (sessionIdFilter && o.session_id) {
-              return o.session_id === sessionIdFilter;
-            }
-            if (sessionIdFilter && !o.session_id) {
-              // Historical orders without session_id are isolated from new customer visits
-              return false;
-            }
-            const nameMatch = cleanFilter && o.customer_name && o.customer_name.trim().toLowerCase() === cleanFilter;
-            const phoneMatch = digitsFilter.length === 10 && o.customer_phone && o.customer_phone.replace(/\D/g, "") === digitsFilter;
-            return Boolean(nameMatch || phoneMatch);
-          });
+        if (sessionIdFilter) {
+          return allMapped.filter((o) => o.session_id === sessionIdFilter);
         }
         return allMapped;
       }
@@ -361,20 +391,8 @@ export async function getOrdersByTable(
 
   const localOrders = getLocalOrders();
   const tableLocal = localOrders.filter((o) => o.table_number.toLowerCase() === tableNumber.toLowerCase());
-  if (sessionIdFilter || customerFilter) {
-    const cleanFilter = (customerFilter || "").trim().toLowerCase();
-    const digitsFilter = (customerFilter || "").replace(/\D/g, "");
-    return tableLocal.filter((o) => {
-      if (sessionIdFilter && o.session_id) {
-        return o.session_id === sessionIdFilter;
-      }
-      if (sessionIdFilter && !o.session_id) {
-        return false;
-      }
-      const nameMatch = cleanFilter && o.customer_name && o.customer_name.trim().toLowerCase() === cleanFilter;
-      const phoneMatch = digitsFilter.length === 10 && o.customer_phone && o.customer_phone.replace(/\D/g, "") === digitsFilter;
-      return Boolean(nameMatch || phoneMatch);
-    });
+  if (sessionIdFilter) {
+    return tableLocal.filter((o) => o.session_id === sessionIdFilter);
   }
   return tableLocal;
 }
@@ -392,80 +410,18 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
         .order("created_at", { ascending: false });
 
       if (!error && data && data.length > 0) {
-        data.map(mapRowToDbOrder).forEach((o) => fetchedOrders.push(o));
-      } else {
-        if (error) {
-          console.error("[ME] getOrdersBySession error:", error);
-        }
-
-        // Fallback: If session_id column is missing or returned no rows, filter by customer identity
-        const rawCust = typeof window !== "undefined" ? localStorage.getItem("scandine_current_customer") : null;
-        if (rawCust) {
-          try {
-            const cust = JSON.parse(rawCust);
-            if (cust?.phone || cust?.email || cust?.fullName) {
-              const { data: idData, error: idErr } = await supabase
-                .from("sd_orders")
-                .select("*")
-                .order("created_at", { ascending: false });
-
-              if (idErr) {
-                console.error("[ME] Fallback sd_orders fetch error:", idErr);
-              }
-
-              if (idData) {
-                const matches = idData
-                  .map(mapRowToDbOrder)
-                  .filter((o) => {
-                    if (o.session_id === sessionId) return true;
-                    const pMatch = cust.phone && o.customer_phone &&
-                      o.customer_phone.replace(/\D/g, "") === cust.phone.replace(/\D/g, "");
-                    const eMatch = cust.email && o.customer_email &&
-                      o.customer_email.trim().toLowerCase() === cust.email.trim().toLowerCase();
-
-                    const nameA = (cust.fullName || "").trim().toLowerCase();
-                    const nameB = (o.customer_name || (o as any).customer || "").trim().toLowerCase();
-                    const nMatch = Boolean(nameA && nameB && (nameA === nameB || nameB.includes(nameA) || nameA.includes(nameB)));
-
-                    return pMatch || eMatch || nMatch;
-                  });
-                matches.forEach((m) => {
-                  if (!fetchedOrders.some((existing) => existing.id === m.id || existing.order_number === m.order_number)) {
-                    fetchedOrders.push(m);
-                  }
-                });
-              }
-            }
-          } catch (e) {
-            console.error("Error during customer identity fallback match:", e);
+        data.map(mapRowToDbOrder).forEach((o) => {
+          if (o.session_id === sessionId) {
+            fetchedOrders.push(o);
           }
-        }
+        });
       }
     } catch (err) {
       console.error("Supabase exception during session order fetch:", err);
     }
   }
 
-  // Also query active order ID from local storage if present (session-scoped)
-  try {
-    if (typeof window !== "undefined") {
-      const keysToTry = [
-        "scandine_active_order_id",
-        `scandine_active_order_${sessionId}`,
-      ];
-      for (const k of keysToTry) {
-        const activeOrderId = localStorage.getItem(k);
-        if (activeOrderId && !fetchedOrders.some((o) => o.id === activeOrderId || o.order_number === activeOrderId)) {
-          const activeOrder = await getOrderById(activeOrderId);
-          if (activeOrder && activeOrder.session_id === sessionId) {
-            fetchedOrders.push(activeOrder);
-          }
-        }
-      }
-    }
-  } catch { }
-
-  // Merge local session orders so offline/newly created session orders appear immediately
+  // Merge local session orders
   const localOrders = getLocalOrders();
   localOrders
     .filter((o) => o.session_id === sessionId)
@@ -475,7 +431,10 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
       }
     });
 
-  return fetchedOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  // Strict Ownership Enforcement: ONLY return orders matching sessionId
+  return fetchedOrders
+    .filter((o) => o.session_id === sessionId)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
 export function subscribeToOrdersBySession(
@@ -487,12 +446,6 @@ export function subscribeToOrdersBySession(
     return () => { };
   }
 
-  const rawCust = typeof window !== "undefined" ? localStorage.getItem("scandine_current_customer") : null;
-  let currentCust: any = null;
-  if (rawCust) {
-    try { currentCust = JSON.parse(rawCust); } catch { }
-  }
-
   const channel = supabase
     .channel(`orders-sub-session-${sessionId.replace(/[^a-zA-Z0-9]/g, "_")}`)
     .on(
@@ -501,41 +454,15 @@ export function subscribeToOrdersBySession(
         event: "*",
         schema: "public",
         table: "sd_orders",
+        filter: `session_id=eq.${sessionId}`,
       },
       (payload) => {
         if (payload.new) {
           const mapped = mapRowToDbOrder(payload.new);
-
-          // Match Priority 1: Exact session_id
-          if (mapped.session_id && mapped.session_id === sessionId) {
+          // Security Rule: ONLY trigger update if session_id matches the current session exactly
+          if (mapped.session_id === sessionId) {
             onUpdate(mapped);
-            return;
           }
-
-          // Match Priority 2: Customer Identity fallback (Phone / Email / Full Name)
-          if (currentCust) {
-            const phoneMatch = currentCust.phone && mapped.customer_phone &&
-              mapped.customer_phone.replace(/\D/g, "") === currentCust.phone.replace(/\D/g, "");
-            const emailMatch = currentCust.email && mapped.customer_email &&
-              mapped.customer_email.trim().toLowerCase() === currentCust.email.trim().toLowerCase();
-
-            const nameA = (currentCust.fullName || "").trim().toLowerCase();
-            const nameB = (mapped.customer_name || (payload.new as any).customer || "").trim().toLowerCase();
-            const nameMatch = Boolean(nameA && nameB && (nameA === nameB || nameB.includes(nameA) || nameA.includes(nameB)));
-
-            if (phoneMatch || emailMatch || nameMatch) {
-              onUpdate(mapped);
-              return;
-            }
-          }
-
-          // Match Priority 3: Session active order ID lookup
-          try {
-            const activeOrderId = localStorage.getItem(`scandine_active_order_${sessionId}`) || localStorage.getItem("scandine_active_order_id");
-            if (activeOrderId && (mapped.id === activeOrderId || mapped.order_number === activeOrderId)) {
-              onUpdate(mapped);
-            }
-          } catch { }
         }
       }
     )

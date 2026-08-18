@@ -88,6 +88,11 @@ GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
 
+ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS session_id TEXT;
+ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS customer_phone TEXT;
+ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS customer_email TEXT;
+ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS customer_name TEXT;
+
 -- 4. Enable RLS & Drop existing policies to prevent conflicts
 ALTER TABLE sd_employees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sd_menu_items ENABLE ROW LEVEL SECURITY;
@@ -98,12 +103,31 @@ ALTER TABLE sd_purchase_orders ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow anon all on sd_employees" ON sd_employees;
 DROP POLICY IF EXISTS "Allow anon all on sd_menu_items" ON sd_menu_items;
 DROP POLICY IF EXISTS "Allow anon all on sd_orders" ON sd_orders;
+DROP POLICY IF EXISTS "Allow public read sd_orders" ON sd_orders;
+DROP POLICY IF EXISTS "Allow public write sd_orders" ON sd_orders;
 DROP POLICY IF EXISTS "Allow anon all on sd_notifications" ON sd_notifications;
 DROP POLICY IF EXISTS "Allow anon all on sd_purchase_orders" ON sd_purchase_orders;
 
--- 5. Create permissive policies for all 5 project tables
+-- 5. Create policies for project tables
 CREATE POLICY "Allow anon all on sd_employees" ON sd_employees FOR ALL TO public USING (true) WITH CHECK (true);
 CREATE POLICY "Allow anon all on sd_menu_items" ON sd_menu_items FOR ALL TO public USING (true) WITH CHECK (true);
-CREATE POLICY "Allow anon all on sd_orders" ON sd_orders FOR ALL TO public USING (true) WITH CHECK (true);
 CREATE POLICY "Allow anon all on sd_notifications" ON sd_notifications FOR ALL TO public USING (true) WITH CHECK (true);
 CREATE POLICY "Allow anon all on sd_purchase_orders" ON sd_purchase_orders FOR ALL TO public USING (true) WITH CHECK (true);
+
+-- 6. Strict Customer Order Isolation RLS Policy for sd_orders
+DROP POLICY IF EXISTS "Allow anon insert on sd_orders" ON sd_orders;
+DROP POLICY IF EXISTS "Allow staff all access on sd_orders" ON sd_orders;
+DROP POLICY IF EXISTS "Allow session customer read sd_orders" ON sd_orders;
+DROP POLICY IF EXISTS "Allow anon customer session read sd_orders" ON sd_orders;
+
+-- Allows anonymous insertion (customers placing orders)
+CREATE POLICY "Allow anon insert on sd_orders" ON sd_orders FOR INSERT TO public WITH CHECK (true);
+
+-- Allows staff / admin / backend service role full access to all orders
+CREATE POLICY "Allow staff all access on sd_orders" ON sd_orders FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Scopes SELECT access so customers can ONLY read orders matching their active x-session-id header
+CREATE POLICY "Allow anon customer session read sd_orders" ON sd_orders FOR SELECT TO public USING (
+  session_id = (current_setting('request.headers', true)::json->>'x-session-id')
+);
+

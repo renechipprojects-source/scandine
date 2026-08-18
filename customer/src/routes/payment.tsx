@@ -81,7 +81,7 @@ function Payment() {
         return;
       }
       setLoading(true);
-      const data = await getOrderById(activeId);
+      const data = await getOrderById(activeId, savedCustomer?.sessionId);
       if (data) {
         const items = data.items || [];
         const calcSubtotal = data.subtotal && data.subtotal > 0
