@@ -161,8 +161,9 @@ function Payment() {
 
     if (isAutoPaid) {
       if (order) {
-        await updateOrderPayment(order.id, payMethodName);
-        setOrder((prev) => (prev ? { ...prev, payment_status: "paid", payment_method: payMethodName } : null));
+        const updateSuccess = await updateOrderPayment(order.id, payMethodName, order.order_id);
+        console.log("[PAYMENT DB UPDATE RESULT]", { orderId: order.id, secondaryId: order.order_id, updateSuccess });
+        setOrder((prev) => (prev ? { ...prev, payment: "paid", payment_status: "paid", payment_method: payMethodName } : null));
       }
       await notifyKitchenOrderPaid(activeTable, orderNum || "#0000");
       setState("success");

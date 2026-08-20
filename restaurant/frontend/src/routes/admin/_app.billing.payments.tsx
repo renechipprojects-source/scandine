@@ -147,9 +147,24 @@ function resolvePaymentMethod(item: any): string {
     return "Card";
   }
 
-  // 4. Custom non-empty method string
-  if (rawMethod && rawMethod !== "—" && rawMethod.toLowerCase() !== "paid" && rawMethod.toLowerCase() !== "unpaid") {
+  // 4. Channel hint if method is missing on paid order
+  const channel = String(item.channel || item.order_channel || "").trim().toLowerCase();
+  if (channel === "qr") return "UPI";
+  if (channel === "counter") return "Cash";
+  if (channel === "waiter") return "Cash";
+
+  // 5. Custom non-empty method string
+  if (rawMethod && rawMethod !== "—" && lowerMethod !== "paid" && lowerMethod !== "unpaid") {
     return rawMethod.charAt(0).toUpperCase() + rawMethod.slice(1);
+  }
+
+  // 6. For paid transactions with unspecified method text, resolve from table / QR context
+  const statusStr = String(item.payment_status || item.payment || item.status || "").trim().toLowerCase();
+  if (statusStr === "paid" || statusStr === "completed") {
+    if (item.table_number || item.table) {
+      return "UPI";
+    }
+    return "Cash";
   }
 
   return "—";
@@ -285,21 +300,40 @@ function PaymentsPage() {
     });
   })();
 
-  const paidTransactions = paymentsList.filter(
-    (p) => p.status === "Paid"
+  if (paymentsList.length > 0) {
+    const samplePaid = paymentsList.find((p) => ["paid", "completed"].includes(String(p.status || "").trim().toLowerCase())) || paymentsList[0];
+    console.log("[ADMIN PAYMENTS DEBUG] Sample Transaction:", {
+      id: samplePaid.id,
+      amount: samplePaid.amount,
+      status: samplePaid.status,
+      method: samplePaid.method,
+      payment: (samplePaid as any).payment,
+      payment_category: (samplePaid as any).payment_category,
+      payment_method: (samplePaid as any).payment_method,
+      total: (samplePaid as any).total,
+    });
+  }
+
+  const paidTransactions = paymentsList.filter((p) =>
+    ["paid", "completed"].includes(
+      String(p.status || "").trim().toLowerCase()
+    )
   );
 
   const cashTotal = paidTransactions
-    .filter((p) => p.method === "Cash")
-    .reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    .filter((p) => String(p.method || "").trim().toLowerCase() === "cash")
+    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
   const upiTotal = paidTransactions
-    .filter((p) => p.method === "UPI")
-    .reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    .filter((p) => {
+      const m = String(p.method || "").trim().toLowerCase();
+      return m === "upi" || m.includes("gpay") || m.includes("upi") || m.includes("online") || m.includes("qr") || m.includes("razorpay");
+    })
+    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
   const cardTotal = paidTransactions
-    .filter((p) => p.method === "Card")
-    .reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    .filter((p) => String(p.method || "").trim().toLowerCase() === "card")
+    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
   const methodBreakdown = [
     { method: "Cash", amount: cashTotal, icon: Banknote },
@@ -307,7 +341,7 @@ function PaymentsPage() {
     ...(cardTotal > 0 ? [{ method: "Card", amount: cardTotal, icon: CreditCard }] : []),
   ];
 
-  const totalGrossSales = paidTransactions.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const totalGrossSales = paidTransactions.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
   const filtered = paymentsList.filter((p) => {
     const q = searchQuery.toLowerCase();

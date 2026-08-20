@@ -480,31 +480,80 @@ export function subscribeToOrdersBySession(
   };
 }
 
-export async function updateOrderPayment(orderId: string, paymentMethod: string): Promise<boolean> {
+export async function updateOrderPayment(orderId: string, paymentMethod: string, secondaryId?: string): Promise<boolean> {
   if (isSupabaseConfigured()) {
     try {
       const isUpi = paymentMethod.toLowerCase().includes("upi") || paymentMethod.toLowerCase().includes("razorpay") || paymentMethod.toLowerCase().includes("gpay");
       const category = isUpi ? "upi" : (paymentMethod.toLowerCase().includes("cash") ? "cash" : "card");
 
-      const { error } = await supabase
+      const cleanRef = (s: any) =>
+        String(s || "")
+          .trim()
+          .replace(/^[#]/, "")
+          .replace(/^ord[-_]?/i, "");
+
+      const idCandidates = Array.from(
+        new Set(
+          [orderId, secondaryId, cleanRef(orderId), cleanRef(secondaryId), `#${cleanRef(orderId)}`, `ord_${cleanRef(orderId)}`]
+            .filter(Boolean)
+            .map((s) => String(s).trim())
+        )
+      );
+
+      const orConditions = idCandidates
+        .flatMap((idVal) => [`id.eq.${idVal}`, `order_id.eq.${idVal}`])
+        .join(",");
+
+      console.log("[UPDATE ORDER PAYMENT INIT]", { orderId, secondaryId, idCandidates, orConditions });
+
+      // 1. Try full payload with payment, payment_status, payment_method, payment_category
+      let { data, error } = await supabase
         .from("sd_orders")
         .update({
           payment: "paid",
+          payment_status: "paid",
           payment_method: paymentMethod,
           payment_category: category,
         } as any)
-        .or(`id.eq.${orderId},order_id.eq.${orderId}`);
+        .or(orConditions)
+        .select();
 
-      if (!error) return true;
+      // 2. Fallback if schema rejects optional columns
+      if (error) {
+        console.warn("[UPDATE ORDER PAYMENT SCHEMA WARN] Retrying core payment update:", error);
+        const retryRes = await supabase
+          .from("sd_orders")
+          .update({
+            payment: "paid",
+          } as any)
+          .or(orConditions)
+          .select();
+
+        data = retryRes.data;
+        error = retryRes.error;
+      }
+
+      if (error) {
+        console.error("[SUPABASE PAYMENT UPDATE ERROR]", error);
+      } else {
+        console.log("[SUPABASE PAYMENT UPDATE SUCCESS]", { updatedCount: data?.length || 0, data });
+        return true;
+      }
     } catch (err) {
-      console.warn("Supabase payment update error:", err);
+      console.warn("Supabase payment update exception:", err);
     }
   }
 
+  const cleanId = String(orderId).replace(/^[#]/, "").replace(/^ord[-_]?/i, "").toLowerCase();
   const localOrders = getLocalOrders();
-  const updated = localOrders.map((o) =>
-    o.id === orderId ? { ...o, payment_status: "paid" as const, payment_method: paymentMethod } : o
-  );
+  const updated = localOrders.map((o) => {
+    const oId = String(o.id || "").replace(/^[#]/, "").replace(/^ord[-_]?/i, "").toLowerCase();
+    const oNum = String(o.order_number || o.order_id || "").replace(/^[#]/, "").replace(/^ord[-_]?/i, "").toLowerCase();
+    if (oId === cleanId || oNum === cleanId || o.id === orderId || o.order_id === orderId) {
+      return { ...o, payment: "paid", payment_status: "paid" as const, payment_method: paymentMethod };
+    }
+    return o;
+  });
   saveLocalOrders(updated);
   return true;
 }
