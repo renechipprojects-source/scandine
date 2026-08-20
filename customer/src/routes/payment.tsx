@@ -285,6 +285,24 @@ function Payment() {
             ...(custEmail.trim() ? { email: custEmail.trim() } : {}),
             method: "upi",
           },
+          config: {
+            display: {
+              blocks: {
+                upi: {
+                  name: "Pay via UPI / QR",
+                  instruments: [
+                    {
+                      method: "upi",
+                    },
+                  ],
+                },
+              },
+              sequence: ["block.upi"],
+              preferences: {
+                show_default_blocks: true,
+              },
+            },
+          },
           theme: {
             color: "#ea580c",
           },
@@ -334,6 +352,15 @@ function Payment() {
             }
           },
         };
+
+        console.log("RAZORPAY CHECKOUT OPTIONS", {
+          "order.total": finalTotal,
+          "orderData.amount": orderData.amount,
+          "orderData.order_id": orderData.order_id,
+          "options.prefill": options.prefill,
+          "options.config": options.config,
+          fullOptions: options,
+        });
 
         const rzp = new (window as any).Razorpay(options);
         rzp.on("payment.failed", function (resp: any) {

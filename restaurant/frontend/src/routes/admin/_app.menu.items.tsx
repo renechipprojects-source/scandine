@@ -38,7 +38,7 @@ function ItemsPage() {
     <div>
       <PageHeader
         title="All food items"
-        description={`${itemsList.length} dishes available on your menu (Read-only)`}
+        description="Read-only"
         icon={<Salad className="h-5 w-5" />}
       />
 

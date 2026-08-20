@@ -36,9 +36,13 @@ export function OrdersPage() {
 
   useRealtimeTable("sd_orders", handleRealtimePayload);
 
-  // Live Supabase Orders — strictly dynamic data
+  // Live Supabase Orders — sorted chronologically descending (newest first)
   const displayOrders: Order[] = useMemo(() => {
-    return dbOrders;
+    return [...dbOrders].sort((a, b) => {
+      const timeA = new Date(a.order_time || a.created_at || 0).getTime();
+      const timeB = new Date(b.order_time || b.created_at || 0).getTime();
+      return timeB - timeA;
+    });
   }, [dbOrders]);
 
   // Derived arrays & counts updating live

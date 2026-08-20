@@ -92,6 +92,8 @@ ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS session_id TEXT;
 ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS customer_phone TEXT;
 ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS customer_email TEXT;
 ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS customer_name TEXT;
+ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS payment_method TEXT;
+ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS payment_category TEXT;
 
 -- 4. Enable RLS & Drop existing policies to prevent conflicts
 ALTER TABLE sd_employees ENABLE ROW LEVEL SECURITY;

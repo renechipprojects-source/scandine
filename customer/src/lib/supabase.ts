@@ -483,11 +483,16 @@ export function subscribeToOrdersBySession(
 export async function updateOrderPayment(orderId: string, paymentMethod: string): Promise<boolean> {
   if (isSupabaseConfigured()) {
     try {
+      const isUpi = paymentMethod.toLowerCase().includes("upi") || paymentMethod.toLowerCase().includes("razorpay") || paymentMethod.toLowerCase().includes("gpay");
+      const category = isUpi ? "upi" : (paymentMethod.toLowerCase().includes("cash") ? "cash" : "card");
+
       const { error } = await supabase
         .from("sd_orders")
         .update({
           payment: "paid",
-        })
+          payment_method: paymentMethod,
+          payment_category: category,
+        } as any)
         .or(`id.eq.${orderId},order_id.eq.${orderId}`);
 
       if (!error) return true;

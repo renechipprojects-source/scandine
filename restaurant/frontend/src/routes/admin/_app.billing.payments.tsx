@@ -5,13 +5,12 @@ import { Card } from "@/admin/components/ui/card";
 import { Button } from "@/admin/components/ui/button";
 import { Input } from "@/admin/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/admin/components/ui/table";
-import { CreditCard, Search, Download, Banknote, Smartphone, CheckCircle2 } from "lucide-react";
+import { CreditCard, Search, Download, Banknote, Smartphone } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useState, useCallback } from "react";
-import { useSupabaseTable, type PaymentTransaction, type Invoice, type Order } from "@/hooks/useSupabaseData";
+import { useSupabaseTable, type PaymentTransaction, type Order } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
 import { exportToCSV } from "@/admin/lib/exportUtils";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/_app/billing/payments")({
   head: () => ({ meta: [{ title: "Payments — ScanDine" }, { name: "description", content: "Payment transaction history across all methods." }] }),
@@ -24,98 +23,288 @@ const formatINR = (val: number) => {
   });
 };
 
+function normalizePaymentStatus(status?: string): string {
+  if (!status) return "Unpaid";
+  const s = String(status).trim().toLowerCase();
+  if (s === "paid" || s === "completed") return "Paid";
+  if (s === "pending" || s === "pending_verification") return "Pending";
+  if (s === "failed") return "Failed";
+  if (s === "cancelled") return "Cancelled";
+  if (s === "refunded") return "Refunded";
+  if (s === "unpaid") return "Unpaid";
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+// Exact reference matching across order and payment identifiers
+function exactMatchRef(rec: any, targetId: string, targetNum?: string): boolean {
+  if (!rec || !targetId) return false;
+
+  const cleanRef = (s: any) =>
+    String(s || "")
+      .trim()
+      .toLowerCase()
+      .replace(/^[#]/, "")
+      .replace(/^ord[-_]?/i, "")
+      .replace(/^pmt[-_]?/i, "")
+      .replace(/^inv[-_]?/i, "");
+
+  const targets = [cleanRef(targetId), cleanRef(targetNum)].filter(Boolean);
+
+  const keys = [
+    rec.id,
+    rec.order_id,
+    rec.order_number,
+    rec.orderId,
+    rec.invoiceId,
+    rec.invoice_id,
+    rec.invoice,
+    rec.transition,
+    rec.transaction_id,
+  ]
+    .filter(Boolean)
+    .map(cleanRef);
+
+  for (const k of keys) {
+    if (k && targets.includes(k)) return true;
+  }
+  return false;
+}
+
+function resolvePaymentMethod(item: any): string {
+  if (!item) return "—";
+
+  const category = String(
+    item.payment_category ||
+    item.paymentCategory ||
+    item.category ||
+    ""
+  ).trim().toLowerCase();
+
+  const rawMethod = String(
+    item.payment_method ||
+    item.paymentMethod ||
+    item.method ||
+    item.payment_type ||
+    item.paymentType ||
+    ""
+  ).trim();
+
+  const txnId = String(
+    item.transaction_id ||
+    item.transactionId ||
+    item.txn_id ||
+    item.tx_id ||
+    item.razorpay_payment_id ||
+    item.razorpay_order_id ||
+    ""
+  ).trim();
+
+  const lowerMethod = rawMethod.toLowerCase();
+  const lowerTxn = txnId.toLowerCase();
+  const lowerId = String(item.id || "").toLowerCase();
+
+  // 1. Explicit Category check
+  if (category === "upi") return "UPI";
+  if (category === "cash") return "Cash";
+  if (category === "card") return "Card";
+
+  // 2. Transaction ID signature check
+  if (lowerTxn.startsWith("txn_cash") || lowerId.startsWith("txn_cash")) {
+    return "Cash";
+  }
+  if (
+    lowerTxn.startsWith("pay_") ||
+    lowerTxn.startsWith("txn_rzp") ||
+    lowerTxn.includes("rzp") ||
+    lowerId.startsWith("pay_") ||
+    lowerId.startsWith("txn_rzp")
+  ) {
+    return "UPI";
+  }
+
+  // 3. Explicit Method string check
+  if (
+    lowerMethod === "cash" ||
+    lowerMethod === "cash at counter" ||
+    lowerMethod.includes("cash")
+  ) {
+    return "Cash";
+  }
+
+  if (
+    lowerMethod.includes("upi") ||
+    lowerMethod.includes("gpay") ||
+    lowerMethod.includes("phonepe") ||
+    lowerMethod.includes("paytm") ||
+    lowerMethod.includes("razorpay") ||
+    lowerMethod.includes("online") ||
+    lowerMethod.includes("qr")
+  ) {
+    return "UPI";
+  }
+
+  if (lowerMethod.includes("card") || lowerMethod.includes("credit card") || lowerMethod.includes("debit card")) {
+    return "Card";
+  }
+
+  // 4. Custom non-empty method string
+  if (rawMethod && rawMethod !== "—" && rawMethod.toLowerCase() !== "paid" && rawMethod.toLowerCase() !== "unpaid") {
+    return rawMethod.charAt(0).toUpperCase() + rawMethod.slice(1);
+  }
+
+  return "—";
+}
+
 function PaymentsPage() {
-  const { data: dbPayments, updateItem: updatePayment, fetchData: fetchPayments } = useSupabaseTable<PaymentTransaction>("payments");
-  const { data: dbInvoices, updateItem: updateInvoice, fetchData: fetchInvoices } = useSupabaseTable<Invoice>("invoices");
   const { data: dbOrders, fetchData: fetchOrders } = useSupabaseTable<Order>("sd_orders");
 
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleRealtimePayload = useCallback(() => {
-    fetchPayments();
-    fetchInvoices();
     fetchOrders();
-  }, [fetchPayments, fetchInvoices, fetchOrders]);
+  }, [fetchOrders]);
 
-  useRealtimeTable("payments", handleRealtimePayload);
-  useRealtimeTable("invoices", handleRealtimePayload);
   useRealtimeTable("sd_orders", handleRealtimePayload);
 
-  // Derive real payment transactions from Supabase tables (payments, invoices, orders)
+  // Derive real canonical payment transactions from sd_orders & local payment store
   const paymentsList: PaymentTransaction[] = (() => {
     const list: PaymentTransaction[] = [];
-    const seenKeys = new Set<string>();
+    const seenOrderKeys = new Set<string>();
 
-    for (const p of dbPayments) {
-      const key = p.id || p.transaction_id;
-      if (!key || seenKeys.has(key)) continue;
-      seenKeys.add(key);
+    let localRecords: any[] = [];
+    try {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("scandine_payment_records_v1");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) localRecords = parsed;
+        }
+      }
+    } catch {}
+
+    const findLocalRecordForRef = (refId: string, refNum?: string) => {
+      return localRecords.find((l: any) => exactMatchRef(l, refId, refNum));
+    };
+
+    // 1. Process all real orders from Supabase sd_orders
+    for (const ord of dbOrders) {
+      const orderKey = String(ord.order_id || ord.id || "").trim().toLowerCase();
+      if (!orderKey || seenOrderKeys.has(orderKey)) continue;
+      seenOrderKeys.add(orderKey);
+
+      const matchedLocal = findLocalRecordForRef(orderKey, ord.order_id || (ord as any).order_number);
+
+      const combined = {
+        ...matchedLocal,
+        ...ord,
+      };
+
+      const rawStatus = ord.payment || (ord as any).payment_status || matchedLocal?.status || ord.status;
+      const normStatus = normalizePaymentStatus(rawStatus);
+
+      let normMethod = "—";
+      if (normStatus === "Paid") {
+        normMethod = resolvePaymentMethod(combined);
+      } else if (normStatus === "Pending") {
+        normMethod = resolvePaymentMethod(combined) !== "—" ? resolvePaymentMethod(combined) : "Pending";
+      }
+
+      const txnId =
+        matchedLocal?.transaction_id ||
+        (ord as any).transaction_id ||
+        ord.order_id ||
+        ord.id;
+
+      const invoiceDisplay =
+        matchedLocal?.invoice_id ||
+        (ord as any).invoice_id ||
+        ord.order_id ||
+        ord.id;
+
+      const customerName =
+        (ord as any).customer_name ||
+        ord.customer ||
+        matchedLocal?.customer_name ||
+        "Customer";
+
+      const totalAmount = Number(
+        matchedLocal?.total ||
+        matchedLocal?.amount ||
+        ord.total ||
+        0
+      );
+
+      const txnDate =
+        matchedLocal?.created_at ||
+        ord.order_time ||
+        (ord as any).created_at ||
+        new Date().toISOString();
+
       list.push({
-        id: p.id,
-        invoiceId: p.invoiceId || p.id,
-        customer: p.customer || "Customer",
-        method: p.method || "Cash",
-        amount: Number(p.amount) || 0,
-        status: p.status || "unpaid",
-        date: p.date || new Date().toISOString(),
-        transaction_id: p.transaction_id,
+        id: txnId,
+        invoiceId: invoiceDisplay,
+        customer: customerName,
+        method: normMethod,
+        amount: totalAmount,
+        status: normStatus as any,
+        date: txnDate,
+        transaction_id: txnId,
       });
     }
 
-    for (const inv of dbInvoices) {
-      const invKey = inv.invoice || inv.id;
-      const alreadyInList = list.some((p) => p.invoiceId === invKey || p.id === inv.id);
-      if (!alreadyInList) {
-        list.push({
-          id: inv.transaction_id || `PMT-${inv.id}`,
-          invoiceId: invKey,
-          customer: inv.customer || "Customer",
-          method: inv.method || "Cash",
-          amount: Number(inv.amount) || 0,
-          status: (inv.status || "unpaid") as any,
-          date: inv.date || new Date().toISOString(),
-          transaction_id: inv.transaction_id,
-        });
+    // 2. Include local payment records that are not in dbOrders
+    for (const loc of localRecords) {
+      const locKey = String(loc.order_id || loc.order_number || loc.id || "").trim().toLowerCase();
+      if (!locKey || seenOrderKeys.has(locKey)) continue;
+      seenOrderKeys.add(locKey);
+
+      const normStatus = normalizePaymentStatus(loc.status);
+      let normMethod = "—";
+      if (normStatus === "Paid") {
+        normMethod = resolvePaymentMethod(loc);
+      } else if (normStatus === "Pending") {
+        normMethod = resolvePaymentMethod(loc) !== "—" ? resolvePaymentMethod(loc) : "Pending";
       }
+
+      list.push({
+        id: loc.transaction_id || loc.id,
+        invoiceId: loc.invoice_id || loc.order_id || loc.id,
+        customer: loc.customer_name || "Customer",
+        method: normMethod,
+        amount: Number(loc.total || loc.amount || 0),
+        status: normStatus as any,
+        date: loc.created_at || new Date().toISOString(),
+        transaction_id: loc.transaction_id || loc.id,
+      });
     }
 
-    for (const ord of dbOrders) {
-      const ordKey = ord.order_id || ord.id;
-      const alreadyInList = list.some((p) => p.invoiceId === ordKey || p.id === ord.id);
-      if (!alreadyInList && (ord.payment === "paid" || ord.status === "completed")) {
-        list.push({
-          id: `PMT-${ord.id}`,
-          invoiceId: ordKey,
-          customer: (ord as any).customer_name || ord.customer || "Customer",
-          method: "Cash",
-          amount: Number(ord.total) || 0,
-          status: ord.payment === "paid" ? "Paid" : "Unpaid",
-          date: ord.order_time || ord.created_at || new Date().toISOString(),
-        });
-      }
-    }
-
-    return list;
+    return list.sort((a, b) => {
+      const timeA = new Date(a.date || 0).getTime();
+      const timeB = new Date(b.date || 0).getTime();
+      return timeB - timeA;
+    });
   })();
 
   const paidTransactions = paymentsList.filter(
-    (p) => p.status?.toLowerCase() === "paid" || p.status?.toLowerCase() === "completed"
+    (p) => p.status === "Paid"
   );
 
   const cashTotal = paidTransactions
-    .filter((p) => p.method?.toLowerCase() === "cash")
+    .filter((p) => p.method === "Cash")
     .reduce((s, p) => s + (Number(p.amount) || 0), 0);
 
   const upiTotal = paidTransactions
-    .filter((p) => {
-      const m = p.method?.toLowerCase() || "";
-      return m.includes("gpay") || m.includes("upi") || m.includes("qr") || m.includes("online") || m.includes("wallet");
-    })
+    .filter((p) => p.method === "UPI")
+    .reduce((s, p) => s + (Number(p.amount) || 0), 0);
+
+  const cardTotal = paidTransactions
+    .filter((p) => p.method === "Card")
     .reduce((s, p) => s + (Number(p.amount) || 0), 0);
 
   const methodBreakdown = [
     { method: "Cash", amount: cashTotal, icon: Banknote },
     { method: "UPI", amount: upiTotal, icon: Smartphone },
+    ...(cardTotal > 0 ? [{ method: "Card", amount: cardTotal, icon: CreditCard }] : []),
   ];
 
   const totalGrossSales = paidTransactions.reduce((s, p) => s + (Number(p.amount) || 0), 0);
@@ -153,7 +342,7 @@ function PaymentsPage() {
         actions={<Button variant="outline" size="sm" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Export</Button>}
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 w-full">
+      <div className={`grid grid-cols-1 gap-3 w-full ${methodBreakdown.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
         {methodBreakdown.map((m) => (
           <Card key={m.method} className="p-4">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
@@ -221,43 +410,43 @@ function PaymentsPage() {
               <TableHead className="sticky top-0 z-30 bg-muted/95 font-semibold text-foreground">Status</TableHead>
             </TableRow>
           </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
-                    No payment transactions found in database.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((p) => {
-                  return (
-                    <TableRow key={p.id} className="hover:bg-muted/50 transition-colors">
-                      <TableCell className="font-mono text-xs font-semibold">
-                        {p.transaction_id || p.id}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{p.invoiceId}</TableCell>
-                      <TableCell className="font-medium text-foreground">{p.customer}</TableCell>
-                      <TableCell>
-                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium border border-border/50">
-                          {p.method}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {p.date ? (isNaN(Date.parse(p.date)) ? p.date : new Date(p.date).toLocaleDateString()) : "Today"}
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-foreground">
-                        {formatINR(Number(p.amount) || 0)}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={p.status} />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </Card>
-      </div>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                  No payment transactions found in database.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((p) => {
+                return (
+                  <TableRow key={p.id} className="hover:bg-muted/50 transition-colors">
+                    <TableCell className="font-mono text-xs font-semibold">
+                      {p.transaction_id || p.id}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{p.invoiceId}</TableCell>
+                    <TableCell className="font-medium text-foreground">{p.customer}</TableCell>
+                    <TableCell>
+                      <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium border border-border/50">
+                        {p.method}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {p.date ? (isNaN(Date.parse(p.date)) ? p.date : new Date(p.date).toLocaleDateString()) : "Today"}
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-foreground">
+                      {formatINR(Number(p.amount) || 0)}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={p.status} />
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+    </div>
   );
 }
