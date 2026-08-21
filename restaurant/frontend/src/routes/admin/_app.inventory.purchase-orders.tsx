@@ -14,7 +14,7 @@ export const Route = createFileRoute("/admin/_app/inventory/purchase-orders")({
 });
 
 function POPage() {
-  const { data: poList } = useSupabaseTable<PurchaseOrder>("sd_purchase_orders", mockPurchaseOrders as any);
+  const { data: poList } = useSupabaseTable<PurchaseOrder>("sd_purchase_orders", []);
 
   const committedTotal = poList.reduce((s, p) => s + Number(p.total || 0), 0);
 
@@ -22,7 +22,7 @@ function POPage() {
     <div>
       <PageHeader
         title="Purchase orders"
-        description={`${poList.length} POs · ${restaurantInfo.currency}${committedTotal.toLocaleString()} committed`}
+        description={`${poList.length} POs · ₹${committedTotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })} committed`}
         icon={<ClipboardList className="h-5 w-5" />}
         actions={<Button size="sm"><Plus className="mr-2 h-4 w-4" />New PO</Button>}
       />

@@ -16,6 +16,7 @@ import { useRealtimeTable } from "@/hooks/useRealtime";
 import { exportToCSV } from "@/admin/lib/exportUtils";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { toast } from "sonner";
+import { resolvePaymentMethod, normalizePaymentStatus } from "@/lib/payment-utils";
 
 export const Route = createFileRoute("/reception/_app/billing/invoices")({
   head: () => ({
@@ -71,25 +72,55 @@ function ReceptionInvoicesPage() {
     const list: Invoice[] = [];
     const seen = new Set<string>();
 
+    const dbOrdersMap = new Map<string, Order>();
+    for (const ord of dbOrders) {
+      const k1 = String(ord.id || "").toLowerCase();
+      const k2 = String(ord.order_id || "").toLowerCase();
+      const k3 = `inv-${k2}`;
+      if (k1) dbOrdersMap.set(k1, ord);
+      if (k2) dbOrdersMap.set(k2, ord);
+      if (k3) dbOrdersMap.set(k3, ord);
+    }
+
     for (const inv of dbInvoices) {
       const key = inv.invoice || inv.id;
       if (!key || seen.has(key)) continue;
       seen.add(key);
-      list.push(inv);
+
+      const matchingOrd = dbOrdersMap.get(String(inv.id || "").toLowerCase()) ||
+                          dbOrdersMap.get(String(inv.invoice || "").toLowerCase()) ||
+                          dbOrdersMap.get(String(inv.transition || "").toLowerCase());
+
+      const status = (matchingOrd && (matchingOrd.payment === "paid" || (matchingOrd as any).payment_status === "paid"))
+        ? "Paid"
+        : inv.status;
+      const method = matchingOrd ? resolvePaymentMethod(matchingOrd) : resolvePaymentMethod(inv);
+
+      list.push({
+        ...inv,
+        status,
+        method,
+      });
     }
 
     for (const ord of dbOrders) {
       const ordKey = `INV-${ord.order_id || ord.id}`;
-      if (!seen.has(ordKey) && !seen.has(ord.order_id) && !seen.has(ord.id)) {
+      const cleanId = String(ord.id || "").toLowerCase();
+      const cleanOrdId = String(ord.order_id || "").toLowerCase();
+
+      if (!seen.has(ordKey) && !seen.has(cleanId) && !seen.has(cleanOrdId)) {
         seen.add(ordKey);
+        if (cleanId) seen.add(cleanId);
+        if (cleanOrdId) seen.add(cleanOrdId);
+
         list.push({
           id: ord.id,
           invoice: ordKey,
           transition: ord.order_id || ord.id,
           customer: (ord as any).customer_name || ord.customer || "Customer",
-          method: "Cash",
+          method: resolvePaymentMethod(ord),
           amount: Number(ord.total) || 0,
-          status: ord.payment === "paid" ? "Paid" : "Unpaid",
+          status: (ord.payment === "paid" || (ord as any).payment_status === "paid") ? "Paid" : "Unpaid",
           date: ord.order_time || ord.created_at || new Date().toISOString(),
         });
       }
@@ -117,16 +148,24 @@ function ReceptionInvoicesPage() {
   const handleMarkAsPaid = async (inv: Invoice) => {
     try {
       const invId = inv.invoice || inv.id;
-      await markPaymentAndInvoiceAsPaid(inv.id, invId, inv.customer, Number(inv.amount), inv.method || "Cash");
+      const targetMethod = "Cash";
+      await markPaymentAndInvoiceAsPaid(inv.id, invId, inv.customer, Number(inv.amount), targetMethod);
+      await fetchOrders();
       await fetchInvoices();
       await fetchPayments();
-      await fetchOrders();
-      toast.success(`Invoice ${invId} marked as Paid successfully!`);
+      updateInvoice({
+        ...inv,
+        status: "Paid",
+        method: targetMethod,
+        date: new Date().toISOString(),
+      });
+      toast.success(`Invoice ${invId} marked as Paid (${targetMethod}) successfully!`);
 
       if (selectedInvoice && (selectedInvoice.id === inv.id || selectedInvoice.invoice === inv.invoice)) {
         setSelectedInvoice({
           ...selectedInvoice,
           status: "Paid",
+          method: targetMethod,
           date: new Date().toISOString(),
         });
       }
@@ -287,7 +326,12 @@ function ReceptionInvoicesPage() {
                 </TableRow>
               ) : (
                 filtered.map((inv) => {
-                  const isPaid = inv.status?.toLowerCase() === "paid";
+                  const normStatus = normalizePaymentStatus(inv.status);
+                  const isUnpaid = normStatus === "Unpaid" || normStatus === "Pending";
+                  const method = resolvePaymentMethod(inv);
+                  const canMarkAsPaid = isUnpaid && method === "Cash";
+                  const isPaid = normStatus === "Paid";
+
                   return (
                     <TableRow key={inv.id} className="hover:bg-muted/40">
                       <TableCell className="font-mono text-xs font-bold text-primary">
@@ -298,17 +342,17 @@ function ReceptionInvoicesPage() {
                         {inv.date ? (isNaN(Date.parse(inv.date)) ? inv.date : new Date(inv.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })) : "Today"}
                       </TableCell>
                       <TableCell className="text-xs font-medium">
-                        <span className="rounded-md bg-muted px-2 py-0.5">{inv.method || "Cash"}</span>
+                        <span className={`rounded-md px-2 py-0.5 ${method === "UPI" ? "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 font-semibold" : "bg-muted text-foreground"}`}>{method}</span>
                       </TableCell>
                       <TableCell className="text-right font-bold text-foreground">
                         {formatINR(Number(inv.amount))}
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={inv.status} />
+                        <StatusBadge status={isPaid ? "Paid" : isUnpaid ? "Unpaid" : inv.status} />
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {!isPaid ? (
+                          {canMarkAsPaid ? (
                             <Button
                               size="sm"
                               className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
@@ -316,10 +360,14 @@ function ReceptionInvoicesPage() {
                             >
                               <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Mark as Paid
                             </Button>
-                          ) : (
-                            <Button size="sm" variant="ghost" disabled className="h-7 text-xs text-emerald-600 opacity-80">
-                              <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Paid
+                          ) : isPaid ? (
+                            <Button size="sm" variant="ghost" disabled className="h-7 text-xs text-emerald-600 font-semibold opacity-90">
+                              <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Paid ({method})
                             </Button>
+                          ) : (
+                            <span className="text-xs font-medium text-amber-600 dark:text-amber-400 px-2 py-1 bg-amber-50 dark:bg-amber-950/40 rounded-md border border-amber-200/50">
+                              {method === "UPI" ? "Awaiting UPI Payment" : normStatus}
+                            </span>
                           )}
                           <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setSelectedInvoice(inv)}>
                             Preview Invoice
@@ -538,7 +586,11 @@ function ReceptionInvoicesPage() {
 
 function InvoicePreview({ inv, onMarkPaid }: { inv: Invoice; onMarkPaid: (inv: Invoice) => void }) {
   const amt = Number(inv.amount) || 0;
-  const isPaid = inv.status?.toLowerCase() === "paid";
+  const normStatus = normalizePaymentStatus(inv.status);
+  const isUnpaid = normStatus === "Unpaid" || normStatus === "Pending";
+  const method = resolvePaymentMethod(inv);
+  const canMarkAsPaid = isUnpaid && method === "Cash";
+  const isPaid = normStatus === "Paid";
 
   const subtotal = amt * 0.95;
   const gst = amt * 0.05;
@@ -566,7 +618,7 @@ function InvoicePreview({ inv, onMarkPaid }: { inv: Invoice; onMarkPaid: (inv: I
         </div>
         <div className="text-right">
           <span className="text-muted-foreground">Method:</span>
-          <div className="font-semibold">{inv.method || "Cash"}</div>
+          <div className="font-semibold">{method}</div>
         </div>
       </div>
 
@@ -591,11 +643,11 @@ function InvoicePreview({ inv, onMarkPaid }: { inv: Invoice; onMarkPaid: (inv: I
       </div>
 
       <div className="mt-4 flex items-center justify-between rounded-lg bg-muted/50 p-2 text-xs">
-        <div>Payment Method · <span className="font-semibold">{inv.method || "Cash"}</span></div>
-        <StatusBadge status={inv.status} />
+        <div>Payment Method · <span className="font-semibold">{method}</span></div>
+        <StatusBadge status={isPaid ? "Paid" : isUnpaid ? "Unpaid" : inv.status} />
       </div>
 
-      {!isPaid ? (
+      {canMarkAsPaid ? (
         <Button
           size="sm"
           className="mt-3 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
@@ -603,10 +655,14 @@ function InvoicePreview({ inv, onMarkPaid }: { inv: Invoice; onMarkPaid: (inv: I
         >
           <CheckCircle2 className="mr-1.5 h-4 w-4" /> Mark Payment as Paid
         </Button>
-      ) : (
-        <Button size="sm" variant="ghost" disabled className="mt-3 w-full text-emerald-600 font-semibold opacity-80">
-          <CheckCircle2 className="mr-1.5 h-4 w-4" /> Paid
+      ) : isPaid ? (
+        <Button size="sm" variant="ghost" disabled className="mt-3 w-full text-emerald-600 font-semibold opacity-90">
+          <CheckCircle2 className="mr-1.5 h-4 w-4" /> Paid ({method})
         </Button>
+      ) : (
+        <div className="mt-3 text-center p-2 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 text-xs font-semibold">
+          {method === "UPI" ? "Awaiting Customer UPI Payment" : normStatus}
+        </div>
       )}
     </Card>
   );

@@ -13,7 +13,7 @@ export const Route = createFileRoute("/admin/_app/inventory/suppliers")({
 });
 
 function SuppliersPage() {
-  const { data: suppliersList } = useSupabaseTable<Supplier>("suppliers", mockSuppliers as any);
+  const { data: suppliersList } = useSupabaseTable<Supplier>("suppliers", []);
 
   return (
     <div>
@@ -51,7 +51,7 @@ function SuppliersPage() {
             <div className="mt-4 grid grid-cols-2 gap-3 border-t pt-3 text-xs">
               <div>
                 <div className="text-muted-foreground">Items supplied</div>
-                <div className="mt-0.5 font-display text-lg font-bold">{s.sku_count || s.items || 12}</div>
+                <div className="mt-0.5 font-display text-lg font-bold">{s.sku_count || s.items || 0}</div>
               </div>
               <div>
                 <div className="text-muted-foreground">Last order</div>

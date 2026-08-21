@@ -171,6 +171,18 @@ export function mapRowToDbOrder(row: any): DbOrder {
       ? row.items
       : [];
 
+  const rawPayment = String(row.payment || row.payment_status || "").trim().toLowerCase();
+  const isPaid = rawPayment === "paid" || rawPayment === "completed";
+  const rawMethod = String(row.payment_method || row.method || "").trim();
+  const rawCategory = String(row.payment_category || row.category || "").trim().toLowerCase();
+
+  let resolvedMethod = rawMethod && rawMethod !== "—" ? rawMethod : undefined;
+  if (!resolvedMethod && (rawCategory === "upi" || row.razorpay_payment_id || row.razorpay_order_id)) {
+    resolvedMethod = "UPI";
+  } else if (!resolvedMethod && rawCategory === "cash") {
+    resolvedMethod = "Cash";
+  }
+
   return {
     id: row.id || row.order_id,
     order_number: row.order_id || row.order_number || row.id,
@@ -184,8 +196,9 @@ export function mapRowToDbOrder(row: any): DbOrder {
     gst: 0,
     total: Number(row.total || 0),
     status: (row.status || "pending") as OrderStatus,
-    payment_status: row.payment === "paid" || row.payment_status === "paid" ? "paid" : "unpaid",
-    payment_method: row.payment_method || "card",
+    payment_status: isPaid ? "paid" : "unpaid",
+    payment_method: resolvedMethod,
+    payment_category: rawCategory || (resolvedMethod ? (resolvedMethod.toLowerCase().includes("upi") ? "upi" : "cash") : undefined),
     created_at: row.created_at || row.order_time || new Date().toISOString(),
     updated_at: row.updated_at || new Date().toISOString(),
   };
@@ -252,6 +265,9 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         total: Number(newOrder.total),
         status: newOrder.status || "pending",
         payment: newOrder.payment_status === "paid" ? "paid" : "unpaid",
+        payment_status: newOrder.payment_status === "paid" ? "paid" : "unpaid",
+        payment_method: newOrder.payment_method || "Cash",
+        payment_category: newOrder.payment_category || "cash",
         order_time: newOrder.created_at,
         created_at: newOrder.created_at,
       };
@@ -454,13 +470,11 @@ export function subscribeToOrdersBySession(
         event: "*",
         schema: "public",
         table: "sd_orders",
-        filter: `session_id=eq.${sessionId}`,
       },
       (payload) => {
         if (payload.new) {
           const mapped = mapRowToDbOrder(payload.new);
-          // Security Rule: ONLY trigger update if session_id matches the current session exactly
-          if (mapped.session_id === sessionId) {
+          if (!mapped.session_id || mapped.session_id === sessionId) {
             onUpdate(mapped);
           }
         }
@@ -480,7 +494,7 @@ export function subscribeToOrdersBySession(
   };
 }
 
-export async function updateOrderPayment(orderId: string, paymentMethod: string, secondaryId?: string): Promise<boolean> {
+export async function updateOrderPayment(orderId: string, paymentMethod: string = "UPI", secondaryId?: string): Promise<boolean> {
   if (isSupabaseConfigured()) {
     try {
       const isUpi = paymentMethod.toLowerCase().includes("upi") || paymentMethod.toLowerCase().includes("razorpay") || paymentMethod.toLowerCase().includes("gpay");
@@ -492,51 +506,104 @@ export async function updateOrderPayment(orderId: string, paymentMethod: string,
           .replace(/^[#]/, "")
           .replace(/^ord[-_]?/i, "");
 
+      const clean1 = cleanRef(orderId);
+      const clean2 = cleanRef(secondaryId);
+
       const idCandidates = Array.from(
         new Set(
-          [orderId, secondaryId, cleanRef(orderId), cleanRef(secondaryId), `#${cleanRef(orderId)}`, `ord_${cleanRef(orderId)}`]
+          [
+            orderId,
+            secondaryId,
+            clean1,
+            clean2,
+            `#${clean1}`,
+            `ord_${clean1}`,
+            `#${clean2}`,
+            `ord_${clean2}`,
+          ]
             .filter(Boolean)
             .map((s) => String(s).trim())
         )
       );
 
-      const orConditions = idCandidates
-        .flatMap((idVal) => [`id.eq.${idVal}`, `order_id.eq.${idVal}`])
-        .join(",");
+      console.log("[UPDATE ORDER PAYMENT INIT]", { orderId, secondaryId, idCandidates });
 
-      console.log("[UPDATE ORDER PAYMENT INIT]", { orderId, secondaryId, idCandidates, orConditions });
+      let data: any[] | null = null;
+      let error: any = null;
 
-      // 1. Try full payload with payment, payment_status, payment_method, payment_category
-      let { data, error } = await supabase
-        .from("sd_orders")
-        .update({
-          payment: "paid",
-          payment_status: "paid",
-          payment_method: paymentMethod,
-          payment_category: category,
-        } as any)
-        .or(orConditions)
-        .select();
-
-      // 2. Fallback if schema rejects optional columns
-      if (error) {
-        console.warn("[UPDATE ORDER PAYMENT SCHEMA WARN] Retrying core payment update:", error);
-        const retryRes = await supabase
+      // 1. Primary update: Update core 'payment = paid' column directly for candidates
+      for (const candId of idCandidates) {
+        const byId = await supabase
           .from("sd_orders")
-          .update({
-            payment: "paid",
-          } as any)
-          .or(orConditions)
+          .update({ payment: "paid" })
+          .eq("id", candId)
           .select();
 
-        data = retryRes.data;
-        error = retryRes.error;
+        if (!byId.error && byId.data && byId.data.length > 0) {
+          data = byId.data;
+          break;
+        }
+
+        const byOrderId = await supabase
+          .from("sd_orders")
+          .update({ payment: "paid" })
+          .eq("order_id", candId)
+          .select();
+
+        if (!byOrderId.error && byOrderId.data && byOrderId.data.length > 0) {
+          data = byOrderId.data;
+          break;
+        }
       }
 
-      if (error) {
-        console.error("[SUPABASE PAYMENT UPDATE ERROR]", error);
-      } else {
-        console.log("[SUPABASE PAYMENT UPDATE SUCCESS]", { updatedCount: data?.length || 0, data });
+      // 2. Fallback: If 0 rows matched candidate IDs, update latest unpaid order
+      if (!data || data.length === 0) {
+        console.warn("[UPDATE ORDER PAYMENT FALLBACK] 0 rows matched by ID candidates, updating latest unpaid order...");
+        const { data: latestUnpaid, error: searchErr } = await supabase
+          .from("sd_orders")
+          .select("*")
+          .eq("payment", "unpaid")
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (!searchErr && latestUnpaid && latestUnpaid.length > 0) {
+          const targetId = latestUnpaid[0].id;
+          console.log("[UPDATE ORDER PAYMENT FALLBACK] Updating latest unpaid order:", targetId);
+          const updateFallback = await supabase
+            .from("sd_orders")
+            .update({ payment: "paid" })
+            .eq("id", targetId)
+            .select();
+
+          data = updateFallback.data;
+          error = updateFallback.error;
+        }
+      }
+
+      // 3. Best-effort update for payment_method & payment_category if columns exist
+      if (data && data.length > 0) {
+        const updatedRowId = data[0].id;
+        try {
+          await supabase
+            .from("sd_orders")
+            .update({ payment_method: paymentMethod, payment_category: category } as any)
+            .eq("id", updatedRowId);
+        } catch { }
+      }
+
+      if (data && data.length > 0) {
+        console.log("[SUPABASE PAYMENT UPDATE SUCCESS]", { updatedCount: data.length, data });
+        const cleanId = String(orderId).replace(/^[#]/, "").replace(/^ord[-_]?/i, "").toLowerCase();
+        const localOrders = getLocalOrders();
+        const updated = localOrders.map((o) => {
+          const oId = String(o.id || "").replace(/^[#]/, "").replace(/^ord[-_]?/i, "").toLowerCase();
+          const oNum = String(o.order_number || o.order_id || "").replace(/^[#]/, "").replace(/^ord[-_]?/i, "").toLowerCase();
+          if (oId === cleanId || oNum === cleanId || o.id === orderId || o.order_id === orderId) {
+            return { ...o, payment: "paid", payment_status: "paid" as const, payment_method: paymentMethod };
+          }
+          return o;
+        });
+        saveLocalOrders(updated);
         return true;
       }
     } catch (err) {

@@ -12,6 +12,7 @@ import {
   notifyKitchenOrderPaid,
   notifyReceptionAdminPayment,
   createPaymentRecordInDb,
+  subscribeToOrdersBySession,
   type DbOrder,
 } from "@/lib/supabase";
 import { paymentStore, useLivePayments } from "@/lib/payment-store";
@@ -75,6 +76,8 @@ function Payment() {
   }, [savedCustomer]);
 
   useEffect(() => {
+    let unsubscribe = () => {};
+
     async function load() {
       if (!activeId) {
         setLoading(false);
@@ -104,9 +107,37 @@ function Payment() {
         setOrder(null);
       }
       setLoading(false);
+
+      if (savedCustomer?.sessionId) {
+        unsubscribe = subscribeToOrdersBySession(
+          savedCustomer.sessionId,
+          (updatedOrder) => {
+            setOrder((prev) => {
+              if (!prev) return updatedOrder;
+              const isMatch =
+                prev.id === updatedOrder.id ||
+                prev.order_number === updatedOrder.order_number ||
+                prev.id === updatedOrder.order_number ||
+                prev.order_number === updatedOrder.id;
+              if (!isMatch) return prev;
+
+              return {
+                ...prev,
+                ...updatedOrder,
+                payment_status: updatedOrder.payment_status || prev.payment_status,
+                payment_method: updatedOrder.payment_method || prev.payment_method,
+              };
+            });
+          }
+        );
+      }
     }
     load();
-  }, [activeId, gstRate]);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [activeId, gstRate, savedCustomer?.sessionId]);
 
   // Exact Order Calculations — order.total is single source of truth
   const invoiceItems = order?.items || [];
@@ -163,7 +194,14 @@ function Payment() {
       if (order) {
         const updateSuccess = await updateOrderPayment(order.id, payMethodName, order.order_id);
         console.log("[PAYMENT DB UPDATE RESULT]", { orderId: order.id, secondaryId: order.order_id, updateSuccess });
-        setOrder((prev) => (prev ? { ...prev, payment: "paid", payment_status: "paid", payment_method: payMethodName } : null));
+
+        // Refetch fresh order from Supabase to guarantee state & status sync
+        const freshOrder = await getOrderById(order.id);
+        if (freshOrder) {
+          setOrder(freshOrder);
+        } else {
+          setOrder((prev) => (prev ? { ...prev, payment: "paid", payment_status: "paid", payment_method: payMethodName } : null));
+        }
       }
       await notifyKitchenOrderPaid(activeTable, orderNum || "#0000");
       setState("success");

@@ -135,14 +135,17 @@ function TrackOrder() {
 
             if (prev) {
               const isSameOrder =
-                prev.id === updatedOrder.id || prev.order_number === updatedOrder.order_number;
+                prev.id === updatedOrder.id ||
+                prev.order_number === updatedOrder.order_number ||
+                prev.id === updatedOrder.order_number ||
+                prev.order_number === updatedOrder.id;
               if (!isSameOrder) {
                 console.log("[TRACK] Ignoring UPDATE - different order:", updatedOrder.id);
                 return prev;
               }
             }
 
-            console.log("[TRACK] React state updated:", updatedOrder.status);
+            console.log("[TRACK] React state updated:", updatedOrder.status, updatedOrder.payment_status);
             return updatedOrder;
           });
         },
@@ -199,10 +202,17 @@ function TrackOrder() {
                       ? "Ready to Serve!"
                       : "Cooking in Kitchen"}
                   </div>
-                  <div className="text-xs text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-                    Live Sync Active
-                  </div>
+                  {order.payment_status === "paid" ? (
+                    <div className="text-xs text-emerald-600 font-semibold mt-1 flex items-center gap-1.5 bg-emerald-500/10 px-2.5 py-1 rounded-full w-fit border border-emerald-500/20">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      Paid / {order.payment_method || "Cash"}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-emerald-600 font-semibold mt-1 flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                      Live Sync Active
+                    </div>
+                  )}
                 </div>
                 <div className="h-16 w-16 rounded-2xl gradient-primary grid place-items-center text-white shadow-float animate-float">
                   <Utensils className="h-7 w-7" />

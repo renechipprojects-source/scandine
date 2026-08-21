@@ -12,11 +12,11 @@ import {
   DollarSign, Utensils, ChefHat,
   Sparkles, Download, Calendar,
 } from "lucide-react";
-import { kpis, salesTrend, restaurantInfo } from "@/reception/lib/mock-data";
+import { restaurantInfo } from "@/reception/lib/mock-data";
 import { useSupabaseTable, type TableItem, type Invoice, type Order } from "@/hooks/useSupabaseData";
 import { exportToCSV } from "@/admin/lib/exportUtils";
 import { toast } from "sonner";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useRealtimeTable } from "@/hooks/useRealtime";
 
 export const Route = createFileRoute("/reception/_app/dashboard")({
@@ -70,6 +70,29 @@ function DashboardPage() {
     { name: "Pending", value: pendingCount },
     { name: "Ready", value: readyCount },
   ];
+
+  // Dynamic 7-day Sales Trend derived strictly from live orders
+  const salesTrend = useMemo(() => {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const now = new Date();
+    const result: { day: string; sales: number; orders: number }[] = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const dayName = days[d.getDay()];
+      const dayOrders = dbOrders.filter((o) => {
+        const orderDate = new Date(o.order_time || o.created_at || Date.now());
+        return orderDate.toDateString() === d.toDateString();
+      });
+      const dayPaid = dayOrders.filter((o) =>
+        ["paid", "completed"].includes(String(o.payment || o.status || "").trim().toLowerCase())
+      );
+      const daySales = dayPaid.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+      result.push({ day: dayName, sales: daySales, orders: dayOrders.length });
+    }
+    return result;
+  }, [dbOrders]);
 
   const handleExportCSV = () => {
     const exportData = [

@@ -207,8 +207,9 @@ function cleanPayloadForSupabase(tableName: string, payload: Record<string, unkn
       cleaned.status = cleaned.status.toLowerCase();
     }
     if (cleaned.payment || cleaned.payment_status) {
-      cleaned.payment_status = String(cleaned.payment_status || cleaned.payment).toLowerCase();
-      delete cleaned.payment;
+      const pVal = String(cleaned.payment_status || cleaned.payment).toLowerCase();
+      cleaned.payment = pVal;
+      cleaned.payment_status = pVal;
     }
     if (cleaned.items || cleaned.item) {
       cleaned.items = cleaned.items || cleaned.item;
@@ -340,36 +341,44 @@ export function useSupabaseTable<T extends { id: string }>(
       } else if (rows) {
         if (rows.length > 0) {
           const fetched = normalizeFetchedRows(tableName, rows as T[]);
-          updateLocalData((prev) => {
-            const map = new Map<string, T>();
-            prev.forEach((item) => map.set(item.id, item));
 
-            fetched.forEach((item: any) => {
-              const prevItem = (map.get(item.id) || Array.from(map.values()).find((p: any) => p.order_id === item.order_id)) as any;
-              if (prevItem && tableName === "sd_orders") {
-                const STAGE_ORDER: Record<string, number> = {
-                  pending: 1,
-                  accepted: 2,
-                  preparing: 3,
-                  ready: 4,
-                  completed: 5,
-                  cancelled: 6,
-                };
-                const prevStage = STAGE_ORDER[prevItem.status] || 0;
-                const fetchedStage = STAGE_ORDER[item.status] || 0;
+          if (tableName === "sd_menu_items") {
+            // Live database rows from Supabase are the single source of truth; replace state completely without merging stale deleted items
+            updateLocalData(fetched);
+          } else {
+            updateLocalData((prev) => {
+              const map = new Map<string, T>();
+              prev.forEach((item) => map.set(item.id, item));
 
-                // Keep locally advanced stage if fetched stage from DB is older/behind
-                if (prevStage > fetchedStage) {
-                  item.status = prevItem.status;
-                  item.accepted_at = prevItem.accepted_at || item.accepted_at;
-                  item.prep_time_minutes = prevItem.prep_time_minutes || item.prep_time_minutes;
-                  item.estimated_ready_at = prevItem.estimated_ready_at || item.estimated_ready_at;
+              fetched.forEach((item: any) => {
+                const prevItem = (map.get(item.id) || Array.from(map.values()).find((p: any) => p.order_id === item.order_id)) as any;
+                if (prevItem && tableName === "sd_orders") {
+                  const STAGE_ORDER: Record<string, number> = {
+                    pending: 1,
+                    accepted: 2,
+                    preparing: 3,
+                    ready: 4,
+                    completed: 5,
+                    cancelled: 6,
+                  };
+                  const prevStage = STAGE_ORDER[prevItem.status] || 0;
+                  const fetchedStage = STAGE_ORDER[item.status] || 0;
+
+                  // Keep locally advanced stage if fetched stage from DB is older/behind
+                  if (prevStage > fetchedStage) {
+                    item.status = prevItem.status;
+                    item.accepted_at = prevItem.accepted_at || item.accepted_at;
+                    item.prep_time_minutes = prevItem.prep_time_minutes || item.prep_time_minutes;
+                    item.estimated_ready_at = prevItem.estimated_ready_at || item.estimated_ready_at;
+                  }
                 }
-              }
-              map.set(item.id, item);
+                map.set(item.id, item);
+              });
+              return Array.from(map.values());
             });
-            return Array.from(map.values());
-          });
+          }
+        } else if (rows.length === 0) {
+          updateLocalData([]);
         }
       }
 
@@ -538,9 +547,19 @@ export function useSupabaseTable<T extends { id: string }>(
 
         if (deleteErr) {
           console.error(`[Supabase Delete Error on ${tableName}]:`, deleteErr.message);
+          throw deleteErr;
         }
+
+        window.dispatchEvent(new CustomEvent("local-table-updated", { detail: { tableName } }));
+        try {
+          if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+            const bc = new BroadcastChannel("aura_dine_sync_channel");
+            bc.postMessage({ type: "MENU_UPDATED", tableName });
+          }
+        } catch {}
       } catch (err) {
         console.error(`Supabase delete exception for ${tableName}:`, err);
+        throw err;
       }
     }
   };
@@ -563,75 +582,165 @@ export async function markPaymentAndInvoiceAsPaid(
   invoiceIdOrOrder: string,
   customerName?: string,
   amountVal?: number,
-  methodVal?: string
+  methodVal: string = "Cash"
 ) {
   const nowIso = new Date().toISOString();
   const invId = invoiceIdOrOrder || targetId;
+  const isCash = methodVal.toLowerCase().includes("cash");
+  const category = isCash ? "cash" : (methodVal.toLowerCase().includes("upi") || methodVal.toLowerCase().includes("razorpay") ? "upi" : "card");
+
+  const cleanRef = (s: any) =>
+    String(s || "")
+      .trim()
+      .replace(/^[#]/, "")
+      .replace(/^ord[-_]?/i, "")
+      .replace(/^inv[-_]?/i, "");
+
+  const c1 = cleanRef(targetId);
+  const c2 = cleanRef(invId);
+
+  const idCandidates = Array.from(
+    new Set([targetId, invId, c1, c2, `#${c1}`, `ord_${c1}`, `INV-${c1}`].filter(Boolean))
+  );
 
   if (isSupabaseConfigured) {
     try {
-      await Promise.all([
+      // 1. Primary update: Update core 'payment = paid' column directly in sd_orders
+      for (const candId of idCandidates) {
+        let { data: byId } = await supabase
+          .from("sd_orders")
+          .update({ payment: "paid" })
+          .eq("id", candId)
+          .select();
+
+        if (byId && byId.length > 0) break;
+
+        let { data: byOrder } = await supabase
+          .from("sd_orders")
+          .update({ payment: "paid" })
+          .eq("order_id", candId)
+          .select();
+
+        if (byOrder && byOrder.length > 0) break;
+      }
+
+      // 2. Best-effort update for payment_method and payment_category in sd_orders
+      for (const candId of idCandidates) {
+        try {
+          await supabase
+            .from("sd_orders")
+            .update({ payment_method: methodVal, payment_category: category } as any)
+            .or(`id.eq.${candId},order_id.eq.${candId}`);
+        } catch {}
+      }
+
+      // 3. Update invoices and payments tables
+      await Promise.allSettled([
         supabase
           .from("invoices")
-          .update({ status: "paid", date: nowIso })
+          .update({ status: "paid", method: methodVal, date: nowIso })
           .or(`id.eq.${targetId},invoice.eq.${invId},transition.eq.${invId}`),
         supabase
           .from("payments")
-          .update({ status: "paid", date: nowIso })
+          .update({ status: "paid", method: methodVal, date: nowIso })
           .or(`id.eq.${targetId},invoiceId.eq.${invId}`),
-        supabase
-          .from("sd_orders")
-          .update({ payment: "paid" })
-          .or(`id.eq.${targetId},order_id.eq.${invId}`),
       ]);
     } catch (err) {
-      console.warn("Optimized Supabase batch update notice:", err);
+      console.warn("Supabase markAsPaid notice:", err);
     }
   }
 
-  // Sync local storage tables
-  ["invoices", "payments"].forEach((tbl) => {
-    try {
-      const key = `mock_table_${tbl}`;
-      const saved = localStorage.getItem(key);
+  // 4. Store canonical payment record in local storage scandine_payment_records_v1
+  try {
+    if (typeof window !== "undefined") {
+      const recordsKey = "scandine_payment_records_v1";
+      let existing: any[] = [];
+      const saved = localStorage.getItem(recordsKey);
       if (saved) {
-        const arr = JSON.parse(saved);
+        try { existing = JSON.parse(saved) || []; } catch {}
+      }
+
+      const newRec = {
+        id: `txn_${targetId}`,
+        transaction_id: `txn_${targetId}`,
+        order_id: invId,
+        invoice_id: invId,
+        customer_name: customerName || "Customer",
+        amount: amountVal || 0,
+        total: amountVal || 0,
+        method: methodVal,
+        payment_method: methodVal,
+        payment_category: category,
+        status: "Paid",
+        created_at: nowIso,
+      };
+
+      const updatedRecords = [newRec, ...existing.filter((r: any) => r.order_id !== invId && r.id !== targetId)];
+      localStorage.setItem(recordsKey, JSON.stringify(updatedRecords));
+
+      // Also sync to aura_dine_payments store
+      try {
+        const auraKey = "aura_dine_payments";
+        let auraExisting: any[] = [];
+        const auraSaved = localStorage.getItem(auraKey);
+        if (auraSaved) {
+          try { auraExisting = JSON.parse(auraSaved) || []; } catch {}
+        }
+        const updatedAura = [newRec, ...auraExisting.filter((r: any) => r.order_id !== invId && r.id !== targetId)];
+        localStorage.setItem(auraKey, JSON.stringify(updatedAura));
+      } catch {}
+
+      // Sync local storage tables
+      ["invoices", "payments"].forEach((tbl) => {
+        try {
+          const key = `mock_table_${tbl}`;
+          const savedTbl = localStorage.getItem(key);
+          if (savedTbl) {
+            const arr = JSON.parse(savedTbl);
+            const updated = arr.map((item: any) => {
+              if (
+                item.id === targetId ||
+                item.id === invId ||
+                item.invoice === invId ||
+                item.invoiceId === invId ||
+                item.transition === invId
+              ) {
+                return { ...item, status: "Paid", method: methodVal, payment_method: methodVal, payment_category: category, date: nowIso };
+              }
+              return item;
+            });
+            localStorage.setItem(key, JSON.stringify(updated));
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      });
+
+      const savedOrders = localStorage.getItem("mock_table_sd_orders");
+      if (savedOrders) {
+        const arr = JSON.parse(savedOrders);
         const updated = arr.map((item: any) => {
-          if (
-            item.id === targetId ||
-            item.id === invId ||
-            item.invoice === invId ||
-            item.invoiceId === invId ||
-            item.transition === invId
-          ) {
-            return { ...item, status: "Paid", date: nowIso };
+          if (item.id === targetId || item.order_id === invId || item.id === invId) {
+            return { ...item, payment: "paid", payment_status: "paid", method: methodVal, payment_method: methodVal, payment_category: category };
           }
           return item;
         });
-        localStorage.setItem(key, JSON.stringify(updated));
+        localStorage.setItem("mock_table_sd_orders", JSON.stringify(updated));
       }
-    } catch (e) {
-      console.error(e);
-    }
-  });
-
-  try {
-    const savedOrders = localStorage.getItem("mock_table_sd_orders");
-    if (savedOrders) {
-      const arr = JSON.parse(savedOrders);
-      const updated = arr.map((item: any) => {
-        if (item.id === targetId || item.order_id === invId || item.id === invId) {
-          return { ...item, payment: "paid" };
-        }
-        return item;
-      });
-      localStorage.setItem("mock_table_sd_orders", JSON.stringify(updated));
     }
   } catch (e) {
     console.error(e);
   }
 
+  // Broadcast real-time events across windows & tabs
   window.dispatchEvent(new CustomEvent("local-table-updated", { detail: { tableName: "invoices" } }));
   window.dispatchEvent(new CustomEvent("local-table-updated", { detail: { tableName: "payments" } }));
   window.dispatchEvent(new CustomEvent("local-table-updated", { detail: { tableName: "sd_orders" } }));
+
+  try {
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      const bc = new BroadcastChannel("aura_dine_sync_channel");
+      bc.postMessage({ type: "MENU_UPDATED", tableName: "sd_orders" });
+    }
+  } catch {}
 }

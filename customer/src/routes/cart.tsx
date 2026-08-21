@@ -89,6 +89,8 @@ function Cart() {
         total: totals.total,
         status: "pending",
         payment_status: "unpaid",
+        payment_method: "Cash",
+        payment_category: "cash",
       });
 
       await notifyKitchenNewOrder(created);

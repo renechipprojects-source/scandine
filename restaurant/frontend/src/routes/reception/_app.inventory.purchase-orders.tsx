@@ -327,7 +327,7 @@ function POPage() {
     <div className="space-y-6">
       <PageHeader
         title="Purchase Orders & Suppliers"
-        description={`${(purchaseOrders || []).length} Purchase Orders · ${restaurantInfo?.currency || "₹"}${(committedTotal || 0).toLocaleString()} committed · ${(suppliers || []).length} Suppliers in Database`}
+        description={`${(purchaseOrders || []).length} Purchase Orders · ${restaurantInfo?.currency || "₹"}${(committedTotal || 0).toLocaleString()} committed`}
         icon={<ClipboardList className="h-5 w-5" />}
         actions={
           <div className="flex flex-wrap items-center gap-2">

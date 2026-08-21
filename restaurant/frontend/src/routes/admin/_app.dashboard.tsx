@@ -69,17 +69,25 @@ function DashboardPage() {
   const completedOrdersCount = dbOrders.filter((o) => o.status === "completed").length;
   const cancelledOrdersCount = dbOrders.filter((o) => o.status === "cancelled").length;
 
-  const totalRevenue = dbOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  const paidOrders = useMemo(() => {
+    return dbOrders.filter((o) =>
+      ["paid", "completed"].includes(String(o.payment || o.status || "").trim().toLowerCase())
+    );
+  }, [dbOrders]);
+
+  const totalRevenue = useMemo(() => {
+    return paidOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  }, [paidOrders]);
 
   const todaysRevenue = useMemo(() => {
     const todayStr = new Date().toDateString();
-    return dbOrders
+    return paidOrders
       .filter((o) => {
         const d = new Date(o.order_time || o.created_at || Date.now());
         return d.toDateString() === todayStr;
       })
       .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
-  }, [dbOrders]);
+  }, [paidOrders]);
 
   const activeTablesCount = dbTables.filter((t) => t.status === "occupied").length;
   const availableTablesCount = dbTables.filter(
@@ -99,7 +107,7 @@ function DashboardPage() {
     { name: "Cancelled", value: cancelledOrdersCount },
   ];
 
-  // Dynamic 7-day Sales Trend derived strictly from live orders
+  // Dynamic 7-day Sales Trend derived strictly from live paid orders
   const salesTrend = useMemo(() => {
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const now = new Date();
@@ -113,7 +121,10 @@ function DashboardPage() {
         const orderDate = new Date(o.order_time || o.created_at || Date.now());
         return orderDate.toDateString() === d.toDateString();
       });
-      const daySales = dayOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+      const dayPaid = dayOrders.filter((o) =>
+        ["paid", "completed"].includes(String(o.payment || o.status || "").trim().toLowerCase())
+      );
+      const daySales = dayPaid.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
       result.push({ day: dayName, sales: daySales, orders: dayOrders.length });
     }
     return result;

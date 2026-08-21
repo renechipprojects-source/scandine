@@ -45,9 +45,14 @@ CREATE TABLE IF NOT EXISTS sd_orders (
   total NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'preparing', 'ready', 'completed', 'cancelled')),
   payment TEXT NOT NULL DEFAULT 'unpaid' CHECK (payment IN ('paid', 'unpaid', 'refunded', 'pending')),
+  payment_method TEXT,
+  payment_category TEXT,
   order_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS payment_method TEXT;
+ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS payment_category TEXT;
 
 CREATE TABLE IF NOT EXISTS sd_notifications (
   id TEXT PRIMARY KEY DEFAULT 'notif_' || gen_random_uuid(),

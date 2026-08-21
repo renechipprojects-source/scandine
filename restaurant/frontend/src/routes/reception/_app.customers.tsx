@@ -103,7 +103,7 @@ function CustomersPage() {
     <div className="w-full space-y-5">
       <PageHeader
         title="Customers"
-        description={`${customersList.length} live customers registered in active system`}
+        description="Manage active system customer directory and order history."
         icon={<Users className="h-5 w-5" />}
         actions={
           <Button variant="outline" size="sm" onClick={handleExportCSV}>

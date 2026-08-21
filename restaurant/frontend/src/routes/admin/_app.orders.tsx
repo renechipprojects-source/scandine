@@ -13,6 +13,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useSupabaseTable, type Order } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/admin/components/ui/dialog";
+import { resolvePaymentMethod } from "@/lib/payment-utils";
 
 export const Route = createFileRoute("/admin/_app/orders")({
   head: () => ({
@@ -24,7 +25,7 @@ export const Route = createFileRoute("/admin/_app/orders")({
   component: OrdersPage,
 });
 
-export function OrdersPage() {
+function OrdersPage() {
   const { data: dbOrders, fetchData } = useSupabaseTable<Order>("sd_orders");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -171,10 +172,10 @@ export function OrdersPage() {
                         <TableCell className="text-sm text-muted-foreground">{Array.isArray(o.item) ? o.item.length : 1} items</TableCell>
                         <TableCell className="text-right font-semibold">{restaurantInfo.currency}{Number(o.total).toFixed(2)}</TableCell>
                         <TableCell><StatusBadge status={o.status} /></TableCell>
-                        <TableCell><StatusBadge status={o.payment} /></TableCell>
+                        <TableCell><StatusBadge status={(o as any).payment_status || o.payment || "unpaid"} /></TableCell>
                         <TableCell>
                           <span className="rounded-md bg-muted/80 px-2 py-0.5 text-xs font-semibold">
-                            {(o as any).payment_method || (o as any).method || (o.payment === "paid" ? "UPI" : "Cash")}
+                            {resolvePaymentMethod(o)}
                           </span>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{o.order_time ? new Date(o.order_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}</TableCell>
@@ -227,10 +228,10 @@ export function OrdersPage() {
                         <TableCell className="text-sm text-muted-foreground">{Array.isArray(o.item) ? o.item.length : 1} items</TableCell>
                         <TableCell className="text-right font-semibold">{restaurantInfo.currency}{Number(o.total).toFixed(2)}</TableCell>
                         <TableCell><StatusBadge status={o.status} /></TableCell>
-                        <TableCell><StatusBadge status={o.payment} /></TableCell>
+                        <TableCell><StatusBadge status={(o as any).payment_status || o.payment || "unpaid"} /></TableCell>
                         <TableCell>
                           <span className="rounded-md bg-muted/80 px-2 py-0.5 text-xs font-semibold">
-                            {(o as any).payment_method || (o as any).method || (o.payment === "paid" ? "UPI" : "Cash")}
+                            {resolvePaymentMethod(o)}
                           </span>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{o.order_time ? new Date(o.order_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}</TableCell>

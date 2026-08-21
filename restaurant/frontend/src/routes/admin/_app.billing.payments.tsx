@@ -5,12 +5,13 @@ import { Card } from "@/admin/components/ui/card";
 import { Button } from "@/admin/components/ui/button";
 import { Input } from "@/admin/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/admin/components/ui/table";
-import { CreditCard, Search, Download, Banknote, Smartphone } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { useState, useCallback } from "react";
+import { CreditCard, Search, Download, Banknote, Smartphone, DollarSign, CheckCircle2 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { useState, useCallback, useMemo } from "react";
 import { useSupabaseTable, type PaymentTransaction, type Order } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
 import { exportToCSV } from "@/admin/lib/exportUtils";
+import { normalizePaymentStatus, resolvePaymentMethod } from "@/lib/payment-utils";
 
 export const Route = createFileRoute("/admin/_app/billing/payments")({
   head: () => ({ meta: [{ title: "Payments — ScanDine" }, { name: "description", content: "Payment transaction history across all methods." }] }),
@@ -23,156 +24,8 @@ const formatINR = (val: number) => {
   });
 };
 
-function normalizePaymentStatus(status?: string): string {
-  if (!status) return "Unpaid";
-  const s = String(status).trim().toLowerCase();
-  if (s === "paid" || s === "completed") return "Paid";
-  if (s === "pending" || s === "pending_verification") return "Pending";
-  if (s === "failed") return "Failed";
-  if (s === "cancelled") return "Cancelled";
-  if (s === "refunded") return "Refunded";
-  if (s === "unpaid") return "Unpaid";
-  return status.charAt(0).toUpperCase() + status.slice(1);
-}
-
-// Exact reference matching across order and payment identifiers
-function exactMatchRef(rec: any, targetId: string, targetNum?: string): boolean {
-  if (!rec || !targetId) return false;
-
-  const cleanRef = (s: any) =>
-    String(s || "")
-      .trim()
-      .toLowerCase()
-      .replace(/^[#]/, "")
-      .replace(/^ord[-_]?/i, "")
-      .replace(/^pmt[-_]?/i, "")
-      .replace(/^inv[-_]?/i, "");
-
-  const targets = [cleanRef(targetId), cleanRef(targetNum)].filter(Boolean);
-
-  const keys = [
-    rec.id,
-    rec.order_id,
-    rec.order_number,
-    rec.orderId,
-    rec.invoiceId,
-    rec.invoice_id,
-    rec.invoice,
-    rec.transition,
-    rec.transaction_id,
-  ]
-    .filter(Boolean)
-    .map(cleanRef);
-
-  for (const k of keys) {
-    if (k && targets.includes(k)) return true;
-  }
-  return false;
-}
-
-function resolvePaymentMethod(item: any): string {
-  if (!item) return "—";
-
-  const category = String(
-    item.payment_category ||
-    item.paymentCategory ||
-    item.category ||
-    ""
-  ).trim().toLowerCase();
-
-  const rawMethod = String(
-    item.payment_method ||
-    item.paymentMethod ||
-    item.method ||
-    item.payment_type ||
-    item.paymentType ||
-    ""
-  ).trim();
-
-  const txnId = String(
-    item.transaction_id ||
-    item.transactionId ||
-    item.txn_id ||
-    item.tx_id ||
-    item.razorpay_payment_id ||
-    item.razorpay_order_id ||
-    ""
-  ).trim();
-
-  const lowerMethod = rawMethod.toLowerCase();
-  const lowerTxn = txnId.toLowerCase();
-  const lowerId = String(item.id || "").toLowerCase();
-
-  // 1. Explicit Category check
-  if (category === "upi") return "UPI";
-  if (category === "cash") return "Cash";
-  if (category === "card") return "Card";
-
-  // 2. Transaction ID signature check
-  if (lowerTxn.startsWith("txn_cash") || lowerId.startsWith("txn_cash")) {
-    return "Cash";
-  }
-  if (
-    lowerTxn.startsWith("pay_") ||
-    lowerTxn.startsWith("txn_rzp") ||
-    lowerTxn.includes("rzp") ||
-    lowerId.startsWith("pay_") ||
-    lowerId.startsWith("txn_rzp")
-  ) {
-    return "UPI";
-  }
-
-  // 3. Explicit Method string check
-  if (
-    lowerMethod === "cash" ||
-    lowerMethod === "cash at counter" ||
-    lowerMethod.includes("cash")
-  ) {
-    return "Cash";
-  }
-
-  if (
-    lowerMethod.includes("upi") ||
-    lowerMethod.includes("gpay") ||
-    lowerMethod.includes("phonepe") ||
-    lowerMethod.includes("paytm") ||
-    lowerMethod.includes("razorpay") ||
-    lowerMethod.includes("online") ||
-    lowerMethod.includes("qr")
-  ) {
-    return "UPI";
-  }
-
-  if (lowerMethod.includes("card") || lowerMethod.includes("credit card") || lowerMethod.includes("debit card")) {
-    return "Card";
-  }
-
-  // 4. Channel hint if method is missing on paid order
-  const channel = String(item.channel || item.order_channel || "").trim().toLowerCase();
-  if (channel === "qr") return "UPI";
-  if (channel === "counter") return "Cash";
-  if (channel === "waiter") return "Cash";
-
-  // 5. Custom non-empty method string
-  if (rawMethod && rawMethod !== "—" && lowerMethod !== "paid" && lowerMethod !== "unpaid") {
-    return rawMethod.charAt(0).toUpperCase() + rawMethod.slice(1);
-  }
-
-  // 6. For paid transactions with unspecified method text, resolve from table / QR context
-  const statusStr = String(item.payment_status || item.payment || item.status || "").trim().toLowerCase();
-  if (statusStr === "paid" || statusStr === "completed") {
-    if (item.table_number || item.table) {
-      return "UPI";
-    }
-    return "Cash";
-  }
-
-  return "—";
-}
-
 function PaymentsPage() {
   const { data: dbOrders, fetchData: fetchOrders } = useSupabaseTable<Order>("sd_orders");
-
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleRealtimePayload = useCallback(() => {
@@ -181,79 +34,25 @@ function PaymentsPage() {
 
   useRealtimeTable("sd_orders", handleRealtimePayload);
 
-  // Derive real canonical payment transactions from sd_orders & local payment store
-  const paymentsList: PaymentTransaction[] = (() => {
+  // Derive real canonical payment transactions directly from Supabase sd_orders
+  const paymentsList: PaymentTransaction[] = useMemo(() => {
     const list: PaymentTransaction[] = [];
     const seenOrderKeys = new Set<string>();
 
-    let localRecords: any[] = [];
-    try {
-      if (typeof window !== "undefined") {
-        const stored = localStorage.getItem("scandine_payment_records_v1");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) localRecords = parsed;
-        }
-      }
-    } catch {}
-
-    const findLocalRecordForRef = (refId: string, refNum?: string) => {
-      return localRecords.find((l: any) => exactMatchRef(l, refId, refNum));
-    };
-
-    // 1. Process all real orders from Supabase sd_orders
     for (const ord of dbOrders) {
       const orderKey = String(ord.order_id || ord.id || "").trim().toLowerCase();
       if (!orderKey || seenOrderKeys.has(orderKey)) continue;
       seenOrderKeys.add(orderKey);
 
-      const matchedLocal = findLocalRecordForRef(orderKey, ord.order_id || (ord as any).order_number);
-
-      const combined = {
-        ...matchedLocal,
-        ...ord,
-      };
-
-      const rawStatus = ord.payment || (ord as any).payment_status || matchedLocal?.status || ord.status;
+      const rawStatus = ord.payment || (ord as any).payment_status || ord.status;
       const normStatus = normalizePaymentStatus(rawStatus);
+      const normMethod = resolvePaymentMethod(ord);
 
-      let normMethod = "—";
-      if (normStatus === "Paid") {
-        normMethod = resolvePaymentMethod(combined);
-      } else if (normStatus === "Pending") {
-        normMethod = resolvePaymentMethod(combined) !== "—" ? resolvePaymentMethod(combined) : "Pending";
-      }
-
-      const txnId =
-        matchedLocal?.transaction_id ||
-        (ord as any).transaction_id ||
-        ord.order_id ||
-        ord.id;
-
-      const invoiceDisplay =
-        matchedLocal?.invoice_id ||
-        (ord as any).invoice_id ||
-        ord.order_id ||
-        ord.id;
-
-      const customerName =
-        (ord as any).customer_name ||
-        ord.customer ||
-        matchedLocal?.customer_name ||
-        "Customer";
-
-      const totalAmount = Number(
-        matchedLocal?.total ||
-        matchedLocal?.amount ||
-        ord.total ||
-        0
-      );
-
-      const txnDate =
-        matchedLocal?.created_at ||
-        ord.order_time ||
-        (ord as any).created_at ||
-        new Date().toISOString();
+      const txnId = (ord as any).transaction_id || ord.order_id || ord.id;
+      const invoiceDisplay = (ord as any).invoice_id || ord.order_id || ord.id;
+      const customerName = (ord as any).customer_name || ord.customer || "Customer";
+      const totalAmount = Number(ord.total || 0);
+      const txnDate = ord.order_time || (ord as any).created_at || new Date().toISOString();
 
       list.push({
         id: txnId,
@@ -267,92 +66,106 @@ function PaymentsPage() {
       });
     }
 
-    // 2. Include local payment records that are not in dbOrders
-    for (const loc of localRecords) {
-      const locKey = String(loc.order_id || loc.order_number || loc.id || "").trim().toLowerCase();
-      if (!locKey || seenOrderKeys.has(locKey)) continue;
-      seenOrderKeys.add(locKey);
-
-      const normStatus = normalizePaymentStatus(loc.status);
-      let normMethod = "—";
-      if (normStatus === "Paid") {
-        normMethod = resolvePaymentMethod(loc);
-      } else if (normStatus === "Pending") {
-        normMethod = resolvePaymentMethod(loc) !== "—" ? resolvePaymentMethod(loc) : "Pending";
-      }
-
-      list.push({
-        id: loc.transaction_id || loc.id,
-        invoiceId: loc.invoice_id || loc.order_id || loc.id,
-        customer: loc.customer_name || "Customer",
-        method: normMethod,
-        amount: Number(loc.total || loc.amount || 0),
-        status: normStatus as any,
-        date: loc.created_at || new Date().toISOString(),
-        transaction_id: loc.transaction_id || loc.id,
-      });
-    }
-
     return list.sort((a, b) => {
       const timeA = new Date(a.date || 0).getTime();
       const timeB = new Date(b.date || 0).getTime();
       return timeB - timeA;
     });
-  })();
+  }, [dbOrders]);
 
-  if (paymentsList.length > 0) {
-    const samplePaid = paymentsList.find((p) => ["paid", "completed"].includes(String(p.status || "").trim().toLowerCase())) || paymentsList[0];
-    console.log("[ADMIN PAYMENTS DEBUG] Sample Transaction:", {
-      id: samplePaid.id,
-      amount: samplePaid.amount,
-      status: samplePaid.status,
-      method: samplePaid.method,
-      payment: (samplePaid as any).payment,
-      payment_category: (samplePaid as any).payment_category,
-      payment_method: (samplePaid as any).payment_method,
-      total: (samplePaid as any).total,
-    });
-  }
-
-  const paidTransactions = paymentsList.filter((p) =>
-    ["paid", "completed"].includes(
-      String(p.status || "").trim().toLowerCase()
-    )
-  );
-
-  const cashTotal = paidTransactions
-    .filter((p) => String(p.method || "").trim().toLowerCase() === "cash")
-    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
-
-  const upiTotal = paidTransactions
-    .filter((p) => {
-      const m = String(p.method || "").trim().toLowerCase();
-      return m === "upi" || m.includes("gpay") || m.includes("upi") || m.includes("online") || m.includes("qr") || m.includes("razorpay");
-    })
-    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
-
-  const cardTotal = paidTransactions
-    .filter((p) => String(p.method || "").trim().toLowerCase() === "card")
-    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
-
-  const methodBreakdown = [
-    { method: "Cash", amount: cashTotal, icon: Banknote },
-    { method: "UPI", amount: upiTotal, icon: Smartphone },
-    ...(cardTotal > 0 ? [{ method: "Card", amount: cardTotal, icon: CreditCard }] : []),
-  ];
-
-  const totalGrossSales = paidTransactions.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-
-  const filtered = paymentsList.filter((p) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      (p.id && p.id.toLowerCase().includes(q)) ||
-      (p.invoiceId && p.invoiceId.toLowerCase().includes(q)) ||
-      (p.customer && p.customer.toLowerCase().includes(q)) ||
-      (p.method && p.method.toLowerCase().includes(q)) ||
-      (p.status && p.status.toLowerCase().includes(q))
+  const paidTransactions = useMemo(() => {
+    return paymentsList.filter((p) =>
+      ["paid", "completed"].includes(
+        String(p.status || "").trim().toLowerCase()
+      )
     );
-  });
+  }, [paymentsList]);
+
+  const unpaidTransactions = useMemo(() => {
+    return paymentsList.filter((p) =>
+      !["paid", "completed"].includes(
+        String(p.status || "").trim().toLowerCase()
+      )
+    );
+  }, [paymentsList]);
+
+  const totalRevenue = useMemo(() => {
+    return paidTransactions.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  }, [paidTransactions]);
+
+  const cashTotal = useMemo(() => {
+    return paidTransactions
+      .filter((p) => String(p.method || "").trim().toLowerCase() === "cash")
+      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  }, [paidTransactions]);
+
+  const upiTotal = useMemo(() => {
+    return paidTransactions
+      .filter((p) => {
+        const m = String(p.method || "").trim().toLowerCase();
+        return m === "upi" || m.includes("gpay") || m.includes("upi") || m.includes("online") || m.includes("qr") || m.includes("razorpay");
+      })
+      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  }, [paidTransactions]);
+
+  const cardTotal = useMemo(() => {
+    return paidTransactions
+      .filter((p) => String(p.method || "").trim().toLowerCase() === "card")
+      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  }, [paidTransactions]);
+
+  const methodBreakdown = useMemo(() => {
+    return [
+      { method: "Cash", amount: cashTotal, icon: Banknote },
+      { method: "UPI", amount: upiTotal, icon: Smartphone },
+      ...(cardTotal > 0 ? [{ method: "Card", amount: cardTotal, icon: CreditCard }] : []),
+    ];
+  }, [cashTotal, upiTotal, cardTotal]);
+
+  const dailyRevenueTrend = useMemo(() => {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const now = new Date();
+    const result: { day: string; UPI: number; Cash: number }[] = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const dayStr = d.toDateString();
+      const dayName = days[d.getDay()];
+
+      const dayPaidOrders = paidTransactions.filter((p) => {
+        const orderDate = new Date(p.date || Date.now());
+        return orderDate.toDateString() === dayStr;
+      });
+
+      const dayUpi = dayPaidOrders
+        .filter((p) => {
+          const m = String(p.method || "").trim().toLowerCase();
+          return m === "upi" || m.includes("gpay") || m.includes("upi") || m.includes("online") || m.includes("qr") || m.includes("razorpay");
+        })
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+      const dayCash = dayPaidOrders
+        .filter((p) => String(p.method || "").trim().toLowerCase() === "cash")
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+      result.push({ day: dayName, UPI: dayUpi, Cash: dayCash });
+    }
+    return result;
+  }, [paidTransactions]);
+
+  const filtered = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return paymentsList.filter((p) => {
+      return (
+        (p.id && p.id.toLowerCase().includes(q)) ||
+        (p.invoiceId && p.invoiceId.toLowerCase().includes(q)) ||
+        (p.customer && p.customer.toLowerCase().includes(q)) ||
+        (p.method && p.method.toLowerCase().includes(q)) ||
+        (p.status && p.status.toLowerCase().includes(q))
+      );
+    });
+  }, [paymentsList, searchQuery]);
 
   const handleExport = () => {
     const exportData = filtered.map((p) => ({
@@ -371,47 +184,100 @@ function PaymentsPage() {
     <div className="w-full space-y-6">
       <PageHeader
         title="Payments"
-        description="Track every transaction across Cash and UPI."
+        description="Track live revenue and payment transaction metrics directly from Supabase."
         icon={<CreditCard className="h-5 w-5" />}
         actions={<Button variant="outline" size="sm" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Export</Button>}
       />
 
-      <div className={`grid grid-cols-1 gap-3 w-full ${methodBreakdown.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-        {methodBreakdown.map((m) => (
-          <Card key={m.method} className="p-4">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-              <m.icon className="h-3.5 w-3.5" /> {m.method}
-            </div>
-            <div className="mt-1 font-display text-xl font-bold">{formatINR(m.amount)}</div>
-            <div className="text-[10px] text-muted-foreground">
-              {totalGrossSales > 0 ? Math.round((m.amount / totalGrossSales) * 100) : 0}% of total
-            </div>
-          </Card>
-        ))}
+      {/* Dynamic Summary Cards */}
+      <div className="grid grid-cols-1 gap-3 w-full sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="p-4 border shadow-xs">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+            <DollarSign className="h-4 w-4 text-emerald-600" /> Total Revenue
+          </div>
+          <div className="mt-1 font-display text-2xl font-bold text-foreground">{formatINR(totalRevenue)}</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">
+            {paidTransactions.length} paid transactions
+          </div>
+        </Card>
+
+        <Card className="p-4 border shadow-xs">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+            <Smartphone className="h-4 w-4 text-indigo-600" /> UPI Revenue
+          </div>
+          <div className="mt-1 font-display text-2xl font-bold text-foreground">{formatINR(upiTotal)}</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">
+            {totalRevenue > 0 ? Math.round((upiTotal / totalRevenue) * 100) : 0}% of revenue
+          </div>
+        </Card>
+
+        <Card className="p-4 border shadow-xs">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+            <Banknote className="h-4 w-4 text-amber-600" /> Cash Revenue
+          </div>
+          <div className="mt-1 font-display text-2xl font-bold text-foreground">{formatINR(cashTotal)}</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">
+            {totalRevenue > 0 ? Math.round((cashTotal / totalRevenue) * 100) : 0}% of revenue
+          </div>
+        </Card>
+
+        <Card className="p-4 border shadow-xs">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+            <CheckCircle2 className="h-4 w-4 text-primary" /> Paid / Unpaid
+          </div>
+          <div className="mt-1 font-display text-2xl font-bold text-foreground">
+            {paidTransactions.length} <span className="text-sm font-normal text-muted-foreground">Paid</span> / {unpaidTransactions.length} <span className="text-sm font-normal text-muted-foreground">Unpaid</span>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">
+            {paymentsList.length} total orders in system
+          </div>
+        </Card>
       </div>
 
-      <Card className="p-5 w-full">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <div className="font-display text-base font-semibold">Payment Methods Distribution</div>
-            <div className="text-xs text-muted-foreground">Cash vs UPI revenue</div>
+      {/* Dynamic Charts Section */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="p-5 w-full border shadow-xs">
+          <div className="mb-3">
+            <div className="font-display text-base font-semibold">Payment Methods Breakdown</div>
+            <div className="text-xs text-muted-foreground">Live revenue distribution by method</div>
           </div>
-        </div>
-        <ResponsiveContainer width="100%" height={180}>
-          <BarChart data={methodBreakdown}>
-            <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.008 60)" vertical={false} />
-            <XAxis dataKey="method" fontSize={11} tickLine={false} axisLine={false} />
-            <YAxis fontSize={11} tickLine={false} axisLine={false} />
-            <Tooltip
-              formatter={(val: any) => [formatINR(Number(val)), "Amount"]}
-              contentStyle={{ borderRadius: 12, border: "1px solid oklch(0.92 0.008 60)", fontSize: 12 }}
-            />
-            <Bar dataKey="amount" fill="oklch(0.68 0.19 40)" radius={[8, 8, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </Card>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={methodBreakdown}>
+              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.008 60)" vertical={false} />
+              <XAxis dataKey="method" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis fontSize={11} tickLine={false} axisLine={false} />
+              <Tooltip
+                formatter={(val: any) => [formatINR(Number(val)), "Revenue"]}
+                contentStyle={{ borderRadius: 12, border: "1px solid oklch(0.92 0.008 60)", fontSize: 12 }}
+              />
+              <Bar dataKey="amount" fill="oklch(0.68 0.19 40)" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
 
-      {/* Full Width Payment List with Dedicated Independent Scrollbar */}
+        <Card className="p-5 w-full border shadow-xs">
+          <div className="mb-3">
+            <div className="font-display text-base font-semibold">7-Day Sales Trend (UPI vs Cash)</div>
+            <div className="text-xs text-muted-foreground">Calculated strictly from live paid orders</div>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={dailyRevenueTrend}>
+              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.008 60)" vertical={false} />
+              <XAxis dataKey="day" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis fontSize={11} tickLine={false} axisLine={false} />
+              <Tooltip
+                formatter={(val: any, name: any) => [formatINR(Number(val)), name]}
+                contentStyle={{ borderRadius: 12, border: "1px solid oklch(0.92 0.008 60)", fontSize: 12 }}
+              />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="UPI" fill="oklch(0.55 0.15 260)" radius={[4, 4, 0, 0]} stackId="a" />
+              <Bar dataKey="Cash" fill="oklch(0.68 0.19 40)" radius={[4, 4, 0, 0]} stackId="a" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      </div>
+
+      {/* Full Width Payment List Table */}
       <Card className="w-full p-4 border shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -431,7 +297,6 @@ function PaymentsPage() {
           </div>
         </div>
 
-        {/* Payment Table with Visible Scrollbar and Frozen Sticky Header */}
         <Table className="w-full min-w-[700px]" containerClassName="max-h-[380px] overflow-y-auto overflow-x-auto scrollbar-thin rounded-lg border border-border bg-card shadow-xs relative">
           <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-md shadow-xs border-b">
             <TableRow className="hover:bg-transparent">
