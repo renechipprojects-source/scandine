@@ -87,12 +87,22 @@ export const syncManager = {
             .maybeSingle();
 
           if (!existing) {
+            const pMethod = order.payment_method || "Cash";
+            const pCategory = order.payment_category || (pMethod.toLowerCase().includes("upi") ? "upi" : "cash");
             const dbPayload = {
               id: order.id,
               order_id: orderIdStr,
               customer: order.customer_name || `Table ${tblNum} Customer`,
               table_number: tblNum,
-              item: order.items.map((it) => ({ name: it.name, qty: it.qty, price: it.price })),
+              item: order.items.map((it, idx) => ({
+                name: it.name,
+                qty: it.qty,
+                price: it.price,
+                ...(idx === 0 ? {
+                  payment_method: pMethod,
+                  payment_category: pCategory,
+                } : {})
+              })),
               total: Number(order.total),
               status: order.status || "pending",
               payment: order.payment_status === "paid" ? "paid" : "unpaid",

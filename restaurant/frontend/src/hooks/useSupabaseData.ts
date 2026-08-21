@@ -613,7 +613,15 @@ export async function markPaymentAndInvoiceAsPaid(
           .eq("id", candId)
           .select();
 
-        if (byId && byId.length > 0) break;
+        if (byId && byId.length > 0) {
+          const items = Array.isArray(byId[0].item) ? byId[0].item : [];
+          const updatedItems = items.map((it: any, idx: number) => ({
+            ...it,
+            ...(idx === 0 ? { payment_method: methodVal, payment_category: category } : {})
+          }));
+          await supabase.from("sd_orders").update({ item: updatedItems }).eq("id", byId[0].id);
+          break;
+        }
 
         let { data: byOrder } = await supabase
           .from("sd_orders")
@@ -621,7 +629,15 @@ export async function markPaymentAndInvoiceAsPaid(
           .eq("order_id", candId)
           .select();
 
-        if (byOrder && byOrder.length > 0) break;
+        if (byOrder && byOrder.length > 0) {
+          const items = Array.isArray(byOrder[0].item) ? byOrder[0].item : [];
+          const updatedItems = items.map((it: any, idx: number) => ({
+            ...it,
+            ...(idx === 0 ? { payment_method: methodVal, payment_category: category } : {})
+          }));
+          await supabase.from("sd_orders").update({ item: updatedItems }).eq("id", byOrder[0].id);
+          break;
+        }
       }
 
       // 2. Best-effort update for payment_method and payment_category in sd_orders

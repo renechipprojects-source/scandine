@@ -171,15 +171,17 @@ export function mapRowToDbOrder(row: any): DbOrder {
       ? row.items
       : [];
 
+  const firstItem = itemsArr[0] || {};
   const rawPayment = String(row.payment || row.payment_status || "").trim().toLowerCase();
   const isPaid = rawPayment === "paid" || rawPayment === "completed";
-  const rawMethod = String(row.payment_method || row.method || "").trim();
-  const rawCategory = String(row.payment_category || row.category || "").trim().toLowerCase();
+  const rawMethod = String(row.payment_method || row.method || firstItem.payment_method || firstItem.method || "").trim();
+  const rawCategory = String(row.payment_category || row.category || firstItem.payment_category || firstItem.category || "").trim().toLowerCase();
+  const rzpId = row.razorpay_payment_id || row.razorpay_order_id || firstItem.razorpay_payment_id || firstItem.razorpay_order_id;
 
   let resolvedMethod = rawMethod && rawMethod !== "—" ? rawMethod : undefined;
-  if (!resolvedMethod && (rawCategory === "upi" || row.razorpay_payment_id || row.razorpay_order_id)) {
+  if (!resolvedMethod && (rawCategory === "upi" || rawMethod.toLowerCase().includes("upi") || rzpId)) {
     resolvedMethod = "UPI";
-  } else if (!resolvedMethod && rawCategory === "cash") {
+  } else if (!resolvedMethod && (rawCategory === "cash" || rawMethod.toLowerCase().includes("cash"))) {
     resolvedMethod = "Cash";
   }
 
@@ -236,10 +238,17 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         return mapped;
       }
 
-      const itemsPayload = newOrder.items.map((it) => ({
+      const pMethod = newOrder.payment_method || "Cash";
+      const pCategory = newOrder.payment_category || (pMethod.toLowerCase().includes("upi") ? "upi" : "cash");
+
+      const itemsPayload = newOrder.items.map((it, idx) => ({
         name: it.name,
         qty: it.qty,
         price: it.price,
+        ...(idx === 0 ? {
+          payment_method: pMethod,
+          payment_category: pCategory,
+        } : {})
       }));
 
       const rawCust = typeof window !== "undefined" ? localStorage.getItem("scandine_current_customer") : null;
@@ -266,8 +275,8 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         status: newOrder.status || "pending",
         payment: newOrder.payment_status === "paid" ? "paid" : "unpaid",
         payment_status: newOrder.payment_status === "paid" ? "paid" : "unpaid",
-        payment_method: newOrder.payment_method || "Cash",
-        payment_category: newOrder.payment_category || "cash",
+        payment_method: pMethod,
+        payment_category: pCategory,
         order_time: newOrder.created_at,
         created_at: newOrder.created_at,
       };
@@ -580,9 +589,27 @@ export async function updateOrderPayment(orderId: string, paymentMethod: string 
         }
       }
 
-      // 3. Best-effort update for payment_method & payment_category if columns exist
+      // 3. Best-effort update for payment_method & payment_category in sd_orders item JSONB
       if (data && data.length > 0) {
-        const updatedRowId = data[0].id;
+        const row = data[0];
+        const updatedRowId = row.id;
+        const currentItems = Array.isArray(row.item) ? row.item : [];
+        const newItems = currentItems.map((it: any, idx: number) => ({
+          ...it,
+          ...(idx === 0 ? {
+            payment_method: paymentMethod,
+            payment_category: category,
+            ...(razorpayPaymentId ? { razorpay_payment_id: razorpayPaymentId } : {})
+          } : {})
+        }));
+
+        try {
+          await supabase
+            .from("sd_orders")
+            .update({ item: newItems })
+            .eq("id", updatedRowId);
+        } catch { }
+
         try {
           await supabase
             .from("sd_orders")

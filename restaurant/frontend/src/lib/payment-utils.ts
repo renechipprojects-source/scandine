@@ -47,11 +47,15 @@ export function exactMatchRef(rec: any, targetId: string, targetNum?: string): b
 export function resolvePaymentMethod(item: any): string {
   if (!item) return "—";
 
-  // 1. Direct fields on item
+  const firstItem = Array.isArray(item.items || item.item) ? (item.items || item.item)[0] || {} : {};
+
+  // 1. Direct fields on item or inside item JSONB
   const category = String(
     item.payment_category ||
     item.paymentCategory ||
     item.category ||
+    firstItem.payment_category ||
+    firstItem.category ||
     ""
   ).trim().toLowerCase();
 
@@ -61,6 +65,8 @@ export function resolvePaymentMethod(item: any): string {
     item.method ||
     item.payment_type ||
     item.paymentType ||
+    firstItem.payment_method ||
+    firstItem.method ||
     ""
   ).trim();
 
@@ -71,6 +77,8 @@ export function resolvePaymentMethod(item: any): string {
     item.tx_id ||
     item.razorpay_payment_id ||
     item.razorpay_order_id ||
+    firstItem.razorpay_payment_id ||
+    firstItem.razorpay_order_id ||
     ""
   ).trim();
 
@@ -78,7 +86,7 @@ export function resolvePaymentMethod(item: any): string {
   const lowerTxn = txnId.toLowerCase();
   const lowerId = String(item.id || "").toLowerCase();
 
-  // Explicit UPI checks on item
+  // Explicit UPI checks on item or item JSONB
   if (
     category === "upi" ||
     lowerMethod.includes("upi") ||
@@ -89,6 +97,8 @@ export function resolvePaymentMethod(item: any): string {
     lowerMethod.includes("online") ||
     item.razorpay_payment_id ||
     item.razorpay_order_id ||
+    firstItem.razorpay_payment_id ||
+    firstItem.razorpay_order_id ||
     lowerTxn.startsWith("pay_") ||
     lowerTxn.startsWith("txn_rzp") ||
     lowerTxn.includes("rzp") ||
@@ -98,7 +108,7 @@ export function resolvePaymentMethod(item: any): string {
     return "UPI";
   }
 
-  // Explicit Cash checks on item
+  // Explicit Cash checks on item or item JSONB
   if (
     category === "cash" ||
     lowerMethod === "cash" ||
@@ -184,21 +194,11 @@ export function resolvePaymentMethod(item: any): string {
 
   // 3. Fallback channel hints
   const channel = String(item.channel || item.order_channel || "").trim().toLowerCase();
-  if (channel === "counter") return "Cash";
-  if (channel === "waiter") return "Cash";
+  if (channel === "counter" || channel === "waiter") return "Cash";
 
   // 4. Custom non-empty method string
   if (rawMethod && rawMethod !== "—" && lowerMethod !== "paid" && lowerMethod !== "unpaid") {
     return rawMethod.charAt(0).toUpperCase() + rawMethod.slice(1);
-  }
-
-  // 5. For paid transactions with unspecified method text
-  const statusStr = String(item.payment_status || item.payment || item.status || "").trim().toLowerCase();
-  if (statusStr === "paid" || statusStr === "completed") {
-    if (item.razorpay_payment_id || item.razorpay_order_id) {
-      return "UPI";
-    }
-    return "Cash";
   }
 
   return "Cash";
