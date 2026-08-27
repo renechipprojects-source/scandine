@@ -365,10 +365,12 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
 }
 
 export async function getOrderById(
-  orderId: string,
+  orderId?: string,
   expectedSessionId?: string
 ): Promise<DbOrder | null> {
-  if (!orderId) return null;
+  if (!orderId || typeof orderId !== "string" || orderId === "undefined" || orderId === "null" || orderId === "[object Object]" || !orderId.trim()) {
+    return null;
+  }
   let order: DbOrder | null = null;
 
   if (isSupabaseConfigured()) {
@@ -377,11 +379,10 @@ export async function getOrderById(
       const { data, error } = await supabase
         .from("sd_orders")
         .select("*")
-        .or(`id.eq.${orderId},order_id.eq.${orderId},id.eq.${cleanId},order_id.eq.${cleanId}`)
-        .maybeSingle();
+        .or(`id.eq.${orderId},order_id.eq.${orderId},id.eq.${cleanId},order_id.eq.${cleanId}`);
 
-      if (!error && data) {
-        order = mapRowToDbOrder(data);
+      if (!error && data && data.length > 0) {
+        order = mapRowToDbOrder(data[0]);
       }
     } catch (err) {
       console.warn("Supabase fetch error:", err);

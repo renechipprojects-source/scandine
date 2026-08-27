@@ -190,7 +190,7 @@ export function useCustomer(table: string): CustomerDetails | null {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
-    () => loadCustomer(table),
-    () => SERVER_CUSTOMER
+    () => (typeof window !== "undefined" ? loadCustomer(table) : null),
+    () => null
   );
 }

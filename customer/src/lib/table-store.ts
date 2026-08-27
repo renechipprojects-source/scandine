@@ -101,7 +101,7 @@ export function useTable(): string {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
-    () => currentTableNumber,
-    () => currentTableNumber
+    () => (typeof window !== "undefined" ? currentTableNumber : ""),
+    () => ""
   );
 }

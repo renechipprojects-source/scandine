@@ -14,12 +14,14 @@ const tabs = [
 ] as const;
 
 export function CustomerNav() {
+  const [mounted, setMounted] = useState(false);
   const path = useRouterState({ select: (r) => r.location.pathname });
   const state = useCart();
   const tableNumber = useTable();
   const count = state.items.reduce((s, i) => s + i.qty, 0);
 
   useEffect(() => {
+    setMounted(true);
     tableStore.initFromUrl();
   }, []);
 
@@ -36,7 +38,7 @@ export function CustomerNav() {
         </Link>
         <div className="inline-flex items-center gap-1 text-xs font-semibold bg-primary/10 text-primary px-3 py-1 rounded-full border border-primary/20">
           <MapPin className="h-3 w-3 text-primary animate-pulse" />
-          <span>{tableNumber}</span>
+          <span>{mounted ? tableNumber : ""}</span>
         </div>
       </div>
 

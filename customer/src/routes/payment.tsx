@@ -27,19 +27,25 @@ export const Route = createFileRoute("/payment")({ component: Payment });
 import { CustomerRegistration } from "@/components/customer-registration";
 
 function Payment() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const tableNumber = useTable();
   const search = useSearch({ strict: false }) as { orderId?: string };
-  const activeId = search.orderId || cart.getActiveOrderId();
+  const rawActiveId = (search.orderId || cart.getActiveOrderId() || "").trim();
+  const activeId = (rawActiveId && rawActiveId !== "undefined" && rawActiveId !== "null" && rawActiveId !== "[object Object]") ? rawActiveId : "";
 
   const [order, setOrder] = useState<DbOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [sel, setSel] = useState("upi");
   const [gstRate, setGstRateState] = useState(5);
   
-  const savedCustomer = customerStore.getCustomer(tableNumber);
-  const [custName, setCustName] = useState(savedCustomer?.fullName || "");
-  const [custPhone, setCustPhone] = useState(savedCustomer?.phone || "");
-  const [custEmail, setCustEmail] = useState(savedCustomer?.email || "");
+  const savedCustomer = mounted ? customerStore.getCustomer(tableNumber) : null;
+  const [custName, setCustName] = useState("");
+  const [custPhone, setCustPhone] = useState("");
+  const [custEmail, setCustEmail] = useState("");
 
   const [state, setState] = useState<"idle" | "processing" | "success" | "failed">("idle");
   const nav = useNavigate();
@@ -57,6 +63,22 @@ function Payment() {
     return () => window.removeEventListener("sd_gst_rate_updated", handleGstUpdate);
   }, []);
 
+  useEffect(() => {
+    if (savedCustomer) {
+      if (savedCustomer.fullName) setCustName(savedCustomer.fullName);
+      if (savedCustomer.phone) setCustPhone(savedCustomer.phone);
+      if (savedCustomer.email) setCustEmail(savedCustomer.email);
+    }
+  }, [savedCustomer]);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!savedCustomer) {
     return (
       <CustomerRegistration
@@ -65,14 +87,6 @@ function Payment() {
       />
     );
   }
-
-  useEffect(() => {
-    if (savedCustomer) {
-      if (!custName && savedCustomer.fullName) setCustName(savedCustomer.fullName);
-      if (!custPhone && savedCustomer.phone) setCustPhone(savedCustomer.phone);
-      if (!custEmail && savedCustomer.email) setCustEmail(savedCustomer.email);
-    }
-  }, [savedCustomer]);
 
   useEffect(() => {
     let unsubscribe = () => {};
