@@ -61,7 +61,17 @@ function StaffLogin() {
         >
           {/* Staff Header */}
           <div className="text-center mb-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20 mb-3">
+            <Link to="/" className="inline-block mb-3 group">
+              <div className="relative rounded-3xl bg-white/80 dark:bg-card/80 p-3 border border-white/80 dark:border-border/80 shadow-[0_14px_35px_-6px_rgba(0,0,0,0.12),0_6px_14px_-4px_rgba(0,0,0,0.06)] backdrop-blur-xl transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-[0_18px_42px_-6px_rgba(0,0,0,0.16)]">
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-3xl bg-gradient-to-b from-white/60 to-transparent" />
+                <img
+                  src="/scandine-customer-logo.png"
+                  alt="ScanDine"
+                  className="h-16 w-16 sm:h-20 sm:w-20 object-contain relative z-10 rounded-2xl drop-shadow-[0_6px_12px_rgba(0,0,0,0.12)]"
+                />
+              </div>
+            </Link>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20 mb-3 block mx-auto w-fit">
               <ShieldCheck className="h-3.5 w-3.5" /> Commercial Restaurant ERP
             </div>
             <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
@@ -151,12 +161,11 @@ function StaffLogin() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+            <div className="flex items-center text-xs text-muted-foreground pt-1">
               <label htmlFor="remember-session" className="flex items-center gap-2 cursor-pointer select-none">
                 <input id="remember-session" name="rememberSession" type="checkbox" defaultChecked className="rounded border-muted-foreground/40 text-primary" />
                 <span>Remember session</span>
               </label>
-              <span className="text-primary hover:underline cursor-pointer">Forgot PIN?</span>
             </div>
 
             <button

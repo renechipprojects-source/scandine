@@ -198,9 +198,16 @@ function LoginPage() {
 
       <main className="w-full max-w-[480px] px-6 py-12 flex flex-col items-center justify-center animate-rise my-auto">
         {/* Header Branding */}
-        <header className="flex flex-col items-center justify-center text-center mb-2">
-          <Link to="/" className="flex items-center justify-center">
-            <img src="/scandine-logo.png" alt="ScanDine" className="h-24 sm:h-28 w-auto object-contain" />
+        <header className="flex flex-col items-center justify-center text-center mb-4">
+          <Link to="/" className="group flex items-center justify-center">
+            <div className="relative rounded-3xl bg-white/80 dark:bg-card/80 p-3 border border-white/80 dark:border-border/80 shadow-[0_14px_35px_-6px_rgba(0,0,0,0.12),0_6px_14px_-4px_rgba(0,0,0,0.06)] backdrop-blur-xl transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-[0_18px_42px_-6px_rgba(0,0,0,0.16)]">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-3xl bg-gradient-to-b from-white/60 to-transparent" />
+              <img
+                src="/scandine-logo.png"
+                alt="ScanDine"
+                className="h-24 sm:h-28 w-auto object-contain relative z-10 rounded-2xl drop-shadow-[0_6px_12px_rgba(0,0,0,0.12)]"
+              />
+            </div>
           </Link>
         </header>
 
