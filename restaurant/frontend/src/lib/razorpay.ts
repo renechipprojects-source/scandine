@@ -1,6 +1,7 @@
 import { fetchFromBackend } from "./api";
 
 export interface CreateRazorpayOrderOptions {
+  order_id?: string;
   amount: number; // in INR
   currency?: string;
   receipt?: string;
@@ -19,6 +20,7 @@ export async function createRazorpayOrder(options: CreateRazorpayOrderOptions) {
 }
 
 export async function verifyRazorpayPayment(paymentData: {
+  order_id?: string;
   razorpay_order_id: string;
   razorpay_payment_id: string;
   razorpay_signature: string;

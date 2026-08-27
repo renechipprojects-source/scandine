@@ -98,16 +98,16 @@ function IngredientsPage() {
                 </DialogHeader>
                 <form onSubmit={handleAdd} className="space-y-3 mt-2">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground">Ingredient Name</label>
-                    <Input required value={ingredient} onChange={(e) => setIngredient(e.target.value)} placeholder="Truffle Butter" className="mt-1" />
+                    <label htmlFor="ingredient-name-input" className="text-xs font-semibold text-muted-foreground">Ingredient Name</label>
+                    <Input id="ingredient-name-input" name="ingredientName" aria-label="Ingredient Name" required value={ingredient} onChange={(e) => setIngredient(e.target.value)} placeholder="Truffle Butter" className="mt-1" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground">Supplier</label>
-                    <Input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Napa Valley Dairy" className="mt-1" />
+                    <label htmlFor="ingredient-supplier-input" className="text-xs font-semibold text-muted-foreground">Supplier</label>
+                    <Input id="ingredient-supplier-input" name="supplierName" aria-label="Supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Napa Valley Dairy" className="mt-1" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground">Stock Quantity</label>
-                    <Input type="number" value={stock} onChange={(e) => setStock(Number(e.target.value))} className="mt-1" />
+                    <label htmlFor="ingredient-stock-input" className="text-xs font-semibold text-muted-foreground">Stock Quantity</label>
+                    <Input id="ingredient-stock-input" name="stockQuantity" aria-label="Stock Quantity" type="number" value={stock} onChange={(e) => setStock(Number(e.target.value))} className="mt-1" />
                   </div>
                   <div className="flex justify-end gap-2 pt-2">
                     <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
@@ -140,7 +140,10 @@ function IngredientsPage() {
           <div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              id="admin-ingredients-search"
+              name="ingredientsSearch"
               placeholder="Search ingredients…"
+              aria-label="Search ingredients"
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

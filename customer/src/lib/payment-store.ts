@@ -24,42 +24,10 @@ export type PaymentRecord = {
   verified_by?: string;
 };
 
-const PAYMENTS_KEY = "scandine_payment_records_v1";
-
-let cachedPayments: PaymentRecord[] = (() => {
-  try {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(PAYMENTS_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    }
-  } catch {}
-  return [];
-})();
-
+let cachedPayments: PaymentRecord[] = [];
 const listeners = new Set<() => void>();
 
-let channel: BroadcastChannel | null = null;
-if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-  channel = new BroadcastChannel("aura_dine_sync_channel");
-  channel.onmessage = (event) => {
-    if (event.data?.type === "PAYMENTS_UPDATE") {
-      cachedPayments = event.data.payments;
-      try {
-        localStorage.setItem(PAYMENTS_KEY, JSON.stringify(cachedPayments));
-      } catch {}
-      listeners.forEach((l) => l());
-    }
-  };
-}
-
-function persistPayments() {
-  try {
-    localStorage.setItem(PAYMENTS_KEY, JSON.stringify(cachedPayments));
-  } catch {}
-  channel?.postMessage({ type: "PAYMENTS_UPDATE", payments: cachedPayments });
+function notifyListeners() {
   listeners.forEach((l) => l());
 }
 
@@ -69,8 +37,10 @@ export const paymentStore = {
   },
 
   getPaymentForOrder(orderId: string): PaymentRecord | undefined {
+    if (!orderId) return undefined;
+    const cleanId = String(orderId).replace(/^#/, "").trim().toLowerCase();
     return cachedPayments.find(
-      (p) => p.order_id === orderId || p.order_number === orderId || p.id === orderId
+      (p) => String(p.order_id).toLowerCase() === cleanId || String(p.id).toLowerCase() === cleanId
     );
   },
 
@@ -79,7 +49,6 @@ export const paymentStore = {
   },
 
   addPaymentRecord(record: PaymentRecord): PaymentRecord {
-    // Deduplication check
     const existingIndex = cachedPayments.findIndex(
       (p) => p.id === record.id || (p.order_id === record.order_id && p.status === record.status)
     );
@@ -89,7 +58,7 @@ export const paymentStore = {
     } else {
       cachedPayments = [record, ...cachedPayments];
     }
-    persistPayments();
+    notifyListeners();
     return record;
   },
 
@@ -98,7 +67,7 @@ export const paymentStore = {
     const now = new Date().toISOString();
 
     cachedPayments = cachedPayments.map((p) => {
-      if (p.id === paymentId || p.order_id === paymentId || p.invoice_id === paymentId) {
+      if (p.id === paymentId || p.order_id === paymentId) {
         updated = true;
         return {
           ...p,
@@ -111,7 +80,7 @@ export const paymentStore = {
     });
 
     if (updated) {
-      persistPayments();
+      notifyListeners();
       toast.success(`Payment verified and marked PAID by ${verifiedBy}`);
     }
     return updated;
@@ -119,7 +88,7 @@ export const paymentStore = {
 
   setPayments(records: PaymentRecord[]) {
     cachedPayments = records;
-    persistPayments();
+    notifyListeners();
   },
 };
 

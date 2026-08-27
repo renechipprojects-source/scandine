@@ -97,12 +97,14 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
         {/* Registration Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-muted-foreground block mb-1">
+            <label htmlFor="cust-reg-name" className="text-xs font-semibold text-muted-foreground block mb-1">
               Full Name <span className="text-destructive">*</span>
             </label>
             <div className="relative">
               <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <input
+                id="cust-reg-name"
+                name="fullName"
                 type="text"
                 required
                 value={fullName}
@@ -114,12 +116,14 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-muted-foreground block mb-1">
+            <label htmlFor="cust-reg-phone" className="text-xs font-semibold text-muted-foreground block mb-1">
               Phone Number <span className="text-destructive">*</span>
             </label>
             <div className="relative">
               <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <input
+                id="cust-reg-phone"
+                name="phone"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -139,12 +143,14 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-muted-foreground block mb-1">
+            <label htmlFor="cust-reg-email" className="text-xs font-semibold text-muted-foreground block mb-1">
               Email Address <span className="text-muted-foreground font-normal">(Optional)</span>
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <input
+                id="cust-reg-email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

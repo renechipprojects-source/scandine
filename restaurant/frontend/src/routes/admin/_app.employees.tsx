@@ -54,7 +54,7 @@ function generateSecurePassword(): string {
   return pass.split("").sort(() => 0.5 - Math.random()).join("");
 }
 
-export function EmployeesPage() {
+function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -450,8 +450,10 @@ export function EmployeesPage() {
 
               <form onSubmit={handleAddStaff} className="space-y-3.5 mt-2">
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground">Full Name *</label>
+                  <label htmlFor="add-emp-name" className="text-xs font-semibold text-muted-foreground">Full Name *</label>
                   <Input
+                    id="add-emp-name"
+                    name="empName"
                     value={name}
                     onChange={(e) => {
                       setName(e.target.value);
@@ -464,8 +466,10 @@ export function EmployeesPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground">Email Address *</label>
+                  <label htmlFor="add-emp-email" className="text-xs font-semibold text-muted-foreground">Email Address *</label>
                   <Input
+                    id="add-emp-email"
+                    name="empEmail"
                     type="email"
                     value={email}
                     onChange={(e) => {
@@ -479,8 +483,10 @@ export function EmployeesPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground">Phone Number *</label>
+                  <label htmlFor="add-emp-phone" className="text-xs font-semibold text-muted-foreground">Phone Number *</label>
                   <Input
+                    id="add-emp-phone"
+                    name="empPhone"
                     value={phone}
                     onChange={(e) => {
                       setPhone(e.target.value);
@@ -493,8 +499,11 @@ export function EmployeesPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground">Role *</label>
+                  <label htmlFor="add-emp-role" className="text-xs font-semibold text-muted-foreground">Role *</label>
                   <select
+                    id="add-emp-role"
+                    name="empRole"
+                    aria-label="Role"
                     value={role}
                     onChange={(e) => {
                       setRole(e.target.value as Employee["role"]);
@@ -511,8 +520,10 @@ export function EmployeesPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground">Address / Branch</label>
+                  <label htmlFor="add-emp-address" className="text-xs font-semibold text-muted-foreground">Address / Branch</label>
                   <Input
+                    id="add-emp-address"
+                    name="empAddress"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="e.g. Main Branch, San Francisco"
@@ -524,7 +535,7 @@ export function EmployeesPage() {
                 {isAuthRoleSelected && (
                   <div className="rounded-xl border border-border/80 bg-muted/30 p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <label htmlFor="add-emp-password" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                         <Key className="h-3.5 w-3.5 text-primary" /> Generate Password *
                       </label>
                       <div className="flex items-center gap-1">
@@ -558,6 +569,8 @@ export function EmployeesPage() {
 
                     <div className="relative">
                       <Input
+                        id="add-emp-password"
+                        name="empPassword"
                         type={showPassword ? "text" : "password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -614,7 +627,10 @@ export function EmployeesPage() {
           <div className="relative ml-auto max-w-xs flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              id="search-staff-input"
+              name="staffSearch"
               placeholder="Search staff by name, email or role…"
+              aria-label="Search staff by name, email or role"
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -716,8 +732,10 @@ export function EmployeesPage() {
 
           <form onSubmit={handleUpdateStaff} className="space-y-3.5 mt-2">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground">Full Name *</label>
+              <label htmlFor="edit-emp-name" className="text-xs font-semibold text-muted-foreground">Full Name *</label>
               <Input
+                id="edit-emp-name"
+                name="editEmpName"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder="e.g. Carlos Gomez"
@@ -726,8 +744,10 @@ export function EmployeesPage() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-muted-foreground">Email Address *</label>
+              <label htmlFor="edit-emp-email" className="text-xs font-semibold text-muted-foreground">Email Address *</label>
               <Input
+                id="edit-emp-email"
+                name="editEmpEmail"
                 type="email"
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
@@ -737,8 +757,10 @@ export function EmployeesPage() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-muted-foreground">Phone Number *</label>
+              <label htmlFor="edit-emp-phone" className="text-xs font-semibold text-muted-foreground">Phone Number *</label>
               <Input
+                id="edit-emp-phone"
+                name="editEmpPhone"
                 value={editPhone}
                 onChange={(e) => setEditPhone(e.target.value)}
                 placeholder="e.g. +1 415 555 0105"
@@ -747,8 +769,11 @@ export function EmployeesPage() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-muted-foreground">Role *</label>
+              <label htmlFor="edit-emp-role" className="text-xs font-semibold text-muted-foreground">Role *</label>
               <select
+                id="edit-emp-role"
+                name="editEmpRole"
+                aria-label="Role"
                 value={editRole}
                 onChange={(e) => setEditRole(e.target.value as Employee["role"])}
                 className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -761,8 +786,11 @@ export function EmployeesPage() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-muted-foreground">Status *</label>
+              <label htmlFor="edit-emp-status" className="text-xs font-semibold text-muted-foreground">Status *</label>
               <select
+                id="edit-emp-status"
+                name="editEmpStatus"
+                aria-label="Status"
                 value={editStatus}
                 onChange={(e) => setEditStatus(e.target.value)}
                 className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -773,8 +801,10 @@ export function EmployeesPage() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-muted-foreground">Password</label>
+              <label htmlFor="edit-emp-password" className="text-xs font-semibold text-muted-foreground">Password</label>
               <Input
+                id="edit-emp-password"
+                name="editEmpPassword"
                 value={editPassword}
                 onChange={(e) => setEditPassword(e.target.value)}
                 placeholder="Update password (optional)"
@@ -783,8 +813,10 @@ export function EmployeesPage() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-muted-foreground">Address / Branch</label>
+              <label htmlFor="edit-emp-address" className="text-xs font-semibold text-muted-foreground">Address / Branch</label>
               <Input
+                id="edit-emp-address"
+                name="editEmpAddress"
                 value={editAddress}
                 onChange={(e) => setEditAddress(e.target.value)}
                 placeholder="e.g. Main Branch, San Francisco"

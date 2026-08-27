@@ -53,9 +53,15 @@ export function useOrderCountdown(
   onTimerComplete?: () => void
 ) {
   const onCompleteRef = useRef(onTimerComplete);
+  const hasFiredRef = useRef(false);
+
   useEffect(() => {
     onCompleteRef.current = onTimerComplete;
   }, [onTimerComplete]);
+
+  useEffect(() => {
+    hasFiredRef.current = false;
+  }, [estimatedReadyAt]);
 
   const getSecondsLeft = (): number => {
     if (!estimatedReadyAt || (status !== "accepted" && status !== "preparing")) {
@@ -83,7 +89,8 @@ export function useOrderCountdown(
 
       if (left <= 0) {
         clearInterval(intervalId);
-        if (onCompleteRef.current) {
+        if (!hasFiredRef.current && onCompleteRef.current) {
+          hasFiredRef.current = true;
           onCompleteRef.current();
         }
       }

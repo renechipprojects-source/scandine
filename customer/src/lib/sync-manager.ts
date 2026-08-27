@@ -1,6 +1,6 @@
 // Enterprise-grade Offline Synchronization & Network Recovery Manager
 import { useSyncExternalStore } from "react";
-import { supabase, isSupabaseConfigured, type DbOrder, type ServiceRequest, mapRowToDbOrder } from "./supabase";
+import { supabase, isSupabaseConfigured, type DbOrder, type ServiceRequest, mapRowToDbOrder, normalizeOrderStatus, normalizePaymentStatus } from "./supabase";
 import { toast } from "sonner";
 
 export type OfflineAction =
@@ -104,8 +104,8 @@ export const syncManager = {
                 } : {})
               })),
               total: Number(order.total),
-              status: order.status || "pending",
-              payment: order.payment_status === "paid" ? "paid" : "unpaid",
+              status: normalizeOrderStatus(order.status),
+              payment: normalizePaymentStatus(order.payment_status || pMethod),
               order_time: action.timestamp,
               created_at: action.timestamp,
             };

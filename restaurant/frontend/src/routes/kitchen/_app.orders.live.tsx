@@ -259,25 +259,15 @@ function LiveOrdersPage() {
     const acceptedAtISO = new Date(nowMs).toISOString();
     const estimatedReadyISO = new Date(estimatedReadyMs).toISOString();
 
-    const primaryId = order.id || order.order_id;
-    const secondaryId = order.order_id;
+    const targetId = order.id || order.order_id;
 
     try {
-      await updateItem(primaryId, {
+      await updateItem(targetId, {
         status: "accepted",
         accepted_at: acceptedAtISO,
         prep_time_minutes: maxPrepMinutes,
         estimated_ready_at: estimatedReadyISO,
       });
-
-      if (secondaryId && secondaryId !== primaryId) {
-        await updateItem(secondaryId, {
-          status: "accepted",
-          accepted_at: acceptedAtISO,
-          prep_time_minutes: maxPrepMinutes,
-          estimated_ready_at: estimatedReadyISO,
-        });
-      }
 
       toast.success(`Order ${order.order_id || order.id} accepted! 👨‍🍳`);
 
@@ -301,11 +291,8 @@ function LiveOrdersPage() {
   const handleAutoReady = async (order: Order) => {
     if (order.status !== "preparing" && order.status !== "accepted") return;
     try {
-      const primaryId = order.id || order.order_id;
-      await updateItem(primaryId, { status: "ready" });
-      if (order.order_id && order.order_id !== primaryId) {
-        await updateItem(order.order_id, { status: "ready" });
-      }
+      const targetId = order.id || order.order_id;
+      await updateItem(targetId, { status: "ready" });
 
       toast.success(`🚀 Order ${order.order_id || order.id} preparation timer completed! Marked as Ready.`);
 
@@ -343,11 +330,8 @@ function LiveOrdersPage() {
 
     if (nextStatus !== order.status) {
       try {
-        const primaryId = order.id || order.order_id;
-        await updateItem(primaryId, { status: nextStatus });
-        if (order.order_id && order.order_id !== primaryId) {
-          await updateItem(order.order_id, { status: nextStatus });
-        }
+        const targetId = order.id || order.order_id;
+        await updateItem(targetId, { status: nextStatus });
 
         toast.success(toastMessage);
 
@@ -368,15 +352,10 @@ function LiveOrdersPage() {
   };
 
   const handleCancelOrder = async (order: Order) => {
-    const primaryId = order.id || order.order_id;
-    const secondaryId = order.order_id;
+    const targetId = order.id || order.order_id;
 
     try {
-      await updateItem(primaryId, { status: "cancelled" });
-
-      if (secondaryId && secondaryId !== primaryId) {
-        await updateItem(secondaryId, { status: "cancelled" });
-      }
+      await updateItem(targetId, { status: "cancelled" });
 
       toast.error(`Order ${order.order_id || order.id} cancelled ❌`);
 
@@ -444,6 +423,9 @@ function LiveOrdersPage() {
         <div className="relative min-w-[220px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            id="kitchen-live-orders-search"
+            name="searchQuery"
+            aria-label="Search order, table or customer"
             placeholder="Search order, table or customer…"
             className="pl-9"
             value={searchQuery}
@@ -451,7 +433,7 @@ function LiveOrdersPage() {
           />
         </div>
         <Select value={channelFilter} onValueChange={setChannelFilter}>
-          <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger id="kitchen-live-orders-channel-filter" name="channelFilter" aria-label="Filter by order channel" className="w-[150px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All channels</SelectItem>
             <SelectItem value="qr">QR Order</SelectItem>

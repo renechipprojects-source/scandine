@@ -40,10 +40,13 @@ function Feedback() {
           <div className="mt-4"><Stars label="Service" value={service} onChange={setService} /></div>
 
           <div className="mt-6">
-            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Write a review</div>
+            <label htmlFor="feedback-review-text" className="text-xs uppercase tracking-widest text-muted-foreground mb-2 block">Write a review</label>
             <textarea
+              id="feedback-review-text"
+              name="reviewText"
               value={text} onChange={(e) => setText(e.target.value)}
               placeholder="Loved the truffle risotto, will come back for more…"
+              aria-label="Write a review"
               rows={4}
               className="w-full rounded-2xl border bg-background p-3 text-sm resize-none"
             />

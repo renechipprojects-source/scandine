@@ -312,6 +312,7 @@ function Field({
         </span>
         <input
           id={id}
+          name={id}
           type={type}
           placeholder={placeholder}
           autoComplete={autoComplete}

@@ -37,6 +37,7 @@ import { Route as KitchenAppMenuAddRouteImport } from './routes/kitchen/_app.men
 import { Route as KitchenAppMenuItemsRouteImport } from './routes/kitchen/_app.menu.items'
 import { Route as KitchenAppOrdersHistoryRouteImport } from './routes/kitchen/_app.orders.history'
 import { Route as KitchenAppOrdersLiveRouteImport } from './routes/kitchen/_app.orders.live'
+import { Route as ReceptionAppBillingCashCollectionRouteImport } from './routes/reception/_app.billing.cash-collection'
 import { Route as ReceptionAppBillingInvoicesRouteImport } from './routes/reception/_app.billing.invoices'
 import { Route as ReceptionAppBillingPaymentsRouteImport } from './routes/reception/_app.billing.payments'
 import { Route as ReceptionAppInventoryIngredientsRouteImport } from './routes/reception/_app.inventory.ingredients'
@@ -185,6 +186,12 @@ const KitchenAppOrdersLiveRoute = KitchenAppOrdersLiveRouteImport.update({
   path: '/orders/live',
   getParentRoute: () => KitchenAppRoute,
 } as any)
+const ReceptionAppBillingCashCollectionRoute =
+  ReceptionAppBillingCashCollectionRouteImport.update({
+    id: '/billing/cash-collection',
+    path: '/billing/cash-collection',
+    getParentRoute: () => ReceptionAppRoute,
+  } as any)
 const ReceptionAppBillingInvoicesRoute =
   ReceptionAppBillingInvoicesRouteImport.update({
     id: '/billing/invoices',
@@ -239,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/kitchen/menu/items': typeof KitchenAppMenuItemsRoute
   '/kitchen/orders/history': typeof KitchenAppOrdersHistoryRoute
   '/kitchen/orders/live': typeof KitchenAppOrdersLiveRoute
+  '/reception/billing/cash-collection': typeof ReceptionAppBillingCashCollectionRoute
   '/reception/billing/invoices': typeof ReceptionAppBillingInvoicesRoute
   '/reception/billing/payments': typeof ReceptionAppBillingPaymentsRoute
   '/reception/inventory/ingredients': typeof ReceptionAppInventoryIngredientsRoute
@@ -270,6 +278,7 @@ export interface FileRoutesByTo {
   '/kitchen/menu/items': typeof KitchenAppMenuItemsRoute
   '/kitchen/orders/history': typeof KitchenAppOrdersHistoryRoute
   '/kitchen/orders/live': typeof KitchenAppOrdersLiveRoute
+  '/reception/billing/cash-collection': typeof ReceptionAppBillingCashCollectionRoute
   '/reception/billing/invoices': typeof ReceptionAppBillingInvoicesRoute
   '/reception/billing/payments': typeof ReceptionAppBillingPaymentsRoute
   '/reception/inventory/ingredients': typeof ReceptionAppInventoryIngredientsRoute
@@ -305,6 +314,7 @@ export interface FileRoutesById {
   '/kitchen/_app/menu/items': typeof KitchenAppMenuItemsRoute
   '/kitchen/_app/orders/history': typeof KitchenAppOrdersHistoryRoute
   '/kitchen/_app/orders/live': typeof KitchenAppOrdersLiveRoute
+  '/reception/_app/billing/cash-collection': typeof ReceptionAppBillingCashCollectionRoute
   '/reception/_app/billing/invoices': typeof ReceptionAppBillingInvoicesRoute
   '/reception/_app/billing/payments': typeof ReceptionAppBillingPaymentsRoute
   '/reception/_app/inventory/ingredients': typeof ReceptionAppInventoryIngredientsRoute
@@ -341,6 +351,7 @@ export interface FileRouteTypes {
     | '/kitchen/menu/items'
     | '/kitchen/orders/history'
     | '/kitchen/orders/live'
+    | '/reception/billing/cash-collection'
     | '/reception/billing/invoices'
     | '/reception/billing/payments'
     | '/reception/inventory/ingredients'
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | '/kitchen/menu/items'
     | '/kitchen/orders/history'
     | '/kitchen/orders/live'
+    | '/reception/billing/cash-collection'
     | '/reception/billing/invoices'
     | '/reception/billing/payments'
     | '/reception/inventory/ingredients'
@@ -406,6 +418,7 @@ export interface FileRouteTypes {
     | '/kitchen/_app/menu/items'
     | '/kitchen/_app/orders/history'
     | '/kitchen/_app/orders/live'
+    | '/reception/_app/billing/cash-collection'
     | '/reception/_app/billing/invoices'
     | '/reception/_app/billing/payments'
     | '/reception/_app/inventory/ingredients'
@@ -622,6 +635,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KitchenAppOrdersLiveRouteImport
       parentRoute: typeof KitchenAppRoute
     }
+    '/reception/_app/billing/cash-collection': {
+      id: '/reception/_app/billing/cash-collection'
+      path: '/billing/cash-collection'
+      fullPath: '/reception/billing/cash-collection'
+      preLoaderRoute: typeof ReceptionAppBillingCashCollectionRouteImport
+      parentRoute: typeof ReceptionAppRoute
+    }
     '/reception/_app/billing/invoices': {
       id: '/reception/_app/billing/invoices'
       path: '/billing/invoices'
@@ -710,6 +730,7 @@ const KitchenAppRouteWithChildren = KitchenAppRoute._addFileChildren(
 interface ReceptionAppRouteChildren {
   ReceptionAppCustomersRoute: typeof ReceptionAppCustomersRoute
   ReceptionAppDashboardRoute: typeof ReceptionAppDashboardRoute
+  ReceptionAppBillingCashCollectionRoute: typeof ReceptionAppBillingCashCollectionRoute
   ReceptionAppBillingInvoicesRoute: typeof ReceptionAppBillingInvoicesRoute
   ReceptionAppBillingPaymentsRoute: typeof ReceptionAppBillingPaymentsRoute
   ReceptionAppInventoryIngredientsRoute: typeof ReceptionAppInventoryIngredientsRoute
@@ -719,6 +740,8 @@ interface ReceptionAppRouteChildren {
 const ReceptionAppRouteChildren: ReceptionAppRouteChildren = {
   ReceptionAppCustomersRoute: ReceptionAppCustomersRoute,
   ReceptionAppDashboardRoute: ReceptionAppDashboardRoute,
+  ReceptionAppBillingCashCollectionRoute:
+    ReceptionAppBillingCashCollectionRoute,
   ReceptionAppBillingInvoicesRoute: ReceptionAppBillingInvoicesRoute,
   ReceptionAppBillingPaymentsRoute: ReceptionAppBillingPaymentsRoute,
   ReceptionAppInventoryIngredientsRoute: ReceptionAppInventoryIngredientsRoute,

@@ -270,8 +270,10 @@ function KitchenItemsPage() {
 
               <form onSubmit={handleCreateFoodItem} className="space-y-4 mt-2">
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground">Food Name *</label>
+                  <label htmlFor="kitchen-food-name" className="text-xs font-semibold text-muted-foreground">Food Name *</label>
                   <Input
+                    id="kitchen-food-name"
+                    name="foodName"
                     value={name}
                     onChange={(e) => {
                       setName(e.target.value);
@@ -285,12 +287,12 @@ function KitchenItemsPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground">Category *</label>
+                    <label htmlFor="kitchen-food-category" className="text-xs font-semibold text-muted-foreground">Category *</label>
                     <Select value={category} onValueChange={(val) => {
                       setCategory(val);
                       if (errors.category) setErrors((prev) => ({ ...prev, category: undefined }));
                     }}>
-                      <SelectTrigger className={`mt-1 ${errors.category ? "border-destructive" : ""}`}>
+                      <SelectTrigger id="kitchen-food-category" aria-label="Category" className={`mt-1 ${errors.category ? "border-destructive" : ""}`}>
                         <SelectValue placeholder="Select Category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -306,8 +308,10 @@ function KitchenItemsPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground">Price (₹) *</label>
+                    <label htmlFor="kitchen-food-price" className="text-xs font-semibold text-muted-foreground">Price (₹) *</label>
                     <Input
+                      id="kitchen-food-price"
+                      name="foodPrice"
                       type="number"
                       step="0.01"
                       value={price}
@@ -324,9 +328,11 @@ function KitchenItemsPage() {
 
                 {/* Image Upload & Uniform Aspect Ratio Preview Section */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-muted-foreground">Food Image *</label>
+                  <label htmlFor="kitchen-food-image-url" className="text-xs font-semibold text-muted-foreground">Food Image *</label>
                   <div className="flex gap-2">
                     <Input
+                      id="kitchen-food-image-url"
+                      name="foodImageUrl"
                       value={imageUrl}
                       onChange={(e) => {
                         setImageUrl(e.target.value);
@@ -335,10 +341,10 @@ function KitchenItemsPage() {
                       placeholder="Paste Image URL or upload below…"
                       className={`flex-1 text-xs ${errors.image ? "border-destructive" : ""}`}
                     />
-                    <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-2 text-xs font-semibold hover:bg-muted transition">
+                    <label htmlFor="kitchen-food-file" className="cursor-pointer inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-2 text-xs font-semibold hover:bg-muted transition">
                       {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
                       Upload
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageFileChange} disabled={uploading} />
+                      <input id="kitchen-food-file" name="foodFile" aria-label="Upload food image file" type="file" accept="image/*" className="hidden" onChange={handleImageFileChange} disabled={uploading} />
                     </label>
                   </div>
                   {errors.image && <p className="text-[11px] text-destructive font-medium">{errors.image}</p>}
@@ -369,8 +375,10 @@ function KitchenItemsPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground">Description *</label>
+                  <label htmlFor="kitchen-food-description" className="text-xs font-semibold text-muted-foreground">Description *</label>
                   <Textarea
+                    id="kitchen-food-description"
+                    name="foodDescription"
                     value={description}
                     onChange={(e) => {
                       setDescription(e.target.value);
@@ -391,11 +399,14 @@ function KitchenItemsPage() {
                     </label>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">Prep time:</span>
+                    <label htmlFor="kitchen-prep-time" className="text-xs text-muted-foreground">Prep time:</label>
                     <Input
+                      id="kitchen-prep-time"
+                      name="prepTime"
                       type="number"
                       value={prepTime}
                       onChange={(e) => setPrepTime(e.target.value)}
+                      aria-label="Preparation time in minutes"
                       className="w-16 h-8 text-xs font-mono"
                     />
                     <span className="text-xs text-muted-foreground">min</span>
@@ -421,7 +432,10 @@ function KitchenItemsPage() {
           <div className="relative min-w-[220px] max-w-xs flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              id="kitchen-items-search"
+              name="itemsSearch"
               placeholder="Search food items…"
+              aria-label="Search food items"
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -430,7 +444,7 @@ function KitchenItemsPage() {
 
           <div className="w-[180px]">
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
+              <SelectTrigger id="kitchen-category-filter" aria-label="Filter by Category">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>

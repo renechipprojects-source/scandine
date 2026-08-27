@@ -206,6 +206,31 @@ export function mapRowToDbOrder(row: any): DbOrder {
   };
 }
 
+export type CanonicalOrderStatus = "pending" | "accepted" | "preparing" | "ready" | "completed" | "cancelled";
+
+export function normalizeOrderStatus(rawStatus?: string | null): CanonicalOrderStatus {
+  if (!rawStatus) return "pending";
+  const s = String(rawStatus).toLowerCase().trim();
+  if (s === "pending" || s === "placed" || s === "new" || s === "received") return "pending";
+  if (s === "accepted" || s === "confirmed") return "accepted";
+  if (s === "preparing" || s === "in_kitchen" || s === "cooking") return "preparing";
+  if (s === "ready" || s === "served" || s === "dispatch") return "ready";
+  if (s === "completed" || s === "done" || s === "finished") return "completed";
+  if (s === "cancelled" || s === "canceled" || s === "rejected") return "cancelled";
+  return "pending";
+}
+
+export type CanonicalPaymentStatus = "paid" | "unpaid" | "refunded" | "pending";
+
+export function normalizePaymentStatus(rawPayment?: string | null): CanonicalPaymentStatus {
+  if (!rawPayment) return "unpaid";
+  const p = String(rawPayment).toLowerCase().trim();
+  if (p === "paid" || p === "success" || p === "verified") return "paid";
+  if (p === "refunded") return "refunded";
+  if (p === "pending" || p === "pending_verification") return "pending";
+  return "unpaid";
+}
+
 // Order Functions
 export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Promise<DbOrder> {
   const newOrder: DbOrder = {
@@ -262,6 +287,9 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         } catch { }
       }
 
+      const normStatus = normalizeOrderStatus(newOrder.status);
+      const normPayment = normalizePaymentStatus(newOrder.payment_status || pMethod);
+
       const dbPayload: any = {
         id: newOrder.id,
         order_id: orderIdStr,
@@ -272,9 +300,8 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         table_number: tblNum,
         item: itemsPayload,
         total: Number(newOrder.total),
-        status: newOrder.status || "pending",
-        payment: newOrder.payment_status === "paid" ? "paid" : "unpaid",
-        payment_status: newOrder.payment_status === "paid" ? "paid" : "unpaid",
+        status: normStatus,
+        payment: normPayment,
         payment_method: pMethod,
         payment_category: pCategory,
         order_time: newOrder.created_at,
@@ -535,59 +562,25 @@ export async function updateOrderPayment(orderId: string, paymentMethod: string 
         )
       );
 
-      console.log("[UPDATE ORDER PAYMENT INIT]", { orderId, secondaryId, idCandidates });
+      const isPaid = normalizePaymentStatus(paymentStatus) === "paid";
+      const paymentVal = isPaid ? "paid" : "unpaid";
 
       let data: any[] | null = null;
       let error: any = null;
 
-      // 1. Primary update: Update core 'payment = paid' column directly for candidates
-      for (const candId of idCandidates) {
-        const byId = await supabase
-          .from("sd_orders")
-          .update({ payment: "paid" })
-          .eq("id", candId)
-          .select();
+      // Match strictly by exact candidate order IDs using PostgreSQL OR query
+      const orFilter = idCandidates
+        .flatMap((cand) => [`id.eq.${cand}`, `order_id.eq.${cand}`])
+        .join(",");
 
-        if (!byId.error && byId.data && byId.data.length > 0) {
-          data = byId.data;
-          break;
-        }
+      const { data: updatedData, error: updateErr } = await supabase
+        .from("sd_orders")
+        .update({ payment: paymentVal })
+        .or(orFilter)
+        .select();
 
-        const byOrderId = await supabase
-          .from("sd_orders")
-          .update({ payment: "paid" })
-          .eq("order_id", candId)
-          .select();
-
-        if (!byOrderId.error && byOrderId.data && byOrderId.data.length > 0) {
-          data = byOrderId.data;
-          break;
-        }
-      }
-
-      // 2. Fallback: If 0 rows matched candidate IDs, update latest unpaid order
-      if (!data || data.length === 0) {
-        console.warn("[UPDATE ORDER PAYMENT FALLBACK] 0 rows matched by ID candidates, updating latest unpaid order...");
-        const { data: latestUnpaid, error: searchErr } = await supabase
-          .from("sd_orders")
-          .select("*")
-          .eq("payment", "unpaid")
-          .order("created_at", { ascending: false })
-          .limit(1);
-
-        if (!searchErr && latestUnpaid && latestUnpaid.length > 0) {
-          const targetId = latestUnpaid[0].id;
-          console.log("[UPDATE ORDER PAYMENT FALLBACK] Updating latest unpaid order:", targetId);
-          const updateFallback = await supabase
-            .from("sd_orders")
-            .update({ payment: "paid" })
-            .eq("id", targetId)
-            .select();
-
-          data = updateFallback.data;
-          error = updateFallback.error;
-        }
-      }
+      data = updatedData;
+      error = updateErr;
 
       // 3. Best-effort update for payment_method & payment_category in sd_orders item JSONB
       if (data && data.length > 0) {
@@ -732,21 +725,6 @@ export async function notifyReceptionAdminPayment(details: {
         event: "reception_admin_billing",
         payload,
       });
-      try {
-        await supabase.from("payments").insert([
-          {
-            order_id: details.order_id,
-            order_number: details.order_number,
-            table_number: details.table_number,
-            customer_name: details.customer_name || "Guest",
-            amount: details.total,
-            payment_method: details.payment_method,
-            transaction_id: details.transaction_id,
-            status: "paid",
-            created_at: details.payment_time,
-          },
-        ]);
-      } catch (e) { }
     }
   } catch (err) {
     console.warn("Supabase reception/admin payment broadcast error:", err);
@@ -1161,40 +1139,9 @@ export function subscribeToMenuItems(onUpdate: () => void) {
 }
 
 // Payment Persistence & Sync Functions
-export async function createPaymentRecordInDb(record: any) {
-  if (isSupabaseConfigured()) {
-    try {
-      const tblNum = parseInt(String(record.table_number).replace(/\D/g, ""), 10) || 1;
-      const dbPayload = {
-        id: record.id,
-        order_id: record.order_id,
-        order_number: record.order_number,
-        invoice_id: record.invoice_id,
-        table_number: tblNum,
-        customer_name: record.customer_name || "Guest",
-        subtotal: record.subtotal,
-        gst: record.gst,
-        amount: record.total,
-        payment_method: record.payment_method,
-        payment_category: record.payment_category,
-        transaction_id: record.transaction_id,
-        status: record.status,
-        created_at: record.created_at,
-        verified_at: record.verified_at || null,
-        verified_by: record.verified_by || null,
-      };
-
-      const { error } = await supabase.from("payments").insert([dbPayload]);
-      if (error) {
-        console.warn("Supabase payments insert error:", error);
-      }
-    } catch (err) {
-      console.warn("Supabase payment creation error:", err);
-    }
-  }
-
-  // Broadcast to Reception & Admin Channel
-  broadcastPaymentToReceptionAdmin(record);
+export async function createPaymentRecordInDb(_record: any) {
+  // Canonical payment records are maintained directly on sd_orders table.
+  return Promise.resolve();
 }
 
 export async function verifyPaymentRecordInDb(paymentId: string, verifiedBy: string = "Reception Staff") {
@@ -1202,14 +1149,11 @@ export async function verifyPaymentRecordInDb(paymentId: string, verifiedBy: str
 
   if (isSupabaseConfigured()) {
     try {
+      const cleanId = String(paymentId).replace(/^#/, "").trim();
       await supabase
-        .from("payments")
-        .update({
-          status: "paid",
-          verified_at: verifiedAt,
-          verified_by: verifiedBy,
-        })
-        .or(`id.eq.${paymentId},order_id.eq.${paymentId},invoice_id.eq.${paymentId}`);
+        .from("sd_orders")
+        .update({ payment: "paid" })
+        .or(`id.eq.${paymentId},order_id.eq.${paymentId},id.eq.${cleanId},order_id.eq.${cleanId}`);
     } catch (err) {
       console.warn("Supabase payment verification error:", err);
     }
@@ -1272,7 +1216,7 @@ export async function getAllPaymentsFromDb() {
   if (isSupabaseConfigured()) {
     try {
       const { data, error } = await supabase
-        .from("payments")
+        .from("sd_orders")
         .select("*")
         .order("created_at", { ascending: false });
 

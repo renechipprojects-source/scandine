@@ -83,9 +83,9 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
           {/* Form / Details */}
           <div className="space-y-3.5">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-muted-foreground">Full Name</label>
+              <label htmlFor="admin-profile-name" className="mb-1 block text-xs font-semibold text-muted-foreground">Full Name</label>
               {isEditing ? (
-                <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9" />
+                <Input id="admin-profile-name" name="profileName" value={name} onChange={(e) => setName(e.target.value)} className="h-9" />
               ) : (
                 <div className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2 text-sm font-medium">
                   <User className="h-4 w-4 text-muted-foreground" />
@@ -95,9 +95,9 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-muted-foreground">Email Address</label>
+              <label htmlFor="admin-profile-email" className="mb-1 block text-xs font-semibold text-muted-foreground">Email Address</label>
               {isEditing ? (
-                <Input value={email} onChange={(e) => setEmail(e.target.value)} className="h-9" />
+                <Input id="admin-profile-email" name="profileEmail" value={email} onChange={(e) => setEmail(e.target.value)} className="h-9" />
               ) : (
                 <div className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2 text-sm font-medium">
                   <Mail className="h-4 w-4 text-muted-foreground" />
@@ -107,9 +107,9 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-muted-foreground">Phone Number</label>
+              <label htmlFor="admin-profile-phone" className="mb-1 block text-xs font-semibold text-muted-foreground">Phone Number</label>
               {isEditing ? (
-                <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-9" />
+                <Input id="admin-profile-phone" name="profilePhone" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-9" />
               ) : (
                 <div className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2 text-sm font-medium">
                   <Phone className="h-4 w-4 text-muted-foreground" />

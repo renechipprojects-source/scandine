@@ -239,8 +239,11 @@ function AdminQrPageRedesigned() {
           <form onSubmit={handleGenerate} className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Input
+                id="qr-table-number"
+                name="tableNumber"
                 type="text"
                 placeholder="Enter Table Number or Name (e.g. 5)"
+                aria-label="Enter Table Number or Name"
                 value={tableInput}
                 onChange={(e) => setTableInput(e.target.value)}
                 className="h-12 text-base px-4 font-semibold"

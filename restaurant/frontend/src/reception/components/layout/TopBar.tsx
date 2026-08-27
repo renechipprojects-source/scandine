@@ -80,20 +80,20 @@ export function TopBar() {
 
               <div className="grid grid-cols-1 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Full Name</Label>
-                  <Input value={profile.name} readOnly className="h-8 text-xs bg-muted/30 cursor-not-allowed" />
+                  <Label htmlFor="receptionist-profile-name" className="text-xs">Full Name</Label>
+                  <Input id="receptionist-profile-name" name="profileName" value={profile.name} readOnly className="h-8 text-xs bg-muted/30 cursor-not-allowed" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Email Address</Label>
-                  <Input value={profile.email} readOnly className="h-8 text-xs bg-muted/30 cursor-not-allowed" />
+                  <Label htmlFor="receptionist-profile-email" className="text-xs">Email Address</Label>
+                  <Input id="receptionist-profile-email" name="profileEmail" value={profile.email} readOnly className="h-8 text-xs bg-muted/30 cursor-not-allowed" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Phone Number</Label>
-                  <Input value={profile.phone} readOnly className="h-8 text-xs bg-muted/30 cursor-not-allowed" />
+                  <Label htmlFor="receptionist-profile-phone" className="text-xs">Phone Number</Label>
+                  <Input id="receptionist-profile-phone" name="profilePhone" value={profile.phone} readOnly className="h-8 text-xs bg-muted/30 cursor-not-allowed" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Role</Label>
-                  <Input value="Receptionist" readOnly className="h-8 text-xs bg-muted/30 cursor-not-allowed font-medium text-foreground" />
+                  <Label htmlFor="receptionist-profile-role" className="text-xs">Role</Label>
+                  <Input id="receptionist-profile-role" name="profileRole" value="Receptionist" readOnly className="h-8 text-xs bg-muted/30 cursor-not-allowed font-medium text-foreground" />
                 </div>
               </div>
 

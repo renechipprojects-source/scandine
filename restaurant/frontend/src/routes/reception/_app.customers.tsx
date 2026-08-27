@@ -131,7 +131,10 @@ function CustomersPage() {
           <div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              id="reception-customers-search"
+              name="customersSearch"
               placeholder="Search live customers by name, phone, email or table…"
+              aria-label="Search live customers by name, phone, email or table"
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

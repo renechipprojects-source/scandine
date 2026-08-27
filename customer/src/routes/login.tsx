@@ -114,12 +114,14 @@ function StaffLogin() {
           {/* Login Form */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
+              <label htmlFor="staff-login-email" className="text-xs font-semibold text-muted-foreground block mb-1.5">
                 Staff Email / ID
               </label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                 <input
+                  id="staff-login-email"
+                  name="email"
                   type="text"
                   required
                   value={email}
@@ -131,12 +133,14 @@ function StaffLogin() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
+              <label htmlFor="staff-login-password" className="text-xs font-semibold text-muted-foreground block mb-1.5">
                 Password / Passcode
               </label>
               <div className="relative">
                 <KeyRound className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                 <input
+                  id="staff-login-password"
+                  name="password"
                   type="password"
                   required
                   value={password}
@@ -148,8 +152,8 @@ function StaffLogin() {
             </div>
 
             <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input type="checkbox" defaultChecked className="rounded border-muted-foreground/40 text-primary" />
+              <label htmlFor="remember-session" className="flex items-center gap-2 cursor-pointer select-none">
+                <input id="remember-session" name="rememberSession" type="checkbox" defaultChecked className="rounded border-muted-foreground/40 text-primary" />
                 <span>Remember session</span>
               </label>
               <span className="text-primary hover:underline cursor-pointer">Forgot PIN?</span>

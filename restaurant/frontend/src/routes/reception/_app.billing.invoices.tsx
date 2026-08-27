@@ -36,8 +36,6 @@ const formatINR = (val: number) => {
 };
 
 function ReceptionInvoicesPage() {
-  const { data: dbInvoices, addItem: addInvoice, updateItem: updateInvoice, fetchData: fetchInvoices } = useSupabaseTable<Invoice>("invoices");
-  const { data: dbPayments, fetchData: fetchPayments } = useSupabaseTable<PaymentTransaction>("payments");
   const { data: dbOrders, fetchData: fetchOrders } = useSupabaseTable<Order>("sd_orders");
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,76 +56,28 @@ function ReceptionInvoicesPage() {
   const [splitCount, setSplitCount] = useState<number>(2);
 
   const handleRealtimePayload = useCallback(() => {
-    fetchInvoices();
-    fetchPayments();
     fetchOrders();
-  }, [fetchInvoices, fetchPayments, fetchOrders]);
+  }, [fetchOrders]);
 
-  useRealtimeTable("invoices", handleRealtimePayload);
-  useRealtimeTable("payments", handleRealtimePayload);
   useRealtimeTable("sd_orders", handleRealtimePayload);
 
-  // Combine and deduplicate invoices from dbInvoices and dbOrders
-  const invoicesList: Invoice[] = (() => {
-    const list: Invoice[] = [];
-    const seen = new Set<string>();
-
-    const dbOrdersMap = new Map<string, Order>();
-    for (const ord of dbOrders) {
-      const k1 = String(ord.id || "").toLowerCase();
-      const k2 = String(ord.order_id || "").toLowerCase();
-      const k3 = `inv-${k2}`;
-      if (k1) dbOrdersMap.set(k1, ord);
-      if (k2) dbOrdersMap.set(k2, ord);
-      if (k3) dbOrdersMap.set(k3, ord);
-    }
-
-    for (const inv of dbInvoices) {
-      const key = inv.invoice || inv.id;
-      if (!key || seen.has(key)) continue;
-      seen.add(key);
-
-      const matchingOrd = dbOrdersMap.get(String(inv.id || "").toLowerCase()) ||
-                          dbOrdersMap.get(String(inv.invoice || "").toLowerCase()) ||
-                          dbOrdersMap.get(String(inv.transition || "").toLowerCase());
-
-      const status = (matchingOrd && (matchingOrd.payment === "paid" || (matchingOrd as any).payment_status === "paid"))
-        ? "Paid"
-        : inv.status;
-      const method = matchingOrd ? resolvePaymentMethod(matchingOrd) : resolvePaymentMethod(inv);
-
-      list.push({
-        ...inv,
-        status,
-        method,
-      });
-    }
-
-    for (const ord of dbOrders) {
+  // Derive invoices list directly from canonical sd_orders table
+  const invoicesList: Invoice[] = useMemo(() => {
+    return dbOrders.map((ord) => {
       const ordKey = `INV-${ord.order_id || ord.id}`;
-      const cleanId = String(ord.id || "").toLowerCase();
-      const cleanOrdId = String(ord.order_id || "").toLowerCase();
-
-      if (!seen.has(ordKey) && !seen.has(cleanId) && !seen.has(cleanOrdId)) {
-        seen.add(ordKey);
-        if (cleanId) seen.add(cleanId);
-        if (cleanOrdId) seen.add(cleanOrdId);
-
-        list.push({
-          id: ord.id,
-          invoice: ordKey,
-          transition: ord.order_id || ord.id,
-          customer: (ord as any).customer_name || ord.customer || "Customer",
-          method: resolvePaymentMethod(ord),
-          amount: Number(ord.total) || 0,
-          status: (ord.payment === "paid" || (ord as any).payment_status === "paid") ? "Paid" : "Unpaid",
-          date: ord.order_time || ord.created_at || new Date().toISOString(),
-        });
-      }
-    }
-
-    return list;
-  })();
+      const isPaid = ord.payment === "paid" || (ord as any).payment_status === "paid";
+      return {
+        id: ord.id,
+        invoice: ordKey,
+        transition: ord.order_id || ord.id,
+        customer: (ord as any).customer_name || ord.customer || "Customer",
+        method: resolvePaymentMethod(ord),
+        amount: Number(ord.total) || 0,
+        status: isPaid ? "Paid" : "Unpaid",
+        date: ord.order_time || ord.created_at || new Date().toISOString(),
+      };
+    });
+  }, [dbOrders]);
 
   const totalBilled = invoicesList.reduce((s, i) => s + (Number(i.amount) || 0), 0);
   const paidTotal = invoicesList.filter((i) => i.status?.toLowerCase() === "paid").reduce((s, i) => s + (Number(i.amount) || 0), 0);
@@ -151,14 +101,6 @@ function ReceptionInvoicesPage() {
       const targetMethod = "Cash";
       await markPaymentAndInvoiceAsPaid(inv.id, invId, inv.customer, Number(inv.amount), targetMethod);
       await fetchOrders();
-      await fetchInvoices();
-      await fetchPayments();
-      updateInvoice({
-        ...inv,
-        status: "Paid",
-        method: targetMethod,
-        date: new Date().toISOString(),
-      });
       toast.success(`Invoice ${invId} marked as Paid (${targetMethod}) successfully!`);
 
       if (selectedInvoice && (selectedInvoice.id === inv.id || selectedInvoice.invoice === inv.invoice)) {
@@ -192,42 +134,28 @@ function ReceptionInvoicesPage() {
     const billAmt = Number(newAmount);
 
     try {
-      const newInvObj: Partial<Invoice> = {
-        id: generatedInvId,
-        invoice: generatedInvId,
-        transition: generatedInvId,
-        customer: newCustName.trim(),
-        method: newMethod,
-        amount: billAmt,
-        status: newStatus,
-        date: nowIso,
-      };
-
       if (isSupabaseConfigured) {
         const payload = {
-          id: generatedInvId,
-          invoice: generatedInvId,
-          transition: generatedInvId,
+          order_id: generatedInvId,
           customer: newCustName.trim(),
-          method: newMethod,
-          amount: billAmt,
-          status: newStatus.toLowerCase(),
-          date: nowIso,
+          customer_name: newCustName.trim(),
+          total: billAmt,
+          subtotal: billAmt,
+          tax: 0,
+          payment: normalizePaymentStatus(newStatus),
+          payment_method: newMethod,
+          status: "completed",
+          order_time: nowIso,
+          table_number: 1,
+          item: [{ name: "Manual Invoice Charge", price: billAmt, quantity: 1, payment_method: newMethod }],
         };
-        const { error } = await supabase.from("invoices").insert([payload]);
+        const { error } = await supabase.from("sd_orders").insert([payload]);
         if (error) {
-          console.warn("Supabase invoice insert warning:", error.message);
+          console.warn("Supabase order insert warning:", error.message);
         }
       }
 
-      await addInvoice(newInvObj as Invoice);
-
-      if (newStatus === "Paid") {
-        await markPaymentAndInvoiceAsPaid(generatedInvId, generatedInvId, newCustName.trim(), billAmt, newMethod);
-      }
-
-      await fetchInvoices();
-      await fetchPayments();
+      await fetchOrders();
 
       toast.success(`Invoice ${generatedInvId} created successfully!`);
       setNewCustName("");
@@ -297,7 +225,10 @@ function ReceptionInvoicesPage() {
           <div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              id="reception-invoices-search"
+              name="invoicesSearch"
               placeholder="Search by Invoice ID, Customer Name or Payment Method…"
+              aria-label="Search by Invoice ID, Customer Name or Payment Method"
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -421,6 +352,7 @@ function ReceptionInvoicesPage() {
               <Label htmlFor="cust-name">Customer Name *</Label>
               <Input
                 id="cust-name"
+                name="custName"
                 placeholder="e.g. Amelia Chen"
                 value={newCustName}
                 onChange={(e) => setNewCustName(e.target.value)}
@@ -432,6 +364,7 @@ function ReceptionInvoicesPage() {
                 <Label htmlFor="bill-amount">Bill Total (₹) *</Label>
                 <Input
                   id="bill-amount"
+                  name="billAmount"
                   type="number"
                   step="0.01"
                   min="1"
@@ -444,7 +377,7 @@ function ReceptionInvoicesPage() {
               <div className="space-y-1">
                 <Label htmlFor="pay-method">Payment Method *</Label>
                 <Select value={newMethod} onValueChange={setNewMethod}>
-                  <SelectTrigger id="pay-method"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="pay-method" aria-label="Payment Method"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Cash">Cash</SelectItem>
                     <SelectItem value="UPI / GPay">UPI / GPay</SelectItem>
@@ -459,7 +392,7 @@ function ReceptionInvoicesPage() {
             <div className="space-y-1">
               <Label htmlFor="inv-status">Payment Status *</Label>
               <Select value={newStatus} onValueChange={(v) => setNewStatus(v as "Paid" | "Unpaid")}>
-                <SelectTrigger id="inv-status"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="inv-status" aria-label="Payment Status"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Unpaid">Unpaid / Pending</SelectItem>
                   <SelectItem value="Paid">Paid</SelectItem>
@@ -513,12 +446,12 @@ function ReceptionInvoicesPage() {
 
           <div className="space-y-4 py-2 text-sm">
             <div className="space-y-1">
-              <Label>Select Invoice to Split</Label>
+              <Label htmlFor="split-invoice-select">Select Invoice to Split</Label>
               <Select
                 value={splitTargetInvoice || (invoicesList[0]?.invoice || invoicesList[0]?.id || "")}
                 onValueChange={setSplitTargetInvoice}
               >
-                <SelectTrigger><SelectValue placeholder="Select Invoice" /></SelectTrigger>
+                <SelectTrigger id="split-invoice-select" aria-label="Select Invoice to Split"><SelectValue placeholder="Select Invoice" /></SelectTrigger>
                 <SelectContent>
                   {invoicesList.map((inv) => (
                     <SelectItem key={inv.id} value={inv.invoice || inv.id}>

@@ -145,6 +145,7 @@ function KitchenAddItemPage() {
                 <Label htmlFor="item-name">Item name *</Label>
                 <Input
                   id="item-name"
+                  name="itemName"
                   placeholder="e.g. Truffle Mushroom Risotto"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -156,6 +157,7 @@ function KitchenAddItemPage() {
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
+                  name="description"
                   rows={4}
                   placeholder="Describe ingredients, flavor profile, dietary callouts..."
                   value={description}
@@ -174,6 +176,7 @@ function KitchenAddItemPage() {
                 <Label htmlFor="price">Base price (₹) *</Label>
                 <Input
                   id="price"
+                  name="price"
                   type="number"
                   step="0.01"
                   placeholder="24.50"
@@ -187,6 +190,7 @@ function KitchenAddItemPage() {
                 <Label htmlFor="prep-time">Est. prep time (minutes)</Label>
                 <Input
                   id="prep-time"
+                  name="prepTime"
                   type="number"
                   placeholder="15"
                   value={preparationTime}
@@ -205,6 +209,7 @@ function KitchenAddItemPage() {
                 <Label htmlFor="image-file">Upload item image</Label>
                 <Input
                   id="image-file"
+                  name="imageFile"
                   type="file"
                   accept="image/*"
                   onChange={handleFileChange}
@@ -214,6 +219,7 @@ function KitchenAddItemPage() {
                 <Label htmlFor="image-url">Or item image URL</Label>
                 <Input
                   id="image-url"
+                  name="imageUrl"
                   placeholder="https://images.unsplash.com/..."
                   value={imageUrl}
                   onChange={(e) => {
@@ -252,7 +258,7 @@ function KitchenAddItemPage() {
               <div className="space-y-2">
                 <Label htmlFor="category">Category *</Label>
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger id="category">
+                  <SelectTrigger id="category" aria-label="Category">
                     <SelectValue placeholder="Select category *" />
                   </SelectTrigger>
                   <SelectContent>
@@ -269,7 +275,7 @@ function KitchenAddItemPage() {
               <div className="space-y-2 border-t pt-4">
                 <Label htmlFor="status">Status *</Label>
                 <Select value={status} onValueChange={(val: "Available" | "Unavailable") => setStatus(val)}>
-                  <SelectTrigger id="status">
+                  <SelectTrigger id="status" aria-label="Status">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>

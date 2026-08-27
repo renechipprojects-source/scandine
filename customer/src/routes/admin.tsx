@@ -426,10 +426,13 @@ function AdminDashboard() {
               <div className="relative min-w-[240px]">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <input
+                  id="admin-billing-search"
+                  name="adminBillingSearch"
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search invoice, table, customer..."
+                  aria-label="Search invoice, table, or customer"
                   className="w-full rounded-full border bg-background pl-9 pr-4 py-1.5 text-xs outline-none focus:ring-2 focus:ring-primary/40"
                 />
               </div>

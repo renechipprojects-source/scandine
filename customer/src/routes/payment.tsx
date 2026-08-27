@@ -11,7 +11,6 @@ import {
   updateOrderPayment,
   notifyKitchenOrderPaid,
   notifyReceptionAdminPayment,
-  createPaymentRecordInDb,
   subscribeToOrdersBySession,
   type DbOrder,
 } from "@/lib/supabase";
@@ -159,43 +158,14 @@ function Payment() {
     transactionId: string,
     isAutoPaid: boolean
   ) => {
-    const totalAmount = Number(order?.total ?? total);
     const activeTable = order?.table_number || tableNumber;
-    const orderIdStr = order?.id || `ord_${Date.now()}`;
     const invoiceId = `INV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
-    const currentSubtotal = subtotal;
-    const currentGst = gst;
-    const paymentTimestamp = new Date().toISOString();
-    const status: "paid" | "pending_verification" = isAutoPaid ? "paid" : "pending_verification";
 
-    const paymentRecord = {
-      id: `pay_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
-      order_id: orderIdStr,
-      order_number: orderNum || "#0000",
-      invoice_id: invoiceId,
-      table_number: activeTable,
-      customer_name: custName.trim() || "Guest",
-      subtotal: currentSubtotal,
-      gst: currentGst,
-      total: totalAmount,
-      payment_method: payMethodName,
-      payment_category: payCategory,
-      transaction_id: transactionId,
-      status,
-      created_at: paymentTimestamp,
-      verified_at: isAutoPaid ? paymentTimestamp : undefined,
-      verified_by: isAutoPaid ? "System (Auto-Verified UPI)" : undefined,
-    };
-
-    paymentStore.addPaymentRecord(paymentRecord);
-    await createPaymentRecordInDb(paymentRecord);
-
-    if (isAutoPaid) {
+    if (isAutoPaid || payCategory === "cash") {
       if (order) {
         const updateSuccess = await updateOrderPayment(order.id, payMethodName, order.order_id);
         console.log("[PAYMENT DB UPDATE RESULT]", { orderId: order.id, secondaryId: order.order_id, updateSuccess });
 
-        // Refetch fresh order from Supabase to guarantee state & status sync
         const freshOrder = await getOrderById(order.id);
         if (freshOrder) {
           setOrder(freshOrder);
@@ -205,7 +175,7 @@ function Payment() {
       }
       await notifyKitchenOrderPaid(activeTable, orderNum || "#0000");
       setState("success");
-      toast.success(`Payment Successful! Invoice: ${invoiceId}`);
+      toast.success(`Payment Successful! Reference: ${invoiceId}`);
     } else {
       setState("pending_approval" as any);
       toast.info(`Payment submitted for Table ${activeTable}. Awaiting Reception verification.`);
@@ -250,12 +220,13 @@ function Payment() {
         "http://localhost:5000"
       ).replace(/\/$/, "");
 
-      // 1. Create Razorpay Order on Backend
+      // 1. Create Razorpay Order on Backend with order_id for server-side total validation
       const createOrderRes = await fetch(`${backendBaseUrl}/api/razorpay/create-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: finalTotal, // in Rupees (e.g. 284, 525, 1617)
+          order_id: order?.id || activeId,
+          amount: finalTotal, // in Rupees
           currency: "INR",
           receipt: `receipt_${orderNum ? orderNum.replace("#", "") : Date.now()}`,
         }),
@@ -360,11 +331,12 @@ function Payment() {
               setState("processing");
               toast.info("Verifying payment security signature...");
 
-              // 3. Backend Signature Verification
+              // 3. Backend Signature Verification & Server-Side sd_orders Update
               const verifyRes = await fetch(`${backendBaseUrl}/api/razorpay/verify`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
+                  order_id: order?.id || activeId,
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_signature: response.razorpay_signature,
@@ -453,10 +425,12 @@ function Payment() {
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    <label htmlFor="payment-cust-name" className="text-xs font-semibold text-muted-foreground block mb-1">
                       Full Name <span className="text-destructive">*</span>
                     </label>
                     <input
+                      id="payment-cust-name"
+                      name="custName"
                       type="text"
                       required
                       value={custName}
@@ -466,10 +440,12 @@ function Payment() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    <label htmlFor="payment-cust-phone" className="text-xs font-semibold text-muted-foreground block mb-1">
                       Phone Number <span className="text-destructive">*</span>
                     </label>
                     <input
+                      id="payment-cust-phone"
+                      name="custPhone"
                       type="tel"
                       required
                       value={custPhone}
@@ -480,10 +456,12 @@ function Payment() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                  <label htmlFor="payment-cust-email" className="text-xs font-semibold text-muted-foreground block mb-1">
                     Email Address <span className="text-muted-foreground font-normal">(Optional)</span>
                   </label>
                   <input
+                    id="payment-cust-email"
+                    name="custEmail"
                     type="email"
                     value={custEmail}
                     onChange={(e) => setCustEmail(e.target.value)}

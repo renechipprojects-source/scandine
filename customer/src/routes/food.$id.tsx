@@ -205,9 +205,12 @@ function FoodDetail() {
 
           <Section title="Special instructions">
             <textarea
+              id="food-special-instructions"
+              name="specialInstructions"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Less spicy, no onions, etc."
+              aria-label="Special instructions"
               className="w-full rounded-2xl border bg-background p-3 text-sm resize-none"
               rows={3}
             />

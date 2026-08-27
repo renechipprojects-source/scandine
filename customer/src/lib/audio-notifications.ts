@@ -11,20 +11,22 @@ class SoundManager {
   constructor() {
     if (typeof window !== "undefined") {
       const unlock = () => {
-        this.enableAudio();
         this.unlocked = true;
+        this.enableAudio();
         window.removeEventListener("click", unlock);
         window.removeEventListener("touchstart", unlock);
         window.removeEventListener("keydown", unlock);
+        window.removeEventListener("pointerdown", unlock);
       };
       window.addEventListener("click", unlock, { once: true });
       window.addEventListener("touchstart", unlock, { once: true });
       window.addEventListener("keydown", unlock, { once: true });
+      window.addEventListener("pointerdown", unlock, { once: true });
     }
   }
 
   private getAudioContext(): AudioContext | null {
-    if (typeof window === "undefined") return null;
+    if (typeof window === "undefined" || !this.unlocked) return null;
     if (!this.audioCtx) {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
@@ -38,6 +40,7 @@ class SoundManager {
   }
 
   public enableAudio(): void {
+    if (!this.unlocked) return;
     const ctx = this.getAudioContext();
     if (ctx && ctx.state === "suspended") {
       ctx.resume().catch(() => {});
@@ -53,13 +56,14 @@ class SoundManager {
   }
 
   private playAudioFile(): boolean {
+    if (!this.unlocked) return false;
     try {
       const audio = new Audio("/notification.wav");
       audio.volume = 0.7;
       const promise = audio.play();
       if (promise !== undefined) {
         promise.catch((err) => {
-          console.warn("Audio file autoplay prevented, falling back to WebAudio synth:", err);
+          console.warn("Audio file autoplay prevented:", err);
         });
       }
       return true;
@@ -72,7 +76,7 @@ class SoundManager {
    * Order Notification Sound (High bright chime: C5 -> E5 -> G5)
    */
   public playOrderSound(notificationId?: string): void {
-    if (this.isMuted) return;
+    if (this.isMuted || !this.unlocked) return;
     if (notificationId) {
       if (playedSoundNotificationIds.has(notificationId)) return;
       playedSoundNotificationIds.add(notificationId);
@@ -82,7 +86,7 @@ class SoundManager {
 
     try {
       const ctx = this.getAudioContext();
-      if (!ctx) return;
+      if (!ctx || ctx.state !== "running") return;
 
       const now = ctx.currentTime;
       const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
@@ -113,7 +117,7 @@ class SoundManager {
    * Service Request Sound (Soft double ding: A5 -> F#5)
    */
   public playServiceSound(notificationId?: string): void {
-    if (this.isMuted) return;
+    if (this.isMuted || !this.unlocked) return;
     if (notificationId) {
       if (playedSoundNotificationIds.has(notificationId)) return;
       playedSoundNotificationIds.add(notificationId);
@@ -123,7 +127,7 @@ class SoundManager {
 
     try {
       const ctx = this.getAudioContext();
-      if (!ctx) return;
+      if (!ctx || ctx.state !== "running") return;
 
       const now = ctx.currentTime;
       const tones = [

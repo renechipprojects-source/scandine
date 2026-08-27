@@ -222,9 +222,12 @@ function Menu() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
+              id="menu-search-input"
+              name="menuSearch"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search dishes…"
+              aria-label="Search dishes"
               className="pl-9 rounded-full bg-card border h-10 text-sm"
             />
           </div>

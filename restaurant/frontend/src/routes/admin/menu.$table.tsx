@@ -53,8 +53,6 @@ function CustomerMenu() {
 
   const { data: dbMenuItems, fetchData: fetchMenuItems } = useSupabaseTable<MenuItem>("sd_menu_items");
   const { data: dbOrders, fetchData: fetchOrders } = useSupabaseTable<Order>("sd_orders");
-  const { addItem: addInvoice } = useSupabaseTable<Invoice>("invoices");
-  const { addItem: addPayment } = useSupabaseTable<PaymentTransaction>("payments");
 
   const handleRealtimeItems = useCallback(() => {
     fetchMenuItems();
@@ -267,7 +265,7 @@ function CustomerMenu() {
         <div className="sticky top-[68px] z-10 -mx-4 mt-4 bg-gradient-to-b from-background via-background to-transparent px-4 pb-3 pt-2">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search dishes…" className="pl-9 rounded-full bg-card shadow-sm" />
+            <Input id="admin-table-search-dishes" name="searchDishes" aria-label="Search dishes" placeholder="Search dishes…" className="pl-9 rounded-full bg-card shadow-sm" />
           </div>
           <div className="mt-3 flex gap-2 overflow-x-auto scrollbar-none">
             <CatChip label="All" active={activeCat === "all"} onClick={() => setActiveCat("all")} icon="🍽️" />
@@ -352,10 +350,10 @@ function CustomerMenu() {
             </div>
             <div className="mt-4 space-y-2 border-t pt-4 text-sm">
               <div className="flex gap-2">
-                <Input placeholder="Coupon code" className="flex-1" />
+                <Input id="admin-coupon-code" name="couponCode" placeholder="Coupon code" aria-label="Coupon code" className="flex-1" />
                 <Button variant="outline">Apply</Button>
               </div>
-              <Textarea placeholder="Special instructions for the chef…" rows={2} />
+              <Textarea id="admin-special-instructions" name="specialInstructions" placeholder="Special instructions for the chef…" aria-label="Special instructions for the chef" rows={2} />
               <div className="space-y-1.5 border-t pt-3">
                 <div className="text-xs font-semibold text-muted-foreground">Payment Method</div>
                 <div className="grid grid-cols-3 gap-2">

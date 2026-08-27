@@ -146,12 +146,7 @@ export interface NotificationItem {
 function cleanPayloadForSupabase(tableName: string, payload: Record<string, unknown>): Record<string, unknown> {
   const cleaned = { ...payload };
 
-  if (tableName === "customers") {
-    delete cleaned.visits;
-    delete cleaned.spent;
-    delete cleaned.tier;
-    delete cleaned.avatar;
-  } else if (tableName === "suppliers") {
+  if (tableName === "suppliers") {
     delete cleaned.items;
   } else if (tableName === "sd_purchase_orders") {
     delete cleaned.entry_type;
@@ -194,14 +189,6 @@ function cleanPayloadForSupabase(tableName: string, payload: Record<string, unkn
     delete cleaned.popular;
     delete cleaned.featured;
     delete cleaned.emoji;
-  } else if (tableName === "invoices") {
-    if (typeof cleaned.status === "string") {
-      cleaned.status = cleaned.status.toLowerCase();
-    }
-  } else if (tableName === "payments") {
-    if (typeof cleaned.status === "string") {
-      cleaned.status = cleaned.status.toLowerCase();
-    }
   } else if (tableName === "sd_orders") {
     if (typeof cleaned.status === "string") {
       cleaned.status = cleaned.status.toLowerCase();
@@ -302,12 +289,12 @@ export function useSupabaseTable<T extends { id: string }>(
   const [error, setError] = useState<string | null>(null);
 
   // Broadcast and sync to local storage for instant reactive UI updates
-  const updateLocalData = useCallback((newVal: T[] | ((prev: T[]) => T[])) => {
+  const updateLocalData = useCallback((newVal: T[] | ((prev: T[]) => T[]), source?: string) => {
     setData((prev) => {
       const updated = typeof newVal === "function" ? newVal(prev) : newVal;
       try {
         localStorage.setItem(storageKey, JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent("local-table-updated", { detail: { tableName } }));
+        window.dispatchEvent(new CustomEvent("local-table-updated", { detail: { tableName, source } }));
       } catch (e) {
         console.error(e);
       }
@@ -335,7 +322,7 @@ export function useSupabaseTable<T extends { id: string }>(
             .from(tableName)
             .select("*");
           if (!fetchErr2 && rows2) {
-            updateLocalData(normalizeFetchedRows(tableName, rows2 as T[]));
+            updateLocalData(normalizeFetchedRows(tableName, rows2 as T[]), "fetch");
           }
         }
       } else if (rows) {
@@ -344,7 +331,7 @@ export function useSupabaseTable<T extends { id: string }>(
 
           if (tableName === "sd_menu_items") {
             // Live database rows from Supabase are the single source of truth; replace state completely without merging stale deleted items
-            updateLocalData(fetched);
+            updateLocalData(fetched, "fetch");
           } else {
             updateLocalData((prev) => {
               const map = new Map<string, T>();
@@ -375,10 +362,10 @@ export function useSupabaseTable<T extends { id: string }>(
                 map.set(item.id, item);
               });
               return Array.from(map.values());
-            });
+            }, "fetch");
           }
         } else if (rows.length === 0) {
-          updateLocalData([]);
+          updateLocalData([], "fetch");
         }
       }
 
@@ -394,7 +381,7 @@ export function useSupabaseTable<T extends { id: string }>(
 
     const handleLocalUpdate = (e: Event) => {
       const customEv = e as CustomEvent;
-      if (!customEv.detail || customEv.detail.tableName === tableName) {
+      if (!customEv.detail || (customEv.detail.tableName === tableName && customEv.detail.source !== "fetch")) {
         fetchData();
       }
     };
@@ -456,7 +443,9 @@ export function useSupabaseTable<T extends { id: string }>(
 
   // UPDATE
   const updateItem = async (id: string, updates: Partial<T>) => {
+    let previousState: T[] = [];
     updateLocalData((prev) => {
+      previousState = prev;
       const exists = prev.some((item: any) => item.id === id || item.order_id === id);
       if (!exists && initialData.length > 0) {
         const fromInitial = initialData.find((item: any) => item.id === id || item.order_id === id);
@@ -476,28 +465,29 @@ export function useSupabaseTable<T extends { id: string }>(
         let updateErr: any = null;
 
         if (tableName === "sd_orders") {
-          // Clean payload containing only valid Postgres DB columns
+          // Strictly valid PostgreSQL DB columns for sd_orders table
           const dbOrderPayload: Record<string, any> = {};
-          if (payload.status !== undefined) dbOrderPayload.status = payload.status;
-          if (payload.payment_status !== undefined || payload.payment !== undefined) {
-            dbOrderPayload.payment_status = payload.payment_status || payload.payment;
+          if (payload.status !== undefined) dbOrderPayload.status = normalizeOrderStatus(String(payload.status));
+          if (payload.payment !== undefined || payload.payment_status !== undefined) {
+            dbOrderPayload.payment = normalizePaymentStatus(String(payload.payment || payload.payment_status));
           }
-          if (payload.total !== undefined) dbOrderPayload.total = payload.total;
-          if (payload.items !== undefined || payload.item !== undefined) {
-            dbOrderPayload.items = payload.items || payload.item;
+          if (payload.total !== undefined) dbOrderPayload.total = Number(payload.total);
+          if (payload.item !== undefined || payload.items !== undefined) {
+            dbOrderPayload.item = payload.item || payload.items;
           }
-          if (payload.customer_name !== undefined || payload.customer !== undefined) {
-            dbOrderPayload.customer_name = payload.customer_name || payload.customer;
+          if (payload.customer !== undefined || payload.customer_name !== undefined) {
+            dbOrderPayload.customer = String(payload.customer || payload.customer_name);
           }
-          if (payload.accepted_at !== undefined) dbOrderPayload.accepted_at = payload.accepted_at;
-          if (payload.prep_time_minutes !== undefined) dbOrderPayload.prep_time_minutes = payload.prep_time_minutes;
-          if (payload.estimated_ready_at !== undefined) dbOrderPayload.estimated_ready_at = payload.estimated_ready_at;
+          if (payload.table_number !== undefined) dbOrderPayload.table_number = Number(payload.table_number);
 
-          let { error: err1 } = await supabase.from(tableName).update(dbOrderPayload).eq("id", id);
-          if (err1) {
-            let { error: err2 } = await supabase.from(tableName).update(dbOrderPayload).eq("order_id", id);
-            updateErr = err2;
-          }
+          // Perform a single exact update matching either primary id or order_id
+          const targetId = String(id).trim();
+          let { error: singleErr } = await supabase
+            .from(tableName)
+            .update(dbOrderPayload)
+            .or(`id.eq.${targetId},order_id.eq.${targetId}`);
+
+          updateErr = singleErr;
         } else if (tableName === "sd_menu_items") {
           let res = await supabase.from(tableName).update(payload).eq("id", id);
           if (res.error) {
@@ -512,24 +502,20 @@ export function useSupabaseTable<T extends { id: string }>(
           } else {
             updateErr = res.error;
           }
-        } else if (tableName === "invoices") {
-          let res = await supabase.from(tableName).update(payload).eq("id", id).select();
-          if (res.error || !res.data || res.data.length === 0) {
-            let res2 = await supabase.from(tableName).update(payload).eq("invoice", id).select();
-            updateErr = res2.error;
-          } else {
-            updateErr = res.error;
-          }
         } else {
           let res = await supabase.from(tableName).update(payload).eq("id", id);
           updateErr = res.error;
         }
 
         if (updateErr) {
-          console.warn(`[Supabase Update Notice on ${tableName}]:`, updateErr.message);
+          console.error(`[Supabase Update Error on ${tableName}]:`, updateErr.message);
+          setLocalData(previousState);
+          throw updateErr;
         }
       } catch (err) {
-        console.warn(`Supabase update notice for ${tableName}:`, err);
+        console.error(`Supabase update error for ${tableName}:`, err);
+        setLocalData(previousState);
+        throw err;
       }
     }
   };
@@ -579,12 +565,11 @@ export function useSupabaseTable<T extends { id: string }>(
 // Optimized parallel utility function to mark payment & invoice as paid across Supabase
 export async function markPaymentAndInvoiceAsPaid(
   targetId: string,
-  invoiceIdOrOrder: string,
+  invoiceIdOrOrder?: string,
   customerName?: string,
   amountVal?: number,
   methodVal: string = "Cash"
 ) {
-  const nowIso = new Date().toISOString();
   const invId = invoiceIdOrOrder || targetId;
   const isCash = methodVal.toLowerCase().includes("cash");
   const category = isCash ? "cash" : (methodVal.toLowerCase().includes("upi") || methodVal.toLowerCase().includes("razorpay") ? "upi" : "card");
@@ -593,19 +578,15 @@ export async function markPaymentAndInvoiceAsPaid(
     String(s || "")
       .trim()
       .replace(/^[#]/, "")
-      .replace(/^ord[-_]?/i, "")
-      .replace(/^inv[-_]?/i, "");
+      .replace(/^ord[-_]?/i, "");
 
   const c1 = cleanRef(targetId);
   const c2 = cleanRef(invId);
 
-  const idCandidates = Array.from(
-    new Set([targetId, invId, c1, c2, `#${c1}`, `ord_${c1}`, `INV-${c1}`].filter(Boolean))
-  );
+  const idCandidates = Array.from(new Set([targetId, invId, c1, c2, `ord_${c1}`].filter(Boolean)));
 
   if (isSupabaseConfigured) {
     try {
-      // 1. Primary update: Update core 'payment = paid' column directly in sd_orders
       for (const candId of idCandidates) {
         let { data: byId } = await supabase
           .from("sd_orders")
@@ -639,124 +620,11 @@ export async function markPaymentAndInvoiceAsPaid(
           break;
         }
       }
-
-      // 2. Best-effort update for payment_method and payment_category in sd_orders
-      for (const candId of idCandidates) {
-        try {
-          await supabase
-            .from("sd_orders")
-            .update({ payment_method: methodVal, payment_category: category } as any)
-            .or(`id.eq.${candId},order_id.eq.${candId}`);
-        } catch {}
-      }
-
-      // 3. Update invoices and payments tables
-      await Promise.allSettled([
-        supabase
-          .from("invoices")
-          .update({ status: "paid", method: methodVal, date: nowIso })
-          .or(`id.eq.${targetId},invoice.eq.${invId},transition.eq.${invId}`),
-        supabase
-          .from("payments")
-          .update({ status: "paid", method: methodVal, date: nowIso })
-          .or(`id.eq.${targetId},invoiceId.eq.${invId}`),
-      ]);
     } catch (err) {
       console.warn("Supabase markAsPaid notice:", err);
     }
   }
 
-  // 4. Store canonical payment record in local storage scandine_payment_records_v1
-  try {
-    if (typeof window !== "undefined") {
-      const recordsKey = "scandine_payment_records_v1";
-      let existing: any[] = [];
-      const saved = localStorage.getItem(recordsKey);
-      if (saved) {
-        try { existing = JSON.parse(saved) || []; } catch {}
-      }
-
-      const newRec = {
-        id: `txn_${targetId}`,
-        transaction_id: `txn_${targetId}`,
-        order_id: invId,
-        invoice_id: invId,
-        customer_name: customerName || "Customer",
-        amount: amountVal || 0,
-        total: amountVal || 0,
-        method: methodVal,
-        payment_method: methodVal,
-        payment_category: category,
-        status: "Paid",
-        created_at: nowIso,
-      };
-
-      const updatedRecords = [newRec, ...existing.filter((r: any) => r.order_id !== invId && r.id !== targetId)];
-      localStorage.setItem(recordsKey, JSON.stringify(updatedRecords));
-
-      // Also sync to aura_dine_payments store
-      try {
-        const auraKey = "aura_dine_payments";
-        let auraExisting: any[] = [];
-        const auraSaved = localStorage.getItem(auraKey);
-        if (auraSaved) {
-          try { auraExisting = JSON.parse(auraSaved) || []; } catch {}
-        }
-        const updatedAura = [newRec, ...auraExisting.filter((r: any) => r.order_id !== invId && r.id !== targetId)];
-        localStorage.setItem(auraKey, JSON.stringify(updatedAura));
-      } catch {}
-
-      // Sync local storage tables
-      ["invoices", "payments"].forEach((tbl) => {
-        try {
-          const key = `mock_table_${tbl}`;
-          const savedTbl = localStorage.getItem(key);
-          if (savedTbl) {
-            const arr = JSON.parse(savedTbl);
-            const updated = arr.map((item: any) => {
-              if (
-                item.id === targetId ||
-                item.id === invId ||
-                item.invoice === invId ||
-                item.invoiceId === invId ||
-                item.transition === invId
-              ) {
-                return { ...item, status: "Paid", method: methodVal, payment_method: methodVal, payment_category: category, date: nowIso };
-              }
-              return item;
-            });
-            localStorage.setItem(key, JSON.stringify(updated));
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      });
-
-      const savedOrders = localStorage.getItem("mock_table_sd_orders");
-      if (savedOrders) {
-        const arr = JSON.parse(savedOrders);
-        const updated = arr.map((item: any) => {
-          if (item.id === targetId || item.order_id === invId || item.id === invId) {
-            return { ...item, payment: "paid", payment_status: "paid", method: methodVal, payment_method: methodVal, payment_category: category };
-          }
-          return item;
-        });
-        localStorage.setItem("mock_table_sd_orders", JSON.stringify(updated));
-      }
-    }
-  } catch (e) {
-    console.error(e);
-  }
-
-  // Broadcast real-time events across windows & tabs
-  window.dispatchEvent(new CustomEvent("local-table-updated", { detail: { tableName: "invoices" } }));
-  window.dispatchEvent(new CustomEvent("local-table-updated", { detail: { tableName: "payments" } }));
+  // Notify reactive UI listeners to re-fetch canonical sd_orders table
   window.dispatchEvent(new CustomEvent("local-table-updated", { detail: { tableName: "sd_orders" } }));
-
-  try {
-    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-      const bc = new BroadcastChannel("aura_dine_sync_channel");
-      bc.postMessage({ type: "MENU_UPDATED", tableName: "sd_orders" });
-    }
-  } catch {}
 }

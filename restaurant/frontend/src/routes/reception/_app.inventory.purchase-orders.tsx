@@ -24,7 +24,7 @@ export const Route = createFileRoute("/reception/_app/inventory/purchase-orders"
   component: POPage,
 });
 
-export interface SupplierRecord {
+interface SupplierRecord {
   id: string;
   name: string;
   phone: string;
@@ -33,7 +33,7 @@ export interface SupplierRecord {
   created_at?: string;
 }
 
-export interface PurchaseOrderRecord {
+interface PurchaseOrderRecord {
   id: string;
   supplier: string;
   items: number;
@@ -351,6 +351,7 @@ function POPage() {
                     <Label htmlFor="supplier-name">Supplier Name *</Label>
                     <Input
                       id="supplier-name"
+                      name="supplierName"
                       placeholder="e.g. ABC Foods Supplier"
                       value={supName}
                       onChange={(e) => setSupName(e.target.value)}
@@ -361,6 +362,7 @@ function POPage() {
                     <Label htmlFor="supplier-phone">Phone Number *</Label>
                     <Input
                       id="supplier-phone"
+                      name="supplierPhone"
                       placeholder="e.g. +91 98765 43210"
                       value={supPhone}
                       onChange={(e) => setSupPhone(e.target.value)}
@@ -371,6 +373,7 @@ function POPage() {
                     <Label htmlFor="supplier-address">Address *</Label>
                     <Input
                       id="supplier-address"
+                      name="supplierAddress"
                       placeholder="e.g. Chennai, Tamil Nadu"
                       value={supAddress}
                       onChange={(e) => setSupAddress(e.target.value)}
@@ -421,7 +424,7 @@ function POPage() {
                 </DialogHeader>
                 <form onSubmit={handleCreatePO} className="space-y-4 mt-2">
                   <div className="space-y-1">
-                    <Label>Supplier Name *</Label>
+                    <Label htmlFor="po-supplier-select">Supplier Name *</Label>
                     <Select
                       value={selectedSupplierId || undefined}
                       onValueChange={(val) => {
@@ -431,7 +434,7 @@ function POPage() {
                       }}
                       disabled={loadingPOs || (suppliers || []).length === 0}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="po-supplier-select" aria-label="Supplier Name">
                         <SelectValue
                           placeholder={
                             loadingPOs
@@ -453,9 +456,9 @@ function POPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <Label>Entry Type *</Label>
+                    <Label htmlFor="po-entry-type">Entry Type *</Label>
                     <Select value={entryType} onValueChange={setEntryType}>
-                      <SelectTrigger><SelectValue placeholder="Select Entry Type" /></SelectTrigger>
+                      <SelectTrigger id="po-entry-type" aria-label="Entry Type"><SelectValue placeholder="Select Entry Type" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Direct Restock">Direct Restock</SelectItem>
                         <SelectItem value="Kitchen Raw Ingredients">Kitchen Raw Ingredients</SelectItem>
@@ -471,6 +474,7 @@ function POPage() {
                       <Label htmlFor="po-items">Item SKU Counts *</Label>
                       <Input
                         id="po-items"
+                        name="poItems"
                         type="number"
                         min="1"
                         placeholder="5"
@@ -482,6 +486,7 @@ function POPage() {
                       <Label htmlFor="po-total">Total Amount (₹) *</Label>
                       <Input
                         id="po-total"
+                        name="poTotal"
                         type="number"
                         step="0.01"
                         min="0"
@@ -495,7 +500,7 @@ function POPage() {
                   <div className="space-y-1">
                     <Label htmlFor="po-terms">Payment Terms *</Label>
                     <Select value={poTerms} onValueChange={setPoTerms}>
-                      <SelectTrigger id="po-terms" className="w-full"><SelectValue placeholder="Select Payment Terms" /></SelectTrigger>
+                      <SelectTrigger id="po-terms" name="poTerms" aria-label="Payment Terms" className="w-full"><SelectValue placeholder="Select Payment Terms" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Prepaid">Prepaid</SelectItem>
                         <SelectItem value="Pay on Delivery (POD)">Pay on Delivery (POD)</SelectItem>

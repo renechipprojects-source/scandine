@@ -14,7 +14,7 @@ export const Route = createFileRoute("/kitchen/_app/notifications")({
   component: KitchenNotificationsPage,
 });
 
-export interface NotificationItem {
+interface NotificationItem {
   id: string;
   title: string;
   body: string;
@@ -23,7 +23,7 @@ export interface NotificationItem {
   created_at?: string;
 }
 
-export function KitchenNotificationsPage() {
+function KitchenNotificationsPage() {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);

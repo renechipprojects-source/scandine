@@ -57,8 +57,11 @@ CREATE TABLE sd_orders (
   table_number INT,
   item JSONB NOT NULL DEFAULT '[]'::jsonb,
   total NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'preparing', 'ready', 'completed', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled')),
   payment TEXT NOT NULL DEFAULT 'unpaid' CHECK (payment IN ('paid', 'unpaid', 'refunded', 'pending')),
+  accepted_at TIMESTAMPTZ,
+  prep_time_minutes INT,
+  estimated_ready_at TIMESTAMPTZ,
   order_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

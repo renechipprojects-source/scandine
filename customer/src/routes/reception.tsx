@@ -259,10 +259,13 @@ function ReceptionDashboard() {
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <input
+                  id="reception-search-input"
+                  name="receptionSearch"
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search table, customer, invoice..."
+                  aria-label="Search table, customer, or invoice"
                   className="w-full rounded-full border bg-background pl-9 pr-4 py-1.5 text-xs outline-none focus:ring-2 focus:ring-primary/40"
                 />
               </div>

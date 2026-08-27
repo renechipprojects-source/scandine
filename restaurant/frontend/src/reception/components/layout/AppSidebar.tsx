@@ -22,6 +22,7 @@ const nav: { label: string; items: NavItem[] }[] = [
       { title: "Customers", url: "/reception/customers", icon: Users },
       {
         title: "Billing", icon: Receipt, children: [
+          { title: "Cash Collection", url: "/reception/billing/cash-collection" },
           { title: "Invoices", url: "/reception/billing/invoices" },
           { title: "Payments", url: "/reception/billing/payments" },
         ]

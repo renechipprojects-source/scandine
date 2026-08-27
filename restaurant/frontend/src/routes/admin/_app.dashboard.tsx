@@ -17,8 +17,6 @@ import { restaurantInfo } from "@/admin/lib/mock-data";
 import {
   useSupabaseTable,
   type Order,
-  type TableItem,
-  type Customer,
   type Employee,
   type MenuItem,
 } from "@/hooks/useSupabaseData";
@@ -46,15 +44,11 @@ const COLORS = [
 
 function DashboardPage() {
   const { data: dbOrders, fetchData: fetchOrders } = useSupabaseTable<Order>("sd_orders");
-  const { data: dbTables, fetchData: fetchTables } = useSupabaseTable<TableItem>("tables");
-  const { data: dbCustomers, fetchData: fetchCustomers } = useSupabaseTable<Customer>("customers");
   const { data: dbEmployees, fetchData: fetchEmployees } = useSupabaseTable<Employee>("sd_employees");
   const { data: dbMenuItems, fetchData: fetchMenuItems } = useSupabaseTable<MenuItem>("sd_menu_items");
 
-  // Real-time subscriptions for all dynamic tables
+  // Real-time subscriptions for active project tables
   useRealtimeTable("sd_orders", useCallback(() => { fetchOrders(); }, [fetchOrders]));
-  useRealtimeTable("tables", useCallback(() => { fetchTables(); }, [fetchTables]));
-  useRealtimeTable("customers", useCallback(() => { fetchCustomers(); }, [fetchCustomers]));
   useRealtimeTable("sd_employees", useCallback(() => { fetchEmployees(); }, [fetchEmployees]));
   useRealtimeTable("sd_menu_items", useCallback(() => { fetchMenuItems(); }, [fetchMenuItems]));
 
@@ -66,7 +60,9 @@ function DashboardPage() {
   const pendingOrdersCount = dbOrders.filter((o) => o.status === "pending").length;
   const preparingOrdersCount = dbOrders.filter((o) => o.status === "preparing").length;
   const readyOrdersCount = dbOrders.filter((o) => o.status === "ready").length;
-  const completedOrdersCount = dbOrders.filter((o) => o.status === "completed").length;
+  const completedOrdersCount = dbOrders.filter(
+    (o) => o.status === "completed" || (o.status as string) === "served"
+  ).length;
   const cancelledOrdersCount = dbOrders.filter((o) => o.status === "cancelled").length;
 
   const paidOrders = useMemo(() => {
@@ -89,13 +85,29 @@ function DashboardPage() {
       .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
   }, [paidOrders]);
 
-  const activeTablesCount = dbTables.filter((t) => t.status === "occupied").length;
-  const availableTablesCount = dbTables.filter(
-    (t) => t.status === "available" || (t.status as string) === "vacant" || (t.status as string) === "cleaning"
-  ).length;
+  const activeTablesCount = useMemo(() => {
+    return new Set(
+      dbOrders
+        .filter(
+          (o) =>
+            ["pending", "accepted", "preparing", "ready"].includes(
+              String(o.status || "").toLowerCase()
+            ) && o.table_number
+        )
+        .map((o) => String(o.table_number))
+    ).size;
+  }, [dbOrders]);
+
+  const totalTablesCount = useMemo(() => {
+    const tableNumbers = dbOrders
+      .map((o) => Number(o.table_number))
+      .filter((n) => !isNaN(n) && n > 0);
+    const maxTableNum = tableNumbers.length > 0 ? Math.max(...tableNumbers) : 5;
+    const uniqueTableCount = new Set(tableNumbers).size;
+    return Math.max(5, maxTableNum, uniqueTableCount);
+  }, [dbOrders]);
 
   const menuItemsCount = dbMenuItems.length;
-  const totalTablesCount = dbTables.length;
   const staffCount = dbEmployees.length;
 
   // Realtime Status Distribution

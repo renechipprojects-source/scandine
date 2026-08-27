@@ -13,7 +13,7 @@ import {
   Sparkles, Download, Calendar,
 } from "lucide-react";
 import { restaurantInfo } from "@/reception/lib/mock-data";
-import { useSupabaseTable, type TableItem, type Invoice, type Order } from "@/hooks/useSupabaseData";
+import { useSupabaseTable, type Invoice, type Order } from "@/hooks/useSupabaseData";
 import { exportToCSV } from "@/admin/lib/exportUtils";
 import { toast } from "sonner";
 import { useCallback, useMemo } from "react";
@@ -32,31 +32,34 @@ export const Route = createFileRoute("/reception/_app/dashboard")({
 const COLORS = ["oklch(0.68 0.19 40)", "oklch(0.62 0.22 25)", "oklch(0.75 0.15 70)", "oklch(0.65 0.16 155)", "oklch(0.55 0.15 260)"];
 
 function DashboardPage() {
-  const { data: dbTables, fetchData: fetchTables } = useSupabaseTable<TableItem>("tables");
-  const { data: dbInvoices, fetchData: fetchInvoices } = useSupabaseTable<Invoice>("invoices");
   const { data: dbOrders, fetchData: fetchOrders } = useSupabaseTable<Order>("sd_orders");
   const { data: dbEmployees, fetchData: fetchEmployees } = useSupabaseTable<any>("sd_employees");
 
   const handleRealtimePayload = useCallback(() => {
-    fetchTables();
-    fetchInvoices();
     fetchOrders();
     fetchEmployees();
-  }, [fetchTables, fetchInvoices, fetchOrders, fetchEmployees]);
+  }, [fetchOrders, fetchEmployees]);
 
-  useRealtimeTable("tables", handleRealtimePayload);
-  useRealtimeTable("invoices", handleRealtimePayload);
   useRealtimeTable("sd_orders", handleRealtimePayload);
   useRealtimeTable("sd_employees", handleRealtimePayload);
 
-  const totalTablesCount = dbTables.length > 0 ? dbTables.length : Math.max(5, new Set(dbOrders.map((o) => String(o.table_number || "")).filter(Boolean)).size);
-  const occupiedTablesCount = new Set(
-    dbOrders
-      .filter((o) => ["pending", "accepted", "preparing", "ready"].includes(String(o.status || "").toLowerCase()))
-      .map((o) => String(o.table_number || ""))
-      .filter(Boolean)
-  ).size || dbTables.filter((t) => t.status === "occupied").length;
-  const pendingBillsCount = dbInvoices.filter((i) => i.status === "unpaid" || i.status === "Unpaid" || i.status === "pending" || i.status === "Pending" || i.status === "partial").length;
+  const totalTablesCount = useMemo(() => {
+    const tableNumbers = dbOrders
+      .map((o) => Number(o.table_number))
+      .filter((n) => !isNaN(n) && n > 0);
+    const maxTableNum = tableNumbers.length > 0 ? Math.max(...tableNumbers) : 5;
+    const uniqueTableCount = new Set(tableNumbers).size;
+    return Math.max(5, maxTableNum, uniqueTableCount);
+  }, [dbOrders]);
+
+  const occupiedTablesCount = useMemo(() => {
+    return new Set(
+      dbOrders
+        .filter((o) => ["pending", "accepted", "preparing", "ready"].includes(String(o.status || "").toLowerCase()) && o.table_number)
+        .map((o) => String(o.table_number))
+    ).size;
+  }, [dbOrders]);
+  const pendingBillsCount = dbOrders.filter((o) => String(o.payment || "").toLowerCase() !== "paid" && String(o.status || "").toLowerCase() !== "cancelled").length;
 
   const pendingCount = dbOrders.filter((o) => o.status === "pending").length;
   const preparingCount = dbOrders.filter((o) => o.status === "preparing").length;

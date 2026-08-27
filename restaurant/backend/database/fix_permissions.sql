@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS sd_orders (
   table_number INT,
   item JSONB NOT NULL DEFAULT '[]'::jsonb,
   total NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'preparing', 'ready', 'completed', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled')),
   payment TEXT NOT NULL DEFAULT 'unpaid' CHECK (payment IN ('paid', 'unpaid', 'refunded', 'pending')),
   payment_method TEXT,
   payment_category TEXT,
@@ -99,6 +99,12 @@ ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS customer_email TEXT;
 ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS customer_name TEXT;
 ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS payment_method TEXT;
 ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS payment_category TEXT;
+ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMPTZ;
+ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS prep_time_minutes INT;
+ALTER TABLE sd_orders ADD COLUMN IF NOT EXISTS estimated_ready_at TIMESTAMPTZ;
+
+ALTER TABLE public.sd_orders DROP CONSTRAINT IF EXISTS sd_orders_status_check;
+ALTER TABLE public.sd_orders ADD CONSTRAINT sd_orders_status_check CHECK (status IN ('pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'));
 
 -- 4. Enable RLS & Drop existing policies to prevent conflicts
 ALTER TABLE sd_employees ENABLE ROW LEVEL SECURITY;
