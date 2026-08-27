@@ -602,13 +602,6 @@ export async function updateOrderPayment(orderId: string, paymentMethod: string 
             .update({ item: newItems })
             .eq("id", updatedRowId);
         } catch { }
-
-        try {
-          await supabase
-            .from("sd_orders")
-            .update({ payment_method: paymentMethod, payment_category: category } as any)
-            .eq("id", updatedRowId);
-        } catch { }
       }
 
       if (data && data.length > 0) {

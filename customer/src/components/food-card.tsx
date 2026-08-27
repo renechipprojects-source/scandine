@@ -12,6 +12,17 @@ export function getKitchenImageUrl(url?: string): string {
   const trimmed = url.trim();
   if (!trimmed) return "";
 
+  // Exclude invalid localhost / 127.0.0.1 asset URLs in production
+  if (trimmed.includes("localhost:") || trimmed.includes("127.0.0.1:")) {
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.pathname && parsed.pathname !== "/" && !parsed.pathname.endsWith("/")) {
+        return parsed.pathname;
+      }
+    } catch {}
+    return "";
+  }
+
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
     if (trimmed.includes("res.cloudinary.com") && !trimmed.includes("q_auto")) {
       return trimmed.replace("/upload/", "/upload/w_600,f_auto,q_auto,c_limit/");

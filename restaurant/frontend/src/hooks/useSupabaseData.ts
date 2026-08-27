@@ -235,12 +235,21 @@ function normalizeFetchedRows<T>(tableName: string, rows: T[]): T[] {
       .filter((r: any) => !mockIds.has(String(r.id)) && !mockNames.has(String(r.name || "").trim()))
       .map((r: any) => {
         const catName = r.category_name || r.category || (r.category_id ? ID_TO_CATEGORY[r.category_id] : null) || "Lunch";
+        let rawImg = String(r.image_url || r.image || "").trim();
+        if (rawImg.includes("localhost:") || rawImg.includes("127.0.0.1:")) {
+          try {
+            const parsed = new URL(rawImg);
+            rawImg = (parsed.pathname && parsed.pathname !== "/" && !parsed.pathname.endsWith("/")) ? parsed.pathname : "";
+          } catch {
+            rawImg = "";
+          }
+        }
         return {
           ...r,
           category: catName,
           category_name: catName,
-          image_url: r.image_url || r.image,
-          image: r.image || r.image_url,
+          image_url: rawImg,
+          image: rawImg,
           status: r.status || (r.available ? "Available" : "Unavailable"),
         };
       });

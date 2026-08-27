@@ -99,21 +99,9 @@ router.post("/verify", async (req, res) => {
                 .or(`id.eq.${order_id},order_id.eq.${order_id},id.eq.${cleanId},order_id.eq.${cleanId}`)
                 .maybeSingle();
             const targetId = dbOrder?.id || order_id;
-            // Update primary payment status column 'payment' to 'paid'
-            const { error: updateErr } = await supabase
-                .from("sd_orders")
-                .update({ payment: "paid" })
-                .eq("id", targetId);
-            if (updateErr) {
-                console.warn("[RAZORPAY SERVER DB UPDATE WARN] Secondary update by order_id...", updateErr);
-                await supabase
-                    .from("sd_orders")
-                    .update({ payment: "paid" })
-                    .eq("order_id", targetId);
-            }
-            // Update item JSONB array with payment metadata
+            let updatedItems = dbOrder?.item;
             if (dbOrder && Array.isArray(dbOrder.item)) {
-                const updatedItems = dbOrder.item.map((it, idx) => ({
+                updatedItems = dbOrder.item.map((it, idx) => ({
                     ...it,
                     ...(idx === 0
                         ? {
@@ -124,18 +112,19 @@ router.post("/verify", async (req, res) => {
                         }
                         : {}),
                 }));
-                await supabase
-                    .from("sd_orders")
-                    .update({ item: updatedItems })
-                    .eq("id", dbOrder.id);
             }
-            try {
-                await supabase
-                    .from("sd_orders")
-                    .update({ payment_method: payMethodName, payment_category: payCategory })
-                    .eq("id", targetId);
+            const { error: updateErr } = await supabase
+                .from("sd_orders")
+                .update({
+                payment: "paid",
+                payment_method: payMethodName,
+                payment_category: payCategory,
+                ...(updatedItems ? { item: updatedItems } : {}),
+            })
+                .or(`id.eq.${targetId},order_id.eq.${targetId}`);
+            if (updateErr) {
+                console.error("[RAZORPAY VERIFY UPDATE ERROR]", updateErr.message);
             }
-            catch { }
         }
         res.status(200).json({
             success: true,
