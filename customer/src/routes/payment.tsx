@@ -12,6 +12,7 @@ import {
   notifyKitchenOrderPaid,
   notifyReceptionAdminPayment,
   subscribeToOrdersBySession,
+  isValidId,
   type DbOrder,
 } from "@/lib/supabase";
 import { paymentStore, useLivePayments } from "@/lib/payment-store";
@@ -35,7 +36,7 @@ function Payment() {
   const tableNumber = useTable();
   const search = useSearch({ strict: false }) as { orderId?: string };
   const rawActiveId = (search.orderId || cart.getActiveOrderId() || "").trim();
-  const activeId = (rawActiveId && rawActiveId !== "undefined" && rawActiveId !== "null" && rawActiveId !== "[object Object]") ? rawActiveId : "";
+  const activeId = isValidId(rawActiveId) ? rawActiveId : "";
 
   const [order, setOrder] = useState<DbOrder | null>(null);
   const [loading, setLoading] = useState(true);

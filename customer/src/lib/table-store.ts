@@ -95,8 +95,11 @@ export const tableStore = {
   },
 };
 
+import { useHydrated } from "./sync-manager";
+
 export function useTable(): string {
-  return useSyncExternalStore(
+  const isHydrated = useHydrated();
+  const table = useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
@@ -104,4 +107,5 @@ export function useTable(): string {
     () => (typeof window !== "undefined" ? currentTableNumber : ""),
     () => ""
   );
+  return isHydrated ? table : "";
 }

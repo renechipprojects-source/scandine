@@ -1,7 +1,15 @@
 // Enterprise-grade Offline Synchronization & Network Recovery Manager
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useState, useEffect } from "react";
 import { supabase, isSupabaseConfigured, type DbOrder, type ServiceRequest, mapRowToDbOrder, normalizeOrderStatus, normalizePaymentStatus } from "./supabase";
 import { toast } from "sonner";
+
+export function useHydrated(): boolean {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+  return hydrated;
+}
 
 export type OfflineAction =
   | { type: "CREATE_ORDER"; payload: Omit<DbOrder, "created_at">; timestamp: string }
@@ -190,12 +198,14 @@ export const syncManager = {
 };
 
 export function useOnlineStatus(): boolean {
-  return useSyncExternalStore(
+  const isHydrated = useHydrated();
+  const online = useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
-    () => isOnline,
+    () => (typeof window !== "undefined" ? isOnline : true),
     () => true
   );
+  return isHydrated ? online : true;
 }

@@ -76,6 +76,23 @@ export const supabaseAnonKey = envKey;
 
 export const isSupabaseConfigured = () => Boolean(supabaseUrl && supabaseAnonKey);
 
+export function isValidId(id?: any): boolean {
+  if (!id || typeof id !== "string") return false;
+  const trimmed = id.trim();
+  if (
+    !trimmed ||
+    trimmed === "undefined" ||
+    trimmed === "null" ||
+    trimmed === "[object Object]" ||
+    trimmed === "0" ||
+    trimmed.startsWith("undefined") ||
+    trimmed.startsWith("null")
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export const getSessionIdHeader = (): string => {
   try {
     if (typeof window !== "undefined") {
@@ -368,14 +385,14 @@ export async function getOrderById(
   orderId?: string,
   expectedSessionId?: string
 ): Promise<DbOrder | null> {
-  if (!orderId || typeof orderId !== "string" || orderId === "undefined" || orderId === "null" || orderId === "[object Object]" || !orderId.trim()) {
-    return null;
-  }
+  if (!isValidId(orderId)) return null;
   let order: DbOrder | null = null;
 
   if (isSupabaseConfigured()) {
     try {
-      const cleanId = orderId.replace(/^#/, "").trim();
+      const cleanId = orderId!.replace(/^#/, "").trim();
+      if (!isValidId(cleanId)) return null;
+
       const { data, error } = await supabase
         .from("sd_orders")
         .select("*")
@@ -391,7 +408,7 @@ export async function getOrderById(
 
   if (!order) {
     const localOrders = getLocalOrders();
-    const cleanId = orderId.replace(/^#/, "").trim();
+    const cleanId = orderId!.replace(/^#/, "").trim();
     order =
       localOrders.find(
         (o) =>
@@ -424,7 +441,7 @@ export async function getOrdersByTable(
         .select("*")
         .eq("table_number", tblNum);
 
-      if (sessionIdFilter) {
+      if (isValidId(sessionIdFilter)) {
         query = query.eq("session_id", sessionIdFilter);
       }
 
@@ -432,7 +449,7 @@ export async function getOrdersByTable(
 
       if (!error && data) {
         const allMapped = data.map(mapRowToDbOrder);
-        if (sessionIdFilter) {
+        if (isValidId(sessionIdFilter)) {
           return allMapped.filter((o) => o.session_id === sessionIdFilter);
         }
         return allMapped;
@@ -444,14 +461,14 @@ export async function getOrdersByTable(
 
   const localOrders = getLocalOrders();
   const tableLocal = localOrders.filter((o) => o.table_number.toLowerCase() === tableNumber.toLowerCase());
-  if (sessionIdFilter) {
+  if (isValidId(sessionIdFilter)) {
     return tableLocal.filter((o) => o.session_id === sessionIdFilter);
   }
   return tableLocal;
 }
 
-export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> {
-  if (!sessionId) return [];
+export async function getOrdersBySession(sessionId?: string): Promise<DbOrder[]> {
+  if (!isValidId(sessionId)) return [];
   const fetchedOrders: DbOrder[] = [];
 
   if (isSupabaseConfigured()) {
@@ -459,7 +476,7 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
       const { data, error } = await supabase
         .from("sd_orders")
         .select("*")
-        .eq("session_id", sessionId)
+        .eq("session_id", sessionId!)
         .order("created_at", { ascending: false });
 
       if (!error && data && data.length > 0) {
@@ -491,11 +508,11 @@ export async function getOrdersBySession(sessionId: string): Promise<DbOrder[]> 
 }
 
 export function subscribeToOrdersBySession(
-  sessionId: string,
-  onUpdate: (order: DbOrder) => void,
+  sessionId?: string,
+  onUpdate?: (order: DbOrder) => void,
   onSubscribed?: (status?: string) => void
 ) {
-  if (!isSupabaseConfigured() || !sessionId) {
+  if (!isSupabaseConfigured() || !isValidId(sessionId) || !onUpdate) {
     return () => { };
   }
 

@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from "react";
 import type { FoodItem } from "./mock-data";
 import { tableStore } from "./table-store";
+import { isValidId } from "./supabase";
+import { useHydrated } from "./sync-manager";
 
 export type CartItem = {
   food: FoodItem;
@@ -91,30 +93,43 @@ export const cart = {
     };
     emit();
   },
-  setActiveOrder(orderId: string) {
+  setActiveOrderId(orderId?: string) {
     state = loadState();
-    state = { ...state, activeOrderId: orderId };
-    try {
-      const rawCust = localStorage.getItem("scandine_current_customer");
-      const sid = rawCust ? JSON.parse(rawCust)?.sessionId : "guest";
-      localStorage.setItem(`scandine_active_order_${sid}`, orderId);
-      localStorage.setItem("scandine_active_order_id", orderId);
-    } catch {}
+    if (isValidId(orderId)) {
+      state = { ...state, activeOrderId: orderId };
+      try {
+        const rawCust = localStorage.getItem("scandine_current_customer");
+        const sid = rawCust ? JSON.parse(rawCust)?.sessionId : "guest";
+        localStorage.setItem(`scandine_active_order_${sid}`, orderId!);
+        localStorage.setItem("scandine_active_order_id", orderId!);
+      } catch {}
+    } else {
+      state = { ...state, activeOrderId: undefined };
+      try {
+        const rawCust = localStorage.getItem("scandine_current_customer");
+        const sid = rawCust ? JSON.parse(rawCust)?.sessionId : "guest";
+        localStorage.removeItem(`scandine_active_order_${sid}`);
+        localStorage.removeItem("scandine_active_order_id");
+      } catch {}
+    }
     emit();
   },
   getActiveOrderId(): string | undefined {
     state = loadState();
-    if (state.activeOrderId) return state.activeOrderId;
+    if (isValidId(state.activeOrderId)) return state.activeOrderId;
     try {
       const rawCust = localStorage.getItem("scandine_current_customer");
       const sid = rawCust ? JSON.parse(rawCust)?.sessionId : null;
       if (sid) {
-        return localStorage.getItem(`scandine_active_order_${sid}`) || undefined;
+        const val = localStorage.getItem(`scandine_active_order_${sid}`);
+        if (isValidId(val)) return val!;
       }
-      return localStorage.getItem("scandine_active_order_id") || undefined;
+      const val = localStorage.getItem("scandine_active_order_id");
+      if (isValidId(val)) return val!;
     } catch {
       return undefined;
     }
+    return undefined;
   },
   clear() {
     const currentActiveOrder = state.activeOrderId || this.getActiveOrderId();
@@ -140,14 +155,16 @@ export const cart = {
 const SERVER_CART_STATE: State = { items: [] };
 
 export function useCart() {
-  return useSyncExternalStore(
+  const isHydrated = useHydrated();
+  const cartState = useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
-    () => loadState(),
+    () => (typeof window !== "undefined" ? loadState() : SERVER_CART_STATE),
     () => SERVER_CART_STATE
   );
+  return isHydrated ? cartState : SERVER_CART_STATE;
 }
 
 export function cartTotals(items: CartItem[]) {

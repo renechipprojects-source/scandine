@@ -182,15 +182,19 @@ export const customerStore = {
   },
 };
 
+import { useHydrated } from "./sync-manager";
+
 const SERVER_CUSTOMER: CustomerDetails | null = null;
 
 export function useCustomer(table: string): CustomerDetails | null {
-  return useSyncExternalStore(
+  const isHydrated = useHydrated();
+  const customer = useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
     () => (typeof window !== "undefined" ? loadCustomer(table) : null),
-    () => null
+    () => SERVER_CUSTOMER
   );
+  return isHydrated ? customer : SERVER_CUSTOMER;
 }

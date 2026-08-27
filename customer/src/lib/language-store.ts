@@ -44,13 +44,19 @@ export const languageStore = {
   },
 };
 
+import { useHydrated } from "./sync-manager";
+
+const SERVER_LANG = LANGUAGES[0];
+
 export function useLanguage(): Language {
-  return useSyncExternalStore(
+  const isHydrated = useHydrated();
+  const lang = useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
-    () => languageStore.getLanguage(),
-    () => languageStore.getLanguage()
+    () => (typeof window !== "undefined" ? languageStore.getLanguage() : SERVER_LANG),
+    () => SERVER_LANG
   );
+  return isHydrated ? lang : SERVER_LANG;
 }

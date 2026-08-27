@@ -8,7 +8,7 @@ import { cart } from "@/lib/cart-store";
 import { useTable } from "@/lib/table-store";
 import { useCustomer } from "@/lib/customer-store";
 import { CustomerRegistration } from "@/components/customer-registration";
-import { getOrderById, getOrdersBySession, subscribeToOrdersBySession, type DbOrder } from "@/lib/supabase";
+import { getOrderById, getOrdersBySession, subscribeToOrdersBySession, isValidId, type DbOrder } from "@/lib/supabase";
 
 export const Route = createFileRoute("/track")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -72,10 +72,12 @@ function TrackOrder() {
       let fetchedOrder: DbOrder | null = null;
 
       // 1. Try URL orderId parameter or session-scoped active order ID
-      const targetOrderId =
+      const rawTargetId =
         activeId ||
         localStorage.getItem(`scandine_active_order_${customer.sessionId}`) ||
-        localStorage.getItem("scandine_active_order_id");
+        localStorage.getItem("scandine_active_order_id") ||
+        "";
+      const targetOrderId = isValidId(rawTargetId) ? rawTargetId.trim() : "";
 
       if (targetOrderId) {
         const byId = await getOrderById(targetOrderId, customer.sessionId);

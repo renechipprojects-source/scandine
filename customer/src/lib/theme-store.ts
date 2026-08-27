@@ -58,13 +58,19 @@ export const themeStore = {
   },
 };
 
+import { useHydrated } from "./sync-manager";
+
+const SERVER_THEME: Theme = "system";
+
 export function useTheme(): Theme {
-  return useSyncExternalStore(
+  const isHydrated = useHydrated();
+  const theme = useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
-    () => currentTheme,
-    () => currentTheme
+    () => (typeof window !== "undefined" ? currentTheme : SERVER_THEME),
+    () => SERVER_THEME
   );
+  return isHydrated ? theme : SERVER_THEME;
 }
