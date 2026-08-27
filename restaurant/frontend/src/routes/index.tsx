@@ -180,32 +180,29 @@ function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-foreground flex flex-col items-center justify-between">
-      {/* Animated ambient background */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,oklch(0.97_0.04_60)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,oklch(0.96_0.05_30)_0%,transparent_55%)]" />
-        <div className="animate-float-slow absolute -top-32 -left-32 h-[420px] w-[420px] rounded-full bg-[oklch(0.78_0.18_35)] opacity-30 blur-3xl" />
-        <div className="animate-float-slower absolute top-1/2 -right-40 h-[520px] w-[520px] rounded-full bg-[oklch(0.72_0.2_25)] opacity-25 blur-3xl" />
-        <div className="animate-float-slow absolute -bottom-40 left-1/3 h-[380px] w-[380px] rounded-full bg-[oklch(0.85_0.12_65)] opacity-30 blur-3xl" />
-        <div
-          className="absolute inset-0 opacity-[0.035] mix-blend-multiply"
-          style={{
-            backgroundImage:
-              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
-          }}
+    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-foreground flex flex-col items-center justify-between">
+      {/* High-quality ambient restaurant background with dark gradient & vignette */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <img
+          src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2000&q=80"
+          alt=""
+          className="h-full w-full object-cover object-center opacity-25 scale-105 filter blur-[2px]"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/60" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(2,6,23,0.6)_100%)]" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
       </div>
 
-      <main className="w-full max-w-[480px] px-6 py-12 flex flex-col items-center justify-center animate-rise my-auto">
+      <main className="w-full max-w-[480px] px-6 py-12 flex flex-col items-center justify-center animate-rise my-auto relative z-10">
         {/* Header Branding */}
-        <header className="flex flex-col items-center justify-center text-center mb-4">
+        <header className="flex flex-col items-center justify-center text-center mb-6">
           <Link to="/" className="group flex items-center justify-center">
-            <div className="relative rounded-3xl bg-white/80 dark:bg-card/80 p-3 border border-white/80 dark:border-border/80 shadow-[0_14px_35px_-6px_rgba(0,0,0,0.12),0_6px_14px_-4px_rgba(0,0,0,0.06)] backdrop-blur-xl transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-[0_18px_42px_-6px_rgba(0,0,0,0.16)]">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-3xl bg-gradient-to-b from-white/60 to-transparent" />
+            <div className="relative rounded-3xl bg-white/90 dark:bg-slate-900/90 p-3.5 border border-white/80 dark:border-white/10 shadow-[0_16px_36px_-8px_rgba(0,0,0,0.35),0_6px_16px_-4px_rgba(0,0,0,0.2)] backdrop-blur-2xl transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-[0_20px_45px_-8px_rgba(0,0,0,0.45)]">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-3xl bg-gradient-to-b from-white/70 to-transparent" />
               <img
                 src="/scandine-logo.png"
                 alt="ScanDine"
-                className="h-24 sm:h-28 w-auto object-contain relative z-10 rounded-2xl drop-shadow-[0_6px_12px_rgba(0,0,0,0.12)]"
+                className="h-24 sm:h-28 w-auto object-contain relative z-10 rounded-2xl drop-shadow-[0_6px_12px_rgba(0,0,0,0.15)]"
               />
             </div>
           </Link>
@@ -214,17 +211,17 @@ function LoginPage() {
         {/* Centered Form Card */}
         <div className="w-full">
           <div className="mb-6 text-center">
-            <h1 className="text-2xl font-bold tracking-tight leading-[1.1] sm:text-3xl">
+            <h1 className="text-2xl font-bold tracking-tight leading-[1.1] sm:text-3xl text-white">
               Staff Sign In
             </h1>
-            <p className="mt-2 text-xs sm:text-sm text-muted-foreground">
+            <p className="mt-2 text-xs sm:text-sm text-slate-400">
               Enter your credentials to access your designated module.
             </p>
           </div>
 
-          <div className="relative rounded-[28px] border border-white/60 bg-white/70 p-6 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:p-8">
+          <div className="relative rounded-[28px] border border-white/15 bg-slate-900/80 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5),0_10px_25px_-5px_rgba(0,0,0,0.3)] backdrop-blur-2xl sm:p-8">
             {/* Glass reflection */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
@@ -310,11 +307,11 @@ function Field({
 }) {
   return (
     <div className="group">
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-foreground/80">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-slate-300">
         {label}
       </label>
-      <div className="relative flex items-center rounded-2xl border border-border bg-white/80 transition-all duration-300 focus-within:border-[oklch(0.7_0.2_35)] focus-within:shadow-[0_0_0_4px_oklch(0.75_0.18_35/0.15)] hover:border-[oklch(0.82_0.1_50)]">
-        <span className="pl-4 text-muted-foreground transition-colors group-focus-within:text-[oklch(0.62_0.22_30)]">
+      <div className="relative flex items-center rounded-2xl border border-white/10 bg-slate-950/60 transition-all duration-300 focus-within:border-[oklch(0.7_0.2_35)] focus-within:ring-2 focus-within:ring-[oklch(0.75_0.18_35/0.25)] hover:border-white/20">
+        <span className="pl-4 text-slate-400 transition-colors group-focus-within:text-amber-400">
           {icon}
         </span>
         <input
@@ -326,7 +323,7 @@ function Field({
           value={value}
           onChange={onChange}
           required={required}
-          className="flex-1 bg-transparent px-3 py-3.5 text-[15px] text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
+          className="flex-1 bg-transparent px-3 py-3.5 text-[15px] text-white placeholder:text-slate-500 focus:outline-none"
         />
         {trailing && <span className="pr-2">{trailing}</span>}
       </div>

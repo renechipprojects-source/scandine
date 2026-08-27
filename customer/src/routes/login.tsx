@@ -48,17 +48,31 @@ function StaffLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-background relative flex flex-col justify-between overflow-hidden">
+    <div className="min-h-screen bg-slate-950 text-foreground relative flex flex-col justify-between overflow-hidden">
+      {/* High-quality ambient restaurant background with dark gradient & vignette */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <img
+          src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2000&q=80"
+          alt=""
+          className="h-full w-full object-cover object-center opacity-25 scale-105 filter blur-[2px]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/60" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(2,6,23,0.6)_100%)]" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      </div>
+
       <CustomerNav />
 
       {/* Main Centered Container */}
-      <main className="flex-1 flex flex-col items-center justify-center p-4 py-12">
+      <main className="flex-1 flex flex-col items-center justify-center p-4 py-12 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 15, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.4 }}
-          className="w-full max-w-md glass rounded-3xl p-6 sm:p-8 shadow-glass border border-border/80"
+          className="w-full max-w-md rounded-[28px] border border-white/15 bg-slate-900/85 p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5),0_10px_25px_-5px_rgba(0,0,0,0.3)] backdrop-blur-2xl relative"
         >
+          {/* Glass reflection */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
           {/* Staff Header */}
           <div className="text-center mb-6">
             <Link to="/" className="inline-block mb-3 group">
@@ -74,23 +88,23 @@ function StaffLogin() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20 mb-3 block mx-auto w-fit">
               <ShieldCheck className="h-3.5 w-3.5" /> Commercial Restaurant ERP
             </div>
-            <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-white">
               Staff Portal Sign In
             </h1>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-slate-400 mt-1">
               Enter your credentials to access your designated module.
             </p>
           </div>
 
           {/* Role Selection Tabs */}
-          <div className="grid grid-cols-3 gap-1.5 p-1 bg-muted/60 rounded-2xl mb-6">
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950/60 rounded-2xl mb-6 border border-white/10">
             <button
               type="button"
               onClick={() => setRole("admin")}
               className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                 role === "admin"
-                  ? "bg-card text-foreground shadow-xs border"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-slate-800 text-white shadow-xs border border-white/10"
+                  : "text-slate-400 hover:text-white"
               }`}
             >
               <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Admin
@@ -101,11 +115,11 @@ function StaffLogin() {
               onClick={() => setRole("kitchen")}
               className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                 role === "kitchen"
-                  ? "bg-card text-foreground shadow-xs border"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-slate-800 text-white shadow-xs border border-white/10"
+                  : "text-slate-400 hover:text-white"
               }`}
             >
-              <ChefHat className="h-3.5 w-3.5 text-emerald-600" /> Kitchen
+              <ChefHat className="h-3.5 w-3.5 text-emerald-400" /> Kitchen
             </button>
 
             <button
@@ -113,22 +127,22 @@ function StaffLogin() {
               onClick={() => setRole("reception")}
               className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                 role === "reception"
-                  ? "bg-card text-foreground shadow-xs border"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-slate-800 text-white shadow-xs border border-white/10"
+                  : "text-slate-400 hover:text-white"
               }`}
             >
-              <Building2 className="h-3.5 w-3.5 text-blue-600" /> Reception
+              <Building2 className="h-3.5 w-3.5 text-blue-400" /> Reception
             </button>
           </div>
 
           {/* Login Form */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label htmlFor="staff-login-email" className="text-xs font-semibold text-muted-foreground block mb-1.5">
+              <label htmlFor="staff-login-email" className="text-xs font-semibold text-slate-300 block mb-1.5">
                 Staff Email / ID
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
                 <input
                   id="staff-login-email"
                   name="email"
@@ -137,17 +151,17 @@ function StaffLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={`e.g. ${role}@restaurant.com`}
-                  className="w-full rounded-2xl border bg-background/80 pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/40 transition"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="staff-login-password" className="text-xs font-semibold text-muted-foreground block mb-1.5">
+              <label htmlFor="staff-login-password" className="text-xs font-semibold text-slate-300 block mb-1.5">
                 Password / Passcode
               </label>
               <div className="relative">
-                <KeyRound className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
+                <KeyRound className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
                 <input
                   id="staff-login-password"
                   name="password"
@@ -156,14 +170,14 @@ function StaffLogin() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full rounded-2xl border bg-background/80 pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/40 transition"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition"
                 />
               </div>
             </div>
 
-            <div className="flex items-center text-xs text-muted-foreground pt-1">
+            <div className="flex items-center text-xs text-slate-400 pt-1">
               <label htmlFor="remember-session" className="flex items-center gap-2 cursor-pointer select-none">
-                <input id="remember-session" name="rememberSession" type="checkbox" defaultChecked className="rounded border-muted-foreground/40 text-primary" />
+                <input id="remember-session" name="rememberSession" type="checkbox" defaultChecked className="rounded border-slate-700 bg-slate-950 text-primary" />
                 <span>Remember session</span>
               </label>
             </div>
