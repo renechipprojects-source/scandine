@@ -50,17 +50,6 @@ function Profile() {
   const [langModalOpen, setLangModalOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
-  if (!customer) {
-    return (
-      <CustomerRegistration
-        tableNumber={tableNumber}
-        onSuccess={() => {
-          navigate({ to: "/", replace: true });
-        }}
-      />
-    );
-  }
-
   useEffect(() => {
     let unsubscribe = () => {};
 
@@ -101,29 +90,38 @@ function Profile() {
   });
 
   return (
-    <div className="min-h-screen bg-background pb-32">
-      <CustomerNav />
-      <div className="max-w-3xl mx-auto px-4 md:px-8 pt-6">
-        {/* Header Profile Card */}
-        <div className="glass rounded-3xl p-6 shadow-glass flex items-center gap-4">
-          <div className="h-16 w-16 rounded-2xl gradient-accent grid place-items-center text-white text-2xl font-bold">
-            {tableNumber.replace(/\D/g, "") || "1"}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-display text-xl font-bold">{customer.fullName}</div>
-            <div className="text-xs text-muted-foreground">{tableNumber} · {customer.phone} · {customer.email}</div>
-            <div className="text-xs text-primary font-medium mt-0.5">Dining at {restaurant.name}</div>
-          </div>
-          <button
-            onClick={() => themeStore.toggleTheme()}
-            className="rounded-full border p-2.5 text-xs font-semibold hover:bg-muted"
-            title="Toggle theme"
-          >
-            {theme === "dark" ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-700" />}
-          </button>
-        </div>
+    <>
+      {!customer ? (
+        <CustomerRegistration
+          tableNumber={tableNumber}
+          onSuccess={() => {
+            navigate({ to: "/", replace: true });
+          }}
+        />
+      ) : (
+        <div className="min-h-screen bg-background pb-32">
+          <CustomerNav />
+          <div className="max-w-3xl mx-auto px-4 md:px-8 pt-6">
+            {/* Header Profile Card */}
+            <div className="glass rounded-3xl p-6 shadow-glass flex items-center gap-4">
+              <div className="h-16 w-16 rounded-2xl gradient-accent grid place-items-center text-white text-2xl font-bold">
+                {tableNumber.replace(/\D/g, "") || "1"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-display text-xl font-bold">{customer.fullName}</div>
+                <div className="text-xs text-muted-foreground">{tableNumber} · {customer.phone} · {customer.email || "No email"}</div>
+                <div className="text-xs text-primary font-medium mt-0.5">Dining at {restaurant.name}</div>
+              </div>
+              <button
+                onClick={() => themeStore.toggleTheme()}
+                className="rounded-full border p-2.5 text-xs font-semibold hover:bg-muted"
+                title="Toggle theme"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-700" />}
+              </button>
+            </div>
 
-        {/* Active Orders */}
+            {/* Active Orders */}
         <Section title="Active Orders & Live Status" icon={<Utensils className="h-4 w-4" />}>
           {loadingOrders ? (
             <div className="text-center py-6 glass rounded-2xl text-xs text-muted-foreground">
@@ -224,6 +222,8 @@ function Profile() {
         </Section>
       </div>
     </div>
+      )}
+    </>
   );
 }
 

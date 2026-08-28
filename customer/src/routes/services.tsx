@@ -31,17 +31,6 @@ function Services() {
   const [loading, setLoading] = useState(false);
   const liveServices = useLiveServiceRequests();
 
-  if (!customer) {
-    return (
-      <CustomerRegistration
-        tableNumber={tableNumber}
-        onSuccess={() => {
-          navigate({ to: "/", replace: true });
-        }}
-      />
-    );
-  }
-
   useEffect(() => {
     let unsubscribe = () => {};
 
@@ -149,8 +138,17 @@ function Services() {
   });
 
   return (
-    <div className="min-h-screen bg-background pb-32">
-      <CustomerNav />
+    <>
+      {!customer ? (
+        <CustomerRegistration
+          tableNumber={tableNumber}
+          onSuccess={() => {
+            navigate({ to: "/", replace: true });
+          }}
+        />
+      ) : (
+        <div className="min-h-screen bg-background pb-32">
+          <CustomerNav />
       <div className="max-w-3xl mx-auto px-4 md:px-8 pt-6">
         <div className="text-xs uppercase tracking-widest text-muted-foreground">{tableNumber} Services</div>
         <h1 className="font-display text-3xl md:text-4xl font-bold">Quick Table Service</h1>
@@ -240,5 +238,7 @@ function Services() {
         )}
       </div>
     </div>
+      )}
+    </>
   );
 }

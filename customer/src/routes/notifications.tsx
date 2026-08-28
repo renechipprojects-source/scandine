@@ -17,17 +17,6 @@ function Notifs() {
   const tableNumber = useTable();
   const customer = useCustomer(tableNumber);
 
-  if (!customer) {
-    return (
-      <CustomerRegistration
-        tableNumber={tableNumber}
-        onSuccess={() => {
-          navigate({ to: "/", replace: true });
-        }}
-      />
-    );
-  }
-
   useEffect(() => {
     if (!customer?.sessionId) return;
 
@@ -61,31 +50,40 @@ function Notifs() {
   }, [tableNumber, customer?.sessionId]);
 
   return (
-    <div className="min-h-screen bg-background pb-32">
-      <CustomerNav />
-      <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-xs uppercase tracking-widest text-muted-foreground">{tableNumber} Alerts</div>
-            <h1 className="font-display text-3xl md:text-4xl font-bold">Notifications</h1>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => notificationStore.markAllAsRead()}
-              className="rounded-full border bg-card p-2 text-xs font-semibold hover:bg-muted text-muted-foreground"
-              title="Mark all as read"
-            >
-              <CheckCheck className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => notificationStore.clearAll()}
-              className="rounded-full border bg-card p-2 text-xs font-semibold hover:bg-muted text-destructive"
-              title="Clear all"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+    <>
+      {!customer ? (
+        <CustomerRegistration
+          tableNumber={tableNumber}
+          onSuccess={() => {
+            navigate({ to: "/", replace: true });
+          }}
+        />
+      ) : (
+        <div className="min-h-screen bg-background pb-32">
+          <CustomerNav />
+          <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs uppercase tracking-widest text-muted-foreground">{tableNumber} Alerts</div>
+                <h1 className="font-display text-3xl md:text-4xl font-bold">Notifications</h1>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => notificationStore.markAllAsRead()}
+                  className="rounded-full border bg-card p-2 text-xs font-semibold hover:bg-muted text-muted-foreground"
+                  title="Mark all as read"
+                >
+                  <CheckCheck className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => notificationStore.clearAll()}
+                  className="rounded-full border bg-card p-2 text-xs font-semibold hover:bg-muted text-destructive"
+                  title="Clear all"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
 
         {/* Notifications Feed */}
         <div className="mt-6 space-y-3">
@@ -143,5 +141,7 @@ function Notifs() {
         </div>
       </div>
     </div>
+      )}
+    </>
   );
 }

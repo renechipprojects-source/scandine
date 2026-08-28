@@ -87,17 +87,6 @@ function Menu() {
   const tableNumber = useTable();
   const customer = useCustomer(tableNumber);
 
-  if (!customer) {
-    return (
-      <CustomerRegistration
-        tableNumber={tableNumber}
-        onSuccess={() => {
-          navigate({ to: "/menu", replace: true });
-        }}
-      />
-    );
-  }
-
   useEffect(() => {
     let unsubscribe = () => {};
     async function loadSessionOrders() {

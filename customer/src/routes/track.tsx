@@ -44,17 +44,6 @@ function TrackOrder() {
   const [order, setOrder] = useState<DbOrder | null>(null);
   const [loading, setLoading] = useState(true);
 
-  if (!customer) {
-    return (
-      <CustomerRegistration
-        tableNumber={tableNumber}
-        onSuccess={() => {
-          window.location.reload();
-        }}
-      />
-    );
-  }
-
   useEffect(() => {
     let unsubscribe = () => {};
 
@@ -169,8 +158,17 @@ function TrackOrder() {
   const step = getStepFromStatus(order?.status);
 
   return (
-    <div className="min-h-screen bg-background pb-32">
-      <CustomerNav />
+    <>
+      {!customer ? (
+        <CustomerRegistration
+          tableNumber={tableNumber}
+          onSuccess={() => {
+            window.location.reload();
+          }}
+        />
+      ) : (
+        <div className="min-h-screen bg-background pb-32">
+          <CustomerNav />
       <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6">
         <div className="text-xs uppercase tracking-widest text-muted-foreground">{tableNumber} Live Tracking</div>
         <h1 className="font-display text-3xl md:text-4xl font-bold">
@@ -286,5 +284,7 @@ function TrackOrder() {
         )}
       </div>
     </div>
+      )}
+    </>
   );
 }

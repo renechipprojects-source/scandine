@@ -72,23 +72,6 @@ function Payment() {
     }
   }, [savedCustomer]);
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!savedCustomer) {
-    return (
-      <CustomerRegistration
-        tableNumber={tableNumber}
-        onSuccess={() => {}}
-      />
-    );
-  }
-
   useEffect(() => {
     let unsubscribe = () => {};
 
@@ -152,6 +135,23 @@ function Payment() {
       unsubscribe();
     };
   }, [activeId, gstRate, savedCustomer?.sessionId]);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!savedCustomer) {
+    return (
+      <CustomerRegistration
+        tableNumber={tableNumber}
+        onSuccess={() => {}}
+      />
+    );
+  }
 
   // Exact Order Calculations — order.total is single source of truth
   const invoiceItems = order?.items || [];
