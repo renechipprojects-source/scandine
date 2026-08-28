@@ -178,8 +178,15 @@ function Payment() {
 
     if (isAutoPaid || payCategory === "cash") {
       if (order) {
-        const updateSuccess = await updateOrderPayment(order.id, payMethodName, order.order_id);
+        const updateSuccess = await updateOrderPayment(order.id, payMethodName, order.order_id, transactionId);
         console.log("[PAYMENT DB UPDATE RESULT]", { orderId: order.id, secondaryId: order.order_id, updateSuccess });
+
+        if (!updateSuccess) {
+          toast.error("Database update failed for payment. Please notify restaurant staff.");
+          console.error("[PAYMENT DB UPDATE FAILED]", { orderId: order.id });
+          setState("failed");
+          return;
+        }
 
         const freshOrder = await getOrderById(order.id);
         if (freshOrder) {

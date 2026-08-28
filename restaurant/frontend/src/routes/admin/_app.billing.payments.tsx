@@ -11,7 +11,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useSupabaseTable, type PaymentTransaction, type Order } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
 import { exportToCSV } from "@/admin/lib/exportUtils";
-import { normalizePaymentStatus, resolvePaymentMethod } from "@/lib/payment-utils";
+import { resolvePaymentStatus, resolvePaymentMethod, resolveTransactionId, resolveInvoiceId, resolveCustomerName } from "@/lib/payment-utils";
 
 export const Route = createFileRoute("/admin/_app/billing/payments")({
   head: () => ({ meta: [{ title: "Payments — ScanDine" }, { name: "description", content: "Payment transaction history across all methods." }] }),
@@ -44,18 +44,16 @@ function PaymentsPage() {
       if (!orderKey || seenOrderKeys.has(orderKey)) continue;
       seenOrderKeys.add(orderKey);
 
-      const rawStatus = ord.payment || (ord as any).payment_status || ord.status;
-      const normStatus = normalizePaymentStatus(rawStatus);
+      const normStatus = resolvePaymentStatus(ord);
       const normMethod = resolvePaymentMethod(ord);
-
-      const txnId = (ord as any).transaction_id || ord.order_id || ord.id;
-      const invoiceDisplay = (ord as any).invoice_id || ord.order_id || ord.id;
-      const customerName = (ord as any).customer_name || ord.customer || "Customer";
+      const txnId = resolveTransactionId(ord);
+      const invoiceDisplay = resolveInvoiceId(ord);
+      const customerName = resolveCustomerName(ord);
       const totalAmount = Number(ord.total || 0);
       const txnDate = ord.order_time || (ord as any).created_at || new Date().toISOString();
 
       list.push({
-        id: txnId,
+        id: String(ord.id || ord.order_id || txnId),
         invoiceId: invoiceDisplay,
         customer: customerName,
         method: normMethod,

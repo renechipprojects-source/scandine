@@ -348,10 +348,13 @@ function KitchenDashboard() {
 
     if (isSupabaseConfigured()) {
       try {
-        await supabase
-          .from("orders")
-          .update({ status: nextStatus })
-          .or(`id.eq.${orderId},order_id.eq.${orderId}`);
+        const cleanId = String(orderId).replace(/[^a-zA-Z0-9_-]/g, "");
+        if (cleanId) {
+          await supabase
+            .from("sd_orders")
+            .update({ status: nextStatus })
+            .or(`id.eq.${cleanId},order_id.eq.${cleanId}`);
+        }
       } catch (err) {
         console.warn("Failed to update order status in Supabase:", err);
       }
@@ -371,7 +374,7 @@ function KitchenDashboard() {
       try {
         const dbStatus = nextStatus === "accepted" ? "Accepted" : nextStatus === "rejected" ? "Rejected" : nextStatus === "completed" ? "Completed" : nextStatus;
         await supabase
-          .from("notifications")
+          .from("sd_notifications")
           .update({ status: dbStatus })
           .eq("id", serviceId);
       } catch (err) {
@@ -929,7 +932,7 @@ function KitchenDashboard() {
                             );
                             if (isSupabaseConfigured()) {
                               supabase
-                                .from("menu_items")
+                                .from("sd_menu_items")
                                 .update({ available: !item.available })
                                 .eq("id", item.id)
                                 .then(() => {});

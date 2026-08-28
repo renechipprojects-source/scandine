@@ -143,7 +143,6 @@ function ReceptionInvoicesPage() {
           subtotal: billAmt,
           tax: 0,
           payment: normalizePaymentStatus(newStatus),
-          payment_method: newMethod,
           status: "completed",
           order_time: nowIso,
           table_number: 1,

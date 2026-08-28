@@ -114,8 +114,6 @@ function CashCollectionPage() {
         .update({
           payment: "paid",
           item: updatedItems,
-          payment_method: payMethodName,
-          payment_category: payCategory,
         })
         .or(`id.eq.${targetId},order_id.eq.${targetId}`);
 

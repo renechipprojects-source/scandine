@@ -89,8 +89,6 @@ function Cart() {
         total: totals.total,
         status: "pending",
         payment_status: "unpaid",
-        payment_method: "Cash",
-        payment_category: "cash",
       });
 
       await notifyKitchenNewOrder(created);
@@ -134,21 +132,21 @@ function Cart() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, x: -30 }}
-                    className="glass rounded-2xl p-3 flex gap-3 items-center"
+                    className="glass rounded-2xl p-2.5 sm:p-3 flex gap-2.5 sm:gap-3 items-center"
                   >
-                    <img src={i.food.image} className="h-20 w-20 rounded-xl object-cover" alt="" />
+                    <img src={i.food.image} className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl object-cover shrink-0" alt="" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold truncate">{i.food.name}</div>
+                      <div className="font-semibold text-sm sm:text-base truncate">{i.food.name}</div>
                       <div className="text-xs text-muted-foreground">₹{i.food.price} each</div>
-                      <div className="mt-2 flex items-center gap-2">
-                        <button onClick={() => cart.setQty(i.food.id, i.qty - 1)} className="h-8 w-8 rounded-full border grid place-items-center"><Minus className="h-3 w-3" /></button>
+                      <div className="mt-2 flex items-center gap-1.5 sm:gap-2">
+                        <button onClick={() => cart.setQty(i.food.id, i.qty - 1)} className="h-9 w-9 rounded-full border grid place-items-center active:scale-95 transition min-h-[36px] min-w-[36px]" aria-label="Decrease quantity"><Minus className="h-3.5 w-3.5" /></button>
                         <div className="text-sm font-bold w-6 text-center">{i.qty}</div>
-                        <button onClick={() => cart.setQty(i.food.id, i.qty + 1)} className="h-8 w-8 rounded-full gradient-primary text-white grid place-items-center"><Plus className="h-3 w-3" /></button>
+                        <button onClick={() => cart.setQty(i.food.id, i.qty + 1)} className="h-9 w-9 rounded-full gradient-primary text-white grid place-items-center active:scale-95 transition min-h-[36px] min-w-[36px]" aria-label="Increase quantity"><Plus className="h-3.5 w-3.5" /></button>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-bold">₹{i.food.price * i.qty}</div>
-                      <button onClick={() => cart.remove(i.food.id)} className="mt-2 text-xs text-destructive inline-flex items-center gap-1"><Trash2 className="h-3 w-3" /></button>
+                    <div className="text-right shrink-0">
+                      <div className="font-bold text-sm sm:text-base">₹{i.food.price * i.qty}</div>
+                      <button onClick={() => cart.remove(i.food.id)} className="mt-2 text-xs text-destructive inline-flex items-center gap-1 p-1 min-h-[36px]" aria-label="Remove item"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   </motion.div>
                 ))}
@@ -156,7 +154,7 @@ function Cart() {
             </div>
 
             {/* Bill */}
-            <div className="mt-5 rounded-3xl border bg-card p-5">
+            <div className="mt-5 rounded-3xl border bg-card p-4 sm:p-5">
               <Row label="Subtotal" value={`₹${totals.subtotal}`} />
               <Row label="GST (5%)" value={`₹${totals.gst}`} />
               <div className="h-px bg-border my-3" />
@@ -167,7 +165,7 @@ function Cart() {
               whileTap={{ scale: 0.98 }}
               onClick={handlePlaceOrder}
               disabled={isPlacingOrder}
-              className="mt-6 w-full rounded-2xl gradient-primary text-white font-semibold py-4 shadow-float flex items-center justify-center gap-2 disabled:opacity-75"
+              className="mt-6 w-full rounded-2xl gradient-primary text-white font-semibold py-3.5 sm:py-4 shadow-float flex items-center justify-center gap-2 disabled:opacity-75 min-h-[44px] text-sm sm:text-base"
             >
               {isPlacingOrder ? (
                 <>

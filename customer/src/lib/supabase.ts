@@ -1,5 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
-import { syncManager } from "./sync-manager";
+
+function safeEnqueueAction(action: any) {
+  import("./sync-manager")
+    .then(({ syncManager }) => {
+      syncManager.enqueueAction(action);
+    })
+    .catch(() => {});
+}
 
 export type OrderStatus = "pending" | "received" | "accepted" | "preparing" | "ready" | "served" | "completed" | "cancelled";
 
@@ -56,20 +63,14 @@ export type DbMenuItem = {
   prepTime?: number;
 };
 
-const envUrl = (import.meta.env.VITE_SUPABASE_URL || "").replace(/^['"]|['"]$/g, "").trim();
-const envKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || "").replace(/^['"]|['"]$/g, "").trim();
+const DEFAULT_SUPABASE_URL = "https://nyhnkftlkigoliyogwvp.supabase.co";
+const DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55aG5rZnRsa2lnb2xpeW9nd3ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0NzQ2NTMsImV4cCI6MjEwMTA1MDY1M30.KxjH42Wg0IVLfXLLJSbBLvcZ098hvJRUHkDu10NJfB4";
 
-if (!envUrl || envUrl.includes("your-supabase-project") || envUrl.includes("placeholder")) {
-  throw new Error(
-    "Missing required environment variable: VITE_SUPABASE_URL. Please define VITE_SUPABASE_URL in your environment."
-  );
-}
+const rawUrl = (import.meta.env.VITE_SUPABASE_URL || "").replace(/^['"]|['"]$/g, "").trim();
+const rawKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || "").replace(/^['"]|['"]$/g, "").trim();
 
-if (!envKey || envKey.includes("your-supabase-anon-key") || envKey.includes("placeholder")) {
-  throw new Error(
-    "Missing required environment variable: VITE_SUPABASE_ANON_KEY. Please define VITE_SUPABASE_ANON_KEY in your environment."
-  );
-}
+const envUrl = (rawUrl && !rawUrl.includes("your-supabase-project") && !rawUrl.includes("placeholder")) ? rawUrl : DEFAULT_SUPABASE_URL;
+const envKey = (rawKey && !rawKey.includes("your-supabase-anon-key") && !rawKey.includes("placeholder")) ? rawKey : DEFAULT_SUPABASE_ANON_KEY;
 
 export const supabaseUrl = envUrl;
 export const supabaseAnonKey = envKey;
@@ -106,18 +107,30 @@ export const getSessionIdHeader = (): string => {
   return "";
 };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  global: {
-    fetch: (url, options = {}) => {
-      const sessionId = getSessionIdHeader();
-      const headers = new Headers(options.headers || {});
-      if (sessionId) {
-        headers.set("x-session-id", sessionId);
-      }
-      return fetch(url, { ...options, headers });
+declare global {
+  // eslint-disable-next-line no-var
+  var __scandine_supabase_client__: ReturnType<typeof createClient> | undefined;
+}
+
+export const supabase =
+  globalThis.__scandine_supabase_client__ ??
+  (globalThis.__scandine_supabase_client__ = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
     },
-  },
-});
+    global: {
+      fetch: (url, options = {}) => {
+        const sessionId = getSessionIdHeader();
+        const headers = new Headers(options.headers || {});
+        if (sessionId) {
+          headers.set("x-session-id", sessionId);
+        }
+        return fetch(url, { ...options, headers });
+      },
+    },
+  }));
 
 
 const getLocalOrdersKey = () => {
@@ -268,26 +281,33 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
       const tblNum = parseInt(String(newOrder.table_number).replace(/\D/g, ""), 10) || 1;
       const orderIdStr = newOrder.order_number || newOrder.id;
 
-      // Deduplication: Check if order already exists in Supabase
-      const { data: existingDb } = await supabase
-        .from("sd_orders")
-        .select("*")
-        .or(`id.eq.${newOrder.id},order_id.eq.${orderIdStr}`)
-        .maybeSingle();
+      // Safe clean IDs for PostgREST filter
+      const safeId = String(newOrder.id || "").replace(/[^a-zA-Z0-9_-]/g, "");
+      const safeOrdStr = String(orderIdStr || "").replace(/[^a-zA-Z0-9_-]/g, "");
 
-      if (existingDb) {
-        const mapped = mapRowToDbOrder(existingDb);
-        return mapped;
+      if (safeId || safeOrdStr) {
+        const filters = [];
+        if (safeId) filters.push(`id.eq.${safeId}`, `order_id.eq.${safeId}`);
+        if (safeOrdStr) filters.push(`id.eq.${safeOrdStr}`, `order_id.eq.${safeOrdStr}`);
+        const { data: existingDb } = await supabase
+          .from("sd_orders")
+          .select("*")
+          .or(filters.join(","));
+
+        if (existingDb && existingDb.length > 0) {
+          const mapped = mapRowToDbOrder(existingDb[0]);
+          return mapped;
+        }
       }
 
-      const pMethod = newOrder.payment_method || "Cash";
-      const pCategory = newOrder.payment_category || (pMethod.toLowerCase().includes("upi") ? "upi" : "cash");
+      const pMethod = newOrder.payment_method;
+      const pCategory = newOrder.payment_category;
 
       const itemsPayload = newOrder.items.map((it, idx) => ({
         name: it.name,
         qty: it.qty,
         price: it.price,
-        ...(idx === 0 ? {
+        ...(idx === 0 && pMethod && pCategory ? {
           payment_method: pMethod,
           payment_category: pCategory,
         } : {})
@@ -319,8 +339,6 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         total: Number(newOrder.total),
         status: normStatus,
         payment: normPayment,
-        payment_method: pMethod,
-        payment_category: pCategory,
         order_time: newOrder.created_at,
         created_at: newOrder.created_at,
       };
@@ -332,8 +350,7 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
       let { data, error } = await supabase
         .from("sd_orders")
         .insert([dbPayload])
-        .select()
-        .single();
+        .select();
 
       if (error && (error.code === "PGRST204" || error.code === "42703")) {
         // Fallback if extra columns are not yet added to remote Supabase table
@@ -342,21 +359,21 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         const retry = await supabase
           .from("sd_orders")
           .insert([dbPayload])
-          .select()
-          .single();
+          .select();
         data = retry.data;
         error = retry.error;
       }
 
+      const insertedRow = Array.isArray(data) ? data[0] : data;
       if (error) {
         console.error("Supabase insert error, queuing for offline sync:", error);
-        syncManager.enqueueAction({
+        safeEnqueueAction({
           type: "CREATE_ORDER",
           payload: orderPayload,
           timestamp: newOrder.created_at,
         });
-      } else if (data) {
-        const mapped = mapRowToDbOrder(data);
+      } else if (insertedRow) {
+        const mapped = mapRowToDbOrder(insertedRow);
         const updatedLocal = getLocalOrders();
         const filteredLocal = updatedLocal.filter((o) => o.id !== mapped.id);
         saveLocalOrders([mapped, ...filteredLocal]);
@@ -364,14 +381,14 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
       }
     } catch (err) {
       console.error("Supabase exception during insert, queuing for offline sync:", err);
-      syncManager.enqueueAction({
+      safeEnqueueAction({
         type: "CREATE_ORDER",
         payload: orderPayload,
         timestamp: newOrder.created_at,
       });
     }
   } else {
-    syncManager.enqueueAction({
+    safeEnqueueAction({
       type: "CREATE_ORDER",
       payload: orderPayload,
       timestamp: newOrder.created_at,
@@ -390,16 +407,16 @@ export async function getOrderById(
 
   if (isSupabaseConfigured()) {
     try {
-      const cleanId = orderId!.replace(/^#/, "").trim();
-      if (!isValidId(cleanId)) return null;
+      const cleanId = String(orderId).replace(/[^a-zA-Z0-9_-]/g, "");
+      if (cleanId) {
+        const { data, error } = await supabase
+          .from("sd_orders")
+          .select("*")
+          .or(`id.eq.${cleanId},order_id.eq.${cleanId}`);
 
-      const { data, error } = await supabase
-        .from("sd_orders")
-        .select("*")
-        .or(`id.eq.${orderId},order_id.eq.${orderId},id.eq.${cleanId},order_id.eq.${cleanId}`);
-
-      if (!error && data && data.length > 0) {
-        order = mapRowToDbOrder(data[0]);
+        if (!error && data && data.length > 0) {
+          order = mapRowToDbOrder(data[0]);
+        }
       }
     } catch (err) {
       console.warn("Supabase fetch error:", err);
@@ -408,14 +425,14 @@ export async function getOrderById(
 
   if (!order) {
     const localOrders = getLocalOrders();
-    const cleanId = orderId!.replace(/^#/, "").trim();
+    const cleanId = String(orderId).replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase();
     order =
       localOrders.find(
         (o) =>
           o.id === orderId ||
           o.order_number === orderId ||
-          o.id.replace(/^#/, "").trim() === cleanId ||
-          o.order_number.replace(/^#/, "").trim() === cleanId
+          String(o.id).replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase() === cleanId ||
+          String(o.order_number).replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase() === cleanId
       ) || null;
   }
 
@@ -433,24 +450,22 @@ export async function getOrdersByTable(
   customerFilter?: string,
   sessionIdFilter?: string
 ): Promise<DbOrder[]> {
+  if (!tableNumber) return [];
+  const tblNum = parseInt(String(tableNumber).replace(/\D/g, ""), 10);
+  if (!tblNum || isNaN(tblNum)) return [];
+
   if (isSupabaseConfigured()) {
     try {
-      const tblNum = parseInt(String(tableNumber).replace(/\D/g, ""), 10) || 1;
-      let query = supabase
+      const { data, error } = await supabase
         .from("sd_orders")
         .select("*")
-        .eq("table_number", tblNum);
-
-      if (isValidId(sessionIdFilter)) {
-        query = query.eq("session_id", sessionIdFilter);
-      }
-
-      const { data, error } = await query.order("created_at", { ascending: false });
+        .eq("table_number", tblNum)
+        .order("created_at", { ascending: false });
 
       if (!error && data) {
         const allMapped = data.map(mapRowToDbOrder);
         if (isValidId(sessionIdFilter)) {
-          return allMapped.filter((o) => o.session_id === sessionIdFilter);
+          return allMapped.filter((o) => !o.session_id || o.session_id === sessionIdFilter);
         }
         return allMapped;
       }
@@ -460,50 +475,65 @@ export async function getOrdersByTable(
   }
 
   const localOrders = getLocalOrders();
-  const tableLocal = localOrders.filter((o) => o.table_number.toLowerCase() === tableNumber.toLowerCase());
+  const tableLocal = localOrders.filter((o) => o.table_number.toLowerCase() === String(tableNumber).toLowerCase());
   if (isValidId(sessionIdFilter)) {
-    return tableLocal.filter((o) => o.session_id === sessionIdFilter);
+    return tableLocal.filter((o) => !o.session_id || o.session_id === sessionIdFilter);
   }
   return tableLocal;
 }
 
 export async function getOrdersBySession(sessionId?: string): Promise<DbOrder[]> {
   if (!isValidId(sessionId)) return [];
+  const cleanSessionId = String(sessionId).replace(/[^a-zA-Z0-9_-]/g, "");
+  if (!cleanSessionId) return [];
+
   const fetchedOrders: DbOrder[] = [];
 
-  if (isSupabaseConfigured()) {
+  let tblNum: number | null = null;
+  try {
+    if (typeof window !== "undefined") {
+      const rawCust = localStorage.getItem("scandine_current_customer");
+      if (rawCust) {
+        const parsed = JSON.parse(rawCust);
+        if (parsed?.tableNumber) {
+          tblNum = parseInt(String(parsed.tableNumber).replace(/\D/g, ""), 10) || null;
+        }
+      }
+    }
+  } catch {}
+
+  if (isSupabaseConfigured() && tblNum && !isNaN(tblNum)) {
     try {
       const { data, error } = await supabase
         .from("sd_orders")
         .select("*")
-        .eq("session_id", sessionId!)
+        .eq("table_number", tblNum)
         .order("created_at", { ascending: false });
 
       if (!error && data && data.length > 0) {
         data.map(mapRowToDbOrder).forEach((o) => {
-          if (o.session_id === sessionId) {
+          if (!o.session_id || o.session_id === sessionId || o.session_id === cleanSessionId) {
             fetchedOrders.push(o);
           }
         });
       }
     } catch (err) {
-      console.error("Supabase exception during session order fetch:", err);
+      console.warn("Supabase session order fetch warning:", err);
     }
   }
 
   // Merge local session orders
   const localOrders = getLocalOrders();
   localOrders
-    .filter((o) => o.session_id === sessionId)
+    .filter((o) => o.session_id === sessionId || o.session_id === cleanSessionId)
     .forEach((o) => {
       if (!fetchedOrders.some((existing) => existing.id === o.id || existing.order_number === o.order_number)) {
         fetchedOrders.push(o);
       }
     });
 
-  // Strict Ownership Enforcement: ONLY return orders matching sessionId
   return fetchedOrders
-    .filter((o) => o.session_id === sessionId)
+    .filter((o) => !o.session_id || o.session_id === sessionId || o.session_id === cleanSessionId)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
@@ -516,8 +546,11 @@ export function subscribeToOrdersBySession(
     return () => { };
   }
 
+  const cleanSessionId = String(sessionId).replace(/[^a-zA-Z0-9_-]/g, "");
+  if (!cleanSessionId) return () => { };
+
   const channel = supabase
-    .channel(`orders-sub-session-${sessionId.replace(/[^a-zA-Z0-9]/g, "_")}`)
+    .channel(`orders-sub-session-${cleanSessionId}`)
     .on(
       "postgres_changes",
       {
@@ -528,18 +561,17 @@ export function subscribeToOrdersBySession(
       (payload) => {
         if (payload.new) {
           const mapped = mapRowToDbOrder(payload.new);
-          if (!mapped.session_id || mapped.session_id === sessionId) {
+          if (!mapped.session_id || mapped.session_id === sessionId || mapped.session_id === cleanSessionId) {
             onUpdate(mapped);
           }
         }
       }
     )
     .subscribe((status, err) => {
-      console.log("[TRACK] Realtime status:", status);
       if (status === "SUBSCRIBED" && onSubscribed) {
         onSubscribed(status);
       } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-        console.error("[TRACK] Realtime subscription error:", status, err);
+        console.warn("[TRACK] Realtime subscription warning:", status, err);
       }
     });
 
@@ -548,7 +580,9 @@ export function subscribeToOrdersBySession(
   };
 }
 
-export async function updateOrderPayment(orderId: string, paymentMethod: string = "UPI", secondaryId?: string): Promise<boolean> {
+export async function updateOrderPayment(orderId: string, paymentMethod: string = "UPI", secondaryId?: string, razorpayPaymentId?: string): Promise<boolean> {
+  if (!isValidId(orderId) && !isValidId(secondaryId)) return true;
+
   if (isSupabaseConfigured()) {
     try {
       const isUpi = paymentMethod.toLowerCase().includes("upi") || paymentMethod.toLowerCase().includes("razorpay") || paymentMethod.toLowerCase().includes("gpay");
@@ -557,50 +591,34 @@ export async function updateOrderPayment(orderId: string, paymentMethod: string 
       const cleanRef = (s: any) =>
         String(s || "")
           .trim()
-          .replace(/^[#]/, "")
-          .replace(/^ord[-_]?/i, "");
+          .replace(/[^a-zA-Z0-9_-]/g, "");
 
-      const clean1 = cleanRef(orderId);
-      const clean2 = cleanRef(secondaryId);
+      const rawCandidates = [orderId, secondaryId].filter(Boolean);
+      const safeCandidates: string[] = [];
+      rawCandidates.forEach((raw) => {
+        const cleaned = cleanRef(raw);
+        if (cleaned) {
+          safeCandidates.push(cleaned);
+        }
+      });
 
-      const idCandidates = Array.from(
-        new Set(
-          [
-            orderId,
-            secondaryId,
-            clean1,
-            clean2,
-            `#${clean1}`,
-            `ord_${clean1}`,
-            `#${clean2}`,
-            `ord_${clean2}`,
-          ]
-            .filter(Boolean)
-            .map((s) => String(s).trim())
-        )
-      );
+      const idSet = Array.from(new Set(safeCandidates));
+      if (idSet.length === 0) return true;
 
-      const isPaid = normalizePaymentStatus(paymentStatus) === "paid";
-      const paymentVal = isPaid ? "paid" : "unpaid";
-
-      let data: any[] | null = null;
-      let error: any = null;
-
-      // Match strictly by exact candidate order IDs using PostgreSQL OR query
-      const orFilter = idCandidates
+      const orFilter = idSet
         .flatMap((cand) => [`id.eq.${cand}`, `order_id.eq.${cand}`])
         .join(",");
 
-      const { data: updatedData, error: updateErr } = await supabase
+      const { data: updatedData } = await supabase
         .from("sd_orders")
-        .update({ payment: paymentVal })
+        .update({
+          payment: "paid",
+        })
         .or(orFilter)
         .select();
 
-      data = updatedData;
-      error = updateErr;
+      const data = updatedData;
 
-      // 3. Best-effort update for payment_method & payment_category in sd_orders item JSONB
       if (data && data.length > 0) {
         const row = data[0];
         const updatedRowId = row.id;
@@ -614,21 +632,26 @@ export async function updateOrderPayment(orderId: string, paymentMethod: string 
           } : {})
         }));
 
-        try {
-          await supabase
-            .from("sd_orders")
-            .update({ item: newItems })
-            .eq("id", updatedRowId);
-        } catch { }
+        const { error: itemUpdateErr } = await supabase
+          .from("sd_orders")
+          .update({ item: newItems })
+          .eq("id", updatedRowId);
+
+        if (itemUpdateErr) {
+          console.error("[UPDATE ORDER PAYMENT ITEM ERROR]", itemUpdateErr.message);
+          return false;
+        }
+      } else {
+        console.warn("[UPDATE ORDER PAYMENT NO ROW MATCHED]", { orderId, secondaryId });
+        return false;
       }
 
       if (data && data.length > 0) {
-        console.log("[SUPABASE PAYMENT UPDATE SUCCESS]", { updatedCount: data.length, data });
-        const cleanId = String(orderId).replace(/^[#]/, "").replace(/^ord[-_]?/i, "").toLowerCase();
+        const cleanId = String(orderId).replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase();
         const localOrders = getLocalOrders();
         const updated = localOrders.map((o) => {
-          const oId = String(o.id || "").replace(/^[#]/, "").replace(/^ord[-_]?/i, "").toLowerCase();
-          const oNum = String(o.order_number || o.order_id || "").replace(/^[#]/, "").replace(/^ord[-_]?/i, "").toLowerCase();
+          const oId = String(o.id || "").replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase();
+          const oNum = String(o.order_number || o.order_id || "").replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase();
           if (oId === cleanId || oNum === cleanId || o.id === orderId || o.order_id === orderId) {
             return { ...o, payment: "paid", payment_status: "paid" as const, payment_method: paymentMethod };
           }
@@ -642,11 +665,11 @@ export async function updateOrderPayment(orderId: string, paymentMethod: string 
     }
   }
 
-  const cleanId = String(orderId).replace(/^[#]/, "").replace(/^ord[-_]?/i, "").toLowerCase();
+  const cleanId = String(orderId).replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase();
   const localOrders = getLocalOrders();
   const updated = localOrders.map((o) => {
-    const oId = String(o.id || "").replace(/^[#]/, "").replace(/^ord[-_]?/i, "").toLowerCase();
-    const oNum = String(o.order_number || o.order_id || "").replace(/^[#]/, "").replace(/^ord[-_]?/i, "").toLowerCase();
+    const oId = String(o.id || "").replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase();
+    const oNum = String(o.order_number || o.order_id || "").replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase();
     if (oId === cleanId || oNum === cleanId || o.id === orderId || o.order_id === orderId) {
       return { ...o, payment: "paid", payment_status: "paid" as const, payment_method: paymentMethod };
     }
@@ -873,7 +896,7 @@ export async function sendServiceRequest(tableNumber: string, serviceType: strin
         savedReq = mapNotificationToServiceRequest(data[0]);
       } else {
         if (error) console.error("Supabase notifications insert error:", error);
-        syncManager.enqueueAction({
+        safeEnqueueAction({
           type: "SERVICE_REQUEST",
           payload: { tableNumber: finalTable, customerName, serviceType, label: requestType },
           timestamp: createdAt,
@@ -881,14 +904,14 @@ export async function sendServiceRequest(tableNumber: string, serviceType: strin
       }
     } catch (err) {
       console.error("Supabase service request error, queuing for offline sync:", err);
-      syncManager.enqueueAction({
+      safeEnqueueAction({
         type: "SERVICE_REQUEST",
         payload: { tableNumber: finalTable, customerName, serviceType, label: requestType },
         timestamp: createdAt,
       });
     }
   } else {
-    syncManager.enqueueAction({
+    safeEnqueueAction({
       type: "SERVICE_REQUEST",
       payload: { tableNumber: finalTable, customerName, serviceType, label: requestType },
       timestamp: createdAt,

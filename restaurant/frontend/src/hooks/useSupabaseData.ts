@@ -599,7 +599,9 @@ export async function markPaymentAndInvoiceAsPaid(
       for (const candId of idCandidates) {
         let { data: byId } = await supabase
           .from("sd_orders")
-          .update({ payment: "paid" })
+          .update({
+            payment: "paid",
+          })
           .eq("id", candId)
           .select();
 
@@ -615,7 +617,9 @@ export async function markPaymentAndInvoiceAsPaid(
 
         let { data: byOrder } = await supabase
           .from("sd_orders")
-          .update({ payment: "paid" })
+          .update({
+            payment: "paid",
+          })
           .eq("order_id", candId)
           .select();
 

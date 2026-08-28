@@ -122,33 +122,36 @@ router.post("/verify", async (req: Request, res: Response) => {
 
       const targetId = dbOrder?.id || order_id;
 
-      let updatedItems = dbOrder?.item;
-      if (dbOrder && Array.isArray(dbOrder.item)) {
-        updatedItems = dbOrder.item.map((it: any, idx: number) => ({
-          ...it,
-          ...(idx === 0
-            ? {
-                payment_method: payMethodName,
-                payment_category: payCategory,
-                razorpay_payment_id,
-                razorpay_order_id,
-              }
-            : {}),
-        }));
-      }
+      const currentItems = dbOrder && Array.isArray(dbOrder.item) && dbOrder.item.length > 0
+        ? dbOrder.item
+        : [{ name: "Food Order", price: Number(dbOrder?.total || 0), qty: 1 }];
+
+      const updatedItems = currentItems.map((it: any, idx: number) => ({
+        ...it,
+        ...(idx === 0
+          ? {
+              payment_method: payMethodName,
+              payment_category: payCategory,
+              razorpay_payment_id,
+              razorpay_order_id,
+            }
+          : {}),
+      }));
 
       const { error: updateErr } = await supabase
         .from("sd_orders")
         .update({
           payment: "paid",
-          payment_method: payMethodName,
-          payment_category: payCategory,
-          ...(updatedItems ? { item: updatedItems } : {}),
+          item: updatedItems,
         })
         .or(`id.eq.${targetId},order_id.eq.${targetId}`);
 
       if (updateErr) {
         console.error("[RAZORPAY VERIFY UPDATE ERROR]", updateErr.message);
+        return res.status(500).json({
+          success: false,
+          error: "Database update failed after payment verification: " + updateErr.message,
+        });
       }
     }
 
@@ -185,26 +188,25 @@ router.post("/cash-collect", async (req: Request, res: Response) => {
 
     const targetId = dbOrder?.id || order_id;
 
-    let updatedItems = dbOrder?.item;
-    if (dbOrder && Array.isArray(dbOrder.item)) {
-      updatedItems = dbOrder.item.map((it: any, idx: number) => ({
-        ...it,
-        ...(idx === 0
-          ? {
-              payment_method: method,
-              payment_category: "cash",
-            }
-          : {}),
-      }));
-    }
+    const currentItems = dbOrder && Array.isArray(dbOrder.item) && dbOrder.item.length > 0
+      ? dbOrder.item
+      : [{ name: "Food Order", price: Number(dbOrder?.total || 0), qty: 1 }];
+
+    const updatedItems = currentItems.map((it: any, idx: number) => ({
+      ...it,
+      ...(idx === 0
+        ? {
+            payment_method: method,
+            payment_category: "cash",
+          }
+        : {}),
+    }));
 
     await supabase
       .from("sd_orders")
       .update({
         payment: "paid",
-        payment_method: method,
-        payment_category: "cash",
-        ...(updatedItems ? { item: updatedItems } : {}),
+        item: updatedItems,
       })
       .or(`id.eq.${targetId},order_id.eq.${targetId}`);
 

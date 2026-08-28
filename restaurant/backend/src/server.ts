@@ -95,6 +95,15 @@ app.get("/api/status", async (_req: Request, res: Response) => {
 app.use("/api/cloudinary", cloudinaryRouter);
 app.use("/api/razorpay", razorpayRouter);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Restaurant ERP Backend Server running on port ${PORT}`);
+});
+
+server.on("error", (err: any) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`❌ Port ${PORT} is already in use by another process.`);
+    console.error(`👉 Please kill the process using port ${PORT} or set process.env.PORT to another port.`);
+  } else {
+    console.error("Server error:", err);
+  }
 });

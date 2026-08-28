@@ -13,7 +13,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useSupabaseTable, type Order } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/admin/components/ui/dialog";
-import { resolvePaymentMethod } from "@/lib/payment-utils";
+import { resolvePaymentStatus, resolvePaymentMethod, resolveTransactionId, resolveInvoiceId, resolveCustomerName } from "@/lib/payment-utils";
 
 export const Route = createFileRoute("/admin/_app/orders")({
   head: () => ({
@@ -24,6 +24,108 @@ export const Route = createFileRoute("/admin/_app/orders")({
   }),
   component: OrdersPage,
 });
+
+function matchesOrderQuery(o: Order, searchQuery: string): boolean {
+  const q = searchQuery.trim().toLowerCase();
+  if (!q) return true;
+
+  // 1. Order ID & Canonical Database ID
+  const idStr = String(o.id || "").toLowerCase();
+  const orderIdStr = String(o.order_id || "").toLowerCase();
+  const rawId = String(o.order_id || o.id || "").toLowerCase();
+  const formattedHash = `#${rawId}`;
+  const formattedPrefix = `ord-#${rawId}`;
+  if (
+    idStr.includes(q) ||
+    orderIdStr.includes(q) ||
+    formattedHash.includes(q) ||
+    formattedPrefix.includes(q)
+  ) {
+    return true;
+  }
+
+  // 2. Customer Name (direct column or inside item[0] metadata)
+  const custName = resolveCustomerName(o).toLowerCase();
+  const rawCustName = String(o.customer || (o as any).customer_name || "").toLowerCase();
+  if (custName.includes(q) || rawCustName.includes(q)) return true;
+
+  // 3. Customer Phone Number
+  const firstItem = Array.isArray(o.item || (o as any).items) ? (o.item || (o as any).items)[0] || {} : {};
+  const phoneNum = String(
+    (o as any).phone ||
+    (o as any).phone_number ||
+    (o as any).customer_phone ||
+    firstItem.phone ||
+    firstItem.customer_phone ||
+    ""
+  ).toLowerCase();
+  if (phoneNum && phoneNum.includes(q)) return true;
+
+  // 4. Table Number (safe numeric/string comparison)
+  const tblNum = o.table_number ?? (o as any).tableNumber;
+  if (tblNum !== undefined && tblNum !== null) {
+    const tblStr = String(tblNum).toLowerCase();
+    const tblDisplay = `table ${tblStr}`;
+    const tblShort = `t-${tblStr}`;
+    const tblHash = `#${tblStr}`;
+    if (
+      tblStr.includes(q) ||
+      tblDisplay.includes(q) ||
+      tblShort.includes(q) ||
+      tblHash.includes(q)
+    ) {
+      return true;
+    }
+  }
+
+  // 5. Order Status
+  const ordStatus = String(o.status || "").toLowerCase();
+  if (ordStatus.includes(q)) return true;
+
+  // 6. Payment Status
+  const normPaymentStatus = resolvePaymentStatus(o).toLowerCase();
+  const rawPaymentStatus = String(o.payment || (o as any).payment_status || "").toLowerCase();
+  if (normPaymentStatus.includes(q) || rawPaymentStatus.includes(q)) return true;
+
+  // 7. Payment Method
+  const normPaymentMethod = resolvePaymentMethod(o).toLowerCase();
+  const rawPaymentMethod = String(
+    (o as any).payment_method ||
+    (o as any).payment_type ||
+    firstItem.payment_method ||
+    ""
+  ).toLowerCase();
+  if (normPaymentMethod.includes(q) || rawPaymentMethod.includes(q)) return true;
+
+  // 8. Order Date / Time
+  const timeVal = o.order_time || (o as any).created_at;
+  if (timeVal) {
+    const dateObj = new Date(timeVal);
+    if (!isNaN(dateObj.getTime())) {
+      const dateStr = dateObj.toLocaleDateString().toLowerCase();
+      const timeStr = dateObj.toLocaleTimeString().toLowerCase();
+      const isoStr = dateObj.toISOString().toLowerCase();
+      if (dateStr.includes(q) || timeStr.includes(q) || isoStr.includes(q)) {
+        return true;
+      }
+    }
+  }
+
+  // 9. Items / Product Names
+  const itemsArr = Array.isArray(o.item || (o as any).items) ? (o.item || (o as any).items) : [];
+  for (const it of itemsArr) {
+    if (it && it.name && String(it.name).toLowerCase().includes(q)) {
+      return true;
+    }
+  }
+
+  // 10. Transaction / Invoice / Razorpay ID
+  const txnId = resolveTransactionId(o).toLowerCase();
+  const invId = resolveInvoiceId(o).toLowerCase();
+  if (txnId.includes(q) || invId.includes(q)) return true;
+
+  return false;
+}
 
 function OrdersPage() {
   const { data: dbOrders, fetchData } = useSupabaseTable<Order>("sd_orders");
@@ -64,15 +166,7 @@ function OrdersPage() {
     if (activeTab === "completed") list = completedOrders;
 
     if (!searchQuery.trim()) return list;
-    const q = searchQuery.toLowerCase();
-    return list.filter((o) => {
-      return (
-        (o.order_id && o.order_id.toLowerCase().includes(q)) ||
-        (o.customer && o.customer.toLowerCase().includes(q)) ||
-        String(o.table_number).includes(q) ||
-        (o.status && o.status.toLowerCase().includes(q))
-      );
-    });
+    return list.filter((o) => matchesOrderQuery(o, searchQuery));
   }, [displayOrders, activeOrders, completedOrders, activeTab, searchQuery]);
 
   return (

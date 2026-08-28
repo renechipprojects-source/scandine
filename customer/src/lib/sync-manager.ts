@@ -95,8 +95,8 @@ export const syncManager = {
             .maybeSingle();
 
           if (!existing) {
-            const pMethod = order.payment_method || "Cash";
-            const pCategory = order.payment_category || (pMethod.toLowerCase().includes("upi") ? "upi" : "cash");
+            const pMethod = order.payment_method;
+            const pCategory = order.payment_category;
             const dbPayload = {
               id: order.id,
               order_id: orderIdStr,
@@ -106,7 +106,7 @@ export const syncManager = {
                 name: it.name,
                 qty: it.qty,
                 price: it.price,
-                ...(idx === 0 ? {
+                ...(idx === 0 && pMethod && pCategory ? {
                   payment_method: pMethod,
                   payment_category: pCategory,
                 } : {})
@@ -165,11 +165,13 @@ export const syncManager = {
    * Sync active order statuses from Supabase into local cache
    */
   async syncSupabaseOrdersToLocal(tableNumber: string) {
-    if (!isOnline || !isSupabaseConfigured()) return;
+    if (!isOnline || !isSupabaseConfigured() || !tableNumber) return;
     try {
-      const tblNum = parseInt(String(tableNumber).replace(/\D/g, ""), 10) || 1;
+      const tblNum = parseInt(String(tableNumber).replace(/\D/g, ""), 10);
+      if (!tblNum || isNaN(tblNum)) return;
+
       const { data, error } = await supabase
-        .from("orders")
+        .from("sd_orders")
         .select("*")
         .eq("table_number", tblNum)
         .order("created_at", { ascending: false });
