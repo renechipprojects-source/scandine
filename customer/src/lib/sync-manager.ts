@@ -117,14 +117,14 @@ export const syncManager = {
               order_time: action.timestamp,
               created_at: action.timestamp,
             };
-            await supabase.from("sd_orders").insert([dbPayload]);
+            await (supabase.from("sd_orders") as any).insert([dbPayload]);
           }
         } else if (action.type === "SERVICE_REQUEST") {
           const { tableNumber, serviceType, label } = action.payload;
           const reqType = label || serviceType;
           // Deduplication: check if active pending request exists in notifications table
-          const { data: existingSrv } = await supabase
-            .from("sd_notifications")
+          const { data: existingSrv } = await (supabase
+            .from("sd_notifications") as any)
             .select("id")
             .eq("table_number", tableNumber)
             .eq("request_type", reqType)
@@ -132,7 +132,7 @@ export const syncManager = {
             .maybeSingle();
 
           if (!existingSrv) {
-            await supabase.from("sd_notifications").insert([
+            await (supabase.from("sd_notifications") as any).insert([
               {
                 table_number: tableNumber,
                 request_type: reqType,
@@ -147,8 +147,8 @@ export const syncManager = {
           }
         } else if (action.type === "UPDATE_PAYMENT") {
           const { orderId } = action.payload;
-          await supabase
-            .from("sd_orders")
+          await (supabase
+            .from("sd_orders") as any)
             .update({ payment: "paid" })
             .or(`id.eq.${orderId},order_id.eq.${orderId}`);
         }

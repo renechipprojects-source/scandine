@@ -93,7 +93,7 @@ function Cart() {
 
       await notifyKitchenNewOrder(created);
 
-      cart.setActiveOrder(created.id);
+      cart.setActiveOrderId(created.id);
       cart.clear();
       toast.success(`Order ${created.order_number} placed! Sent to Kitchen.`);
       nav({ to: "/track", search: { orderId: created.id } as any });

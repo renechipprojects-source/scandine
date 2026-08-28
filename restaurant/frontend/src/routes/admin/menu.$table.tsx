@@ -53,6 +53,8 @@ function CustomerMenu() {
 
   const { data: dbMenuItems, fetchData: fetchMenuItems } = useSupabaseTable<MenuItem>("sd_menu_items");
   const { data: dbOrders, fetchData: fetchOrders } = useSupabaseTable<Order>("sd_orders");
+  const { addItem: addInvoice } = useSupabaseTable<Invoice>("sd_invoices", []);
+  const { addItem: addPayment } = useSupabaseTable<PaymentTransaction>("sd_payments", []);
 
   const handleRealtimeItems = useCallback(() => {
     fetchMenuItems();

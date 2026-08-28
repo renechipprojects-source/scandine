@@ -141,7 +141,7 @@ export const customerStore = {
         const tblNum = parseInt(String(targetTable).replace(/\D/g, ""), 10);
         if (tblNum && !isNaN(tblNum)) {
           // Attempt insert into sd_customers if table exists
-          await supabase.from("sd_customers").insert([
+          await (supabase.from("sd_customers") as any).insert([
             {
               full_name: customer.fullName,
               phone: customer.phone,

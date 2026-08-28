@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/reception/components/ui/dialog";
 import { Receipt, Search, Download, Printer, Split, CheckCircle2, Plus, Users, Calculator, Loader2 } from "lucide-react";
 import { restaurantInfo } from "@/reception/lib/mock-data";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useSupabaseTable, markPaymentAndInvoiceAsPaid, type Invoice, type PaymentTransaction, type Order } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
 import { exportToCSV } from "@/admin/lib/exportUtils";

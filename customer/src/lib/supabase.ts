@@ -17,10 +17,17 @@ export type DbOrderItem = {
   qty: number;
   note?: string;
   image?: string;
+  payment_method?: string;
+  payment_category?: string;
+  razorpay_payment_id?: string;
+  razorpay_order_id?: string;
+  method?: string;
+  category?: string;
 };
 
 export type DbOrder = {
   id: string;
+  order_id?: string;
   order_number: string;
   table_number: string;
   customer_name?: string;
@@ -35,6 +42,7 @@ export type DbOrder = {
   status: OrderStatus;
   payment_status: "unpaid" | "paid";
   payment_method?: string;
+  payment_category?: string;
   created_at: string;
   updated_at?: string;
 };
@@ -347,8 +355,7 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         dbPayload.session_id = newOrder.session_id;
       }
 
-      let { data, error } = await supabase
-        .from("sd_orders")
+      let { data, error } = await (supabase.from("sd_orders") as any)
         .insert([dbPayload])
         .select();
 
@@ -356,8 +363,7 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         // Fallback if extra columns are not yet added to remote Supabase table
         delete dbPayload.session_id;
         delete dbPayload.customer_name;
-        const retry = await supabase
-          .from("sd_orders")
+        const retry = await (supabase.from("sd_orders") as any)
           .insert([dbPayload])
           .select();
         data = retry.data;
@@ -609,8 +615,7 @@ export async function updateOrderPayment(orderId: string, paymentMethod: string 
         .flatMap((cand) => [`id.eq.${cand}`, `order_id.eq.${cand}`])
         .join(",");
 
-      const { data: updatedData } = await supabase
-        .from("sd_orders")
+      const { data: updatedData } = await (supabase.from("sd_orders") as any)
         .update({
           payment: "paid",
         })
@@ -632,8 +637,7 @@ export async function updateOrderPayment(orderId: string, paymentMethod: string 
           } : {})
         }));
 
-        const { error: itemUpdateErr } = await supabase
-          .from("sd_orders")
+        const { error: itemUpdateErr } = await (supabase.from("sd_orders") as any)
           .update({ item: newItems })
           .eq("id", updatedRowId);
 
@@ -887,8 +891,7 @@ export async function sendServiceRequest(tableNumber: string, serviceType: strin
 
   if (isSupabaseConfigured()) {
     try {
-      const { data, error } = await supabase
-        .from("sd_notifications")
+      const { data, error } = await (supabase.from("sd_notifications") as any)
         .insert([dbRecord])
         .select();
 
@@ -984,8 +987,7 @@ export async function notifyCustomerServiceRequestStatus(serviceReq: Partial<Ser
 export async function getAllServiceRequests(): Promise<ServiceRequest[]> {
   if (isSupabaseConfigured()) {
     try {
-      const { data, error } = await supabase
-        .from("sd_notifications")
+      const { data, error } = await (supabase.from("sd_notifications") as any)
         .select("*")
         .not("request_type", "is", null)
         .order("created_at", { ascending: false });
@@ -1004,8 +1006,7 @@ export async function getAllServiceRequests(): Promise<ServiceRequest[]> {
 export async function getServiceRequestsByTable(tableNumber: string): Promise<ServiceRequest[]> {
   if (isSupabaseConfigured()) {
     try {
-      const { data, error } = await supabase
-        .from("sd_notifications")
+      const { data, error } = await (supabase.from("sd_notifications") as any)
         .select("*")
         .not("request_type", "is", null)
         .eq("table_number", tableNumber)
@@ -1184,8 +1185,7 @@ export async function verifyPaymentRecordInDb(paymentId: string, verifiedBy: str
   if (isSupabaseConfigured()) {
     try {
       const cleanId = String(paymentId).replace(/^#/, "").trim();
-      await supabase
-        .from("sd_orders")
+      await (supabase.from("sd_orders") as any)
         .update({ payment: "paid" })
         .or(`id.eq.${paymentId},order_id.eq.${paymentId},id.eq.${cleanId},order_id.eq.${cleanId}`);
     } catch (err) {
@@ -1425,7 +1425,7 @@ export async function submitFoodRating(payload: {
 
   if (isSupabaseConfigured()) {
     try {
-      let { error } = await supabase.from("sd_food_ratings").upsert(
+      let { error } = await (supabase.from("sd_food_ratings") as any).upsert(
         [
           {
             id: newRating.id,

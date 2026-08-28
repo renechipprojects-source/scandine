@@ -51,6 +51,28 @@ export interface PurchaseOrder {
   created_at?: string;
 }
 
+function normalizeOrderStatus(s?: string): string {
+  const norm = (s || "").toLowerCase().trim();
+  if (norm.includes("prep") || norm === "cooking") return "preparing";
+  if (norm.includes("read") || norm === "kitchen ready") return "ready";
+  if (norm.includes("serv") || norm === "delivered") return "served";
+  if (norm.includes("comp") || norm === "done") return "completed";
+  if (norm.includes("canc") || norm === "void") return "cancelled";
+  return "pending";
+}
+
+function normalizePaymentStatus(p?: string): string {
+  const norm = (p || "").toLowerCase().trim();
+  if (norm === "paid" || norm.includes("settle") || norm.includes("cash") || norm.includes("upi") || norm.includes("card")) return "paid";
+  return "unpaid";
+}
+
+export interface InventoryItem {
+  name: string;
+  qty: number;
+  price: number;
+}
+
 export interface OrderItem {
   name: string;
   qty: number;
@@ -518,12 +540,12 @@ export function useSupabaseTable<T extends { id: string }>(
 
         if (updateErr) {
           console.error(`[Supabase Update Error on ${tableName}]:`, updateErr.message);
-          setLocalData(previousState);
+          updateLocalData(() => previousState);
           throw updateErr;
         }
       } catch (err) {
         console.error(`Supabase update error for ${tableName}:`, err);
-        setLocalData(previousState);
+        updateLocalData(() => previousState);
         throw err;
       }
     }

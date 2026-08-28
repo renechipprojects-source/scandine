@@ -350,8 +350,7 @@ function KitchenDashboard() {
       try {
         const cleanId = String(orderId).replace(/[^a-zA-Z0-9_-]/g, "");
         if (cleanId) {
-          await supabase
-            .from("sd_orders")
+          await (supabase.from("sd_orders") as any)
             .update({ status: nextStatus })
             .or(`id.eq.${cleanId},order_id.eq.${cleanId}`);
         }
@@ -373,8 +372,7 @@ function KitchenDashboard() {
     if (isSupabaseConfigured()) {
       try {
         const dbStatus = nextStatus === "accepted" ? "Accepted" : nextStatus === "rejected" ? "Rejected" : nextStatus === "completed" ? "Completed" : nextStatus;
-        await supabase
-          .from("sd_notifications")
+        await (supabase.from("sd_notifications") as any)
           .update({ status: dbStatus })
           .eq("id", serviceId);
       } catch (err) {
@@ -931,8 +929,7 @@ function KitchenDashboard() {
                               prev.map((i) => (i.id === item.id ? { ...i, available: !i.available } : i))
                             );
                             if (isSupabaseConfigured()) {
-                              supabase
-                                .from("sd_menu_items")
+                              (supabase.from("sd_menu_items") as any)
                                 .update({ available: !item.available })
                                 .eq("id", item.id)
                                 .then(() => {});

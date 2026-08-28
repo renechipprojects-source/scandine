@@ -55,8 +55,8 @@ function matchesOrderQuery(o: Order, searchQuery: string): boolean {
     (o as any).phone ||
     (o as any).phone_number ||
     (o as any).customer_phone ||
-    firstItem.phone ||
-    firstItem.customer_phone ||
+    (firstItem as any).phone ||
+    (firstItem as any).customer_phone ||
     ""
   ).toLowerCase();
   if (phoneNum && phoneNum.includes(q)) return true;
@@ -92,7 +92,7 @@ function matchesOrderQuery(o: Order, searchQuery: string): boolean {
   const rawPaymentMethod = String(
     (o as any).payment_method ||
     (o as any).payment_type ||
-    firstItem.payment_method ||
+    (firstItem as any).payment_method ||
     ""
   ).toLowerCase();
   if (normPaymentMethod.includes(q) || rawPaymentMethod.includes(q)) return true;
