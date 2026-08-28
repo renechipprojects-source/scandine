@@ -478,9 +478,13 @@ export async function getOrdersBySession(sessionId?: string): Promise<DbOrder[]>
   const cleanSessionId = String(sessionId).replace(/[^a-zA-Z0-9_-]/g, "");
   if (!cleanSessionId) return [];
 
-  const fetchedOrders: DbOrder[] = [];
+  const localOrders = getLocalOrders();
+  const localOrderIds = new Set(
+    localOrders.map((o) => String(o.id || o.order_number || "").toLowerCase())
+  );
 
   let tblNum: number | null = null;
+  let custPhone: string | null = null;
   try {
     if (typeof window !== "undefined") {
       const rawCust = localStorage.getItem("scandine_current_customer");
@@ -489,9 +493,14 @@ export async function getOrdersBySession(sessionId?: string): Promise<DbOrder[]>
         if (parsed?.tableNumber) {
           tblNum = parseInt(String(parsed.tableNumber).replace(/\D/g, ""), 10) || null;
         }
+        if (parsed?.phone) {
+          custPhone = String(parsed.phone).replace(/\D/g, "") || null;
+        }
       }
     }
   } catch {}
+
+  const fetchedOrders: DbOrder[] = [];
 
   if (isSupabaseConfigured() && tblNum && !isNaN(tblNum)) {
     try {
@@ -503,7 +512,17 @@ export async function getOrdersBySession(sessionId?: string): Promise<DbOrder[]>
 
       if (!error && data && data.length > 0) {
         data.map(mapRowToDbOrder).forEach((o) => {
-          if (!o.session_id || o.session_id === sessionId || o.session_id === cleanSessionId) {
+          const cleanId = String(o.id || "").toLowerCase();
+          const cleanOrdNum = String(o.order_number || "").toLowerCase();
+          const phoneMatch = custPhone && o.customer_phone && String(o.customer_phone).replace(/\D/g, "") === custPhone;
+          const isOwnOrder =
+            (o.session_id && (o.session_id === sessionId || o.session_id === cleanSessionId)) ||
+            localOrderIds.has(cleanId) ||
+            localOrderIds.has(cleanOrdNum) ||
+            phoneMatch;
+
+          if (isOwnOrder) {
+            o.session_id = sessionId || cleanSessionId;
             fetchedOrders.push(o);
           }
         });
@@ -514,17 +533,13 @@ export async function getOrdersBySession(sessionId?: string): Promise<DbOrder[]>
   }
 
   // Merge local session orders
-  const localOrders = getLocalOrders();
-  localOrders
-    .filter((o) => o.session_id === sessionId || o.session_id === cleanSessionId)
-    .forEach((o) => {
-      if (!fetchedOrders.some((existing) => existing.id === o.id || existing.order_number === o.order_number)) {
-        fetchedOrders.push(o);
-      }
-    });
+  localOrders.forEach((o) => {
+    if (!fetchedOrders.some((existing) => existing.id === o.id || existing.order_number === o.order_number)) {
+      fetchedOrders.push(o);
+    }
+  });
 
   return fetchedOrders
-    .filter((o) => !o.session_id || o.session_id === sessionId || o.session_id === cleanSessionId)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
@@ -552,7 +567,45 @@ export function subscribeToOrdersBySession(
       (payload) => {
         if (payload.new) {
           const mapped = mapRowToDbOrder(payload.new);
-          if (!mapped.session_id || mapped.session_id === sessionId || mapped.session_id === cleanSessionId) {
+
+          let currentTableNum: number | null = null;
+          let currentCustPhone: string | null = null;
+          try {
+            if (typeof window !== "undefined") {
+              const rawCust = localStorage.getItem("scandine_current_customer");
+              if (rawCust) {
+                const parsed = JSON.parse(rawCust);
+                if (parsed?.tableNumber) {
+                  currentTableNum = parseInt(String(parsed.tableNumber).replace(/\D/g, ""), 10) || null;
+                }
+                if (parsed?.phone) {
+                  currentCustPhone = String(parsed.phone).replace(/\D/g, "") || null;
+                }
+              }
+            }
+          } catch {}
+
+          // 1. Must match current customer table
+          if (currentTableNum && parseInt(String(mapped.table_number).replace(/\D/g, ""), 10) !== currentTableNum) {
+            return;
+          }
+
+          // 2. Must match current customer session / local orders / phone
+          const localOrders = getLocalOrders();
+          const localOrderIds = new Set(
+            localOrders.map((o) => String(o.id || o.order_number || "").toLowerCase())
+          );
+          const cleanId = String(mapped.id || "").toLowerCase();
+          const cleanOrdNum = String(mapped.order_number || "").toLowerCase();
+          const phoneMatch = currentCustPhone && mapped.customer_phone && String(mapped.customer_phone).replace(/\D/g, "") === currentCustPhone;
+
+          const isOwnOrder =
+            (mapped.session_id && (mapped.session_id === sessionId || mapped.session_id === cleanSessionId)) ||
+            localOrderIds.has(cleanId) ||
+            localOrderIds.has(cleanOrdNum) ||
+            phoneMatch;
+
+          if (isOwnOrder) {
             onUpdate(mapped);
           }
         }

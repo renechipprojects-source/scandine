@@ -42,7 +42,12 @@ function loadCustomer(table: string): CustomerDetails | null {
       }
 
       // Priority 1: Current customer if table matches
-      const targetCust = currentCust || tableCust;
+      let targetCust: CustomerDetails | null = null;
+      if (currentCust && normTable && currentCust.tableNumber && currentCust.tableNumber.toLowerCase().replace(/\s+/g, "") === normTable) {
+        targetCust = currentCust;
+      } else if (tableCust && normTable && tableCust.tableNumber && tableCust.tableNumber.toLowerCase().replace(/\s+/g, "") === normTable) {
+        targetCust = tableCust;
+      }
 
       const composite = `${activeTable}|${targetCust?.sessionId || ""}|${targetCust?.registeredAt || ""}`;
 
