@@ -63,16 +63,20 @@ function Cart() {
       }));
 
       // Broadcast order to Kitchen live store
-      liveOrderStore.addOrder({
-        id: orderNumber,
-        table: activeTable,
-        customer: custDisplayName,
-        items: orderPayloadItems.map((it) => ({ name: it.name, qty: it.qty, price: it.price })),
-        total: totals.total,
-        status: "pending",
-        payment: "unpaid",
-        channel: "QR",
-      });
+      try {
+        liveOrderStore.addOrder({
+          id: orderNumber,
+          table: activeTable,
+          customer: custDisplayName,
+          items: orderPayloadItems.map((it) => ({ name: it.name, qty: it.qty, price: it.price })),
+          total: totals.total,
+          status: "pending",
+          payment: "unpaid",
+          channel: "QR",
+        });
+      } catch (err) {
+        console.warn("[CART] Live order store update warning:", err);
+      }
 
       const created = await createOrder({
         id: orderId,
@@ -91,14 +95,21 @@ function Cart() {
         payment_status: "unpaid",
       });
 
-      await notifyKitchenNewOrder(created);
+      try {
+        notifyKitchenNewOrder(created);
+      } catch (err) {
+        console.warn("[CART] Notify kitchen error:", err);
+      }
 
-      cart.setActiveOrderId(created.id);
+      const createdOrderId = created?.id || orderId;
+      const createdOrderNumber = created?.order_number || orderNumber;
+
+      cart.setActiveOrderId(createdOrderId);
       cart.clear();
-      toast.success(`Order ${created.order_number} placed! Sent to Kitchen.`);
-      nav({ to: "/track", search: { orderId: created.id } as any });
+      toast.success(`Order ${createdOrderNumber} placed! Sent to Kitchen.`);
+      nav({ to: "/track", search: { orderId: createdOrderId } as any });
     } catch (err) {
-      console.error(err);
+      console.error("[CART PLACE ORDER ERROR]", err);
       toast.error("Failed to place order. Please try again.");
     } finally {
       setIsPlacingOrder(false);

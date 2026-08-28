@@ -253,7 +253,7 @@ function Menu() {
               <div className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
                 <Flame className="h-5 w-5 text-primary animate-pulse" /> Live Orders for {tableNumber} ({activeTableOrders.length})
               </div>
-              <Link to="/track" search={{ orderId: "" }} className="text-xs font-semibold text-primary flex items-center hover:underline">
+              <Link to="/track" search={{ orderId: activeTableOrders[0]?.id || "" }} className="text-xs font-semibold text-primary flex items-center hover:underline">
                 View Tracking <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
               </Link>
             </div>

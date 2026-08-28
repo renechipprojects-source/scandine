@@ -339,7 +339,6 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         id: newOrder.id,
         order_id: orderIdStr,
         customer: newOrder.customer_name || `Table ${tblNum} Customer`,
-        customer_name: newOrder.customer_name || `Table ${tblNum} Customer`,
         customer_email: custEmail || null,
         customer_phone: custPhone || null,
         table_number: tblNum,
@@ -351,24 +350,9 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         created_at: newOrder.created_at,
       };
 
-      if (newOrder.session_id) {
-        dbPayload.session_id = newOrder.session_id;
-      }
-
       let { data, error } = await (supabase.from("sd_orders") as any)
         .insert([dbPayload])
         .select();
-
-      if (error && (error.code === "PGRST204" || error.code === "42703")) {
-        // Fallback if extra columns are not yet added to remote Supabase table
-        delete dbPayload.session_id;
-        delete dbPayload.customer_name;
-        const retry = await (supabase.from("sd_orders") as any)
-          .insert([dbPayload])
-          .select();
-        data = retry.data;
-        error = retry.error;
-      }
 
       const insertedRow = Array.isArray(data) ? data[0] : data;
       if (error) {
@@ -380,8 +364,9 @@ export async function createOrder(orderPayload: Omit<DbOrder, "created_at">): Pr
         });
       } else if (insertedRow) {
         const mapped = mapRowToDbOrder(insertedRow);
+        mapped.session_id = newOrder.session_id || mapped.session_id;
         const updatedLocal = getLocalOrders();
-        const filteredLocal = updatedLocal.filter((o) => o.id !== mapped.id);
+        const filteredLocal = updatedLocal.filter((o) => o.id !== mapped.id && o.order_number !== mapped.order_number);
         saveLocalOrders([mapped, ...filteredLocal]);
         return mapped;
       }
@@ -683,24 +668,20 @@ export async function updateOrderPayment(orderId: string, paymentMethod: string 
   return true;
 }
 
-export async function notifyKitchenOrderPaid(tableNumber: string, orderNumber: string) {
-  const channelName = "scandine_kitchen_channel";
-  const payload = {
-    type: "KITCHEN_ORDER_PAID",
-    table_number: tableNumber,
-    order_number: orderNumber,
-    message: "Order Paid",
-  };
+async function safeBroadcast(channelName: string, event: string, payload: any) {
   try {
     if (isSupabaseConfigured()) {
-      await supabase.channel(channelName).send({
-        type: "broadcast",
-        event: "kitchen_notification",
-        payload,
-      });
+      await Promise.race([
+        supabase.channel(channelName).send({
+          type: "broadcast",
+          event,
+          payload,
+        }),
+        new Promise((res) => setTimeout(res, 1200)),
+      ]);
     }
   } catch (err) {
-    console.warn("Supabase kitchen payment broadcast error:", err);
+    console.warn(`[BROADCAST WARN ${event}]:`, err);
   }
   try {
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -710,6 +691,17 @@ export async function notifyKitchenOrderPaid(tableNumber: string, orderNumber: s
   } catch { }
 }
 
+export async function notifyKitchenOrderPaid(tableNumber: string, orderNumber: string) {
+  const channelName = "scandine_kitchen_channel";
+  const payload = {
+    type: "KITCHEN_ORDER_PAID",
+    table_number: tableNumber,
+    order_number: orderNumber,
+    message: "Order Paid",
+  };
+  await safeBroadcast(channelName, "kitchen_notification", payload);
+}
+
 export async function notifyKitchenNewOrder(order: DbOrder) {
   const channelName = "scandine_kitchen_channel";
   const payload = {
@@ -717,23 +709,7 @@ export async function notifyKitchenNewOrder(order: DbOrder) {
     target: "kitchen",
     order,
   };
-  try {
-    if (isSupabaseConfigured()) {
-      await supabase.channel(channelName).send({
-        type: "broadcast",
-        event: "kitchen_new_order",
-        payload,
-      });
-    }
-  } catch (err) {
-    console.warn("Supabase new order broadcast error:", err);
-  }
-  try {
-    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-      const bc = new BroadcastChannel("aura_dine_sync_channel");
-      bc.postMessage(payload);
-    }
-  } catch { }
+  await safeBroadcast(channelName, "kitchen_new_order", payload);
 }
 
 export async function notifyReceptionAdminPayment(details: {
@@ -756,23 +732,7 @@ export async function notifyReceptionAdminPayment(details: {
     target: "reception_admin",
     ...details,
   };
-  try {
-    if (isSupabaseConfigured()) {
-      await supabase.channel(channelName).send({
-        type: "broadcast",
-        event: "reception_admin_billing",
-        payload,
-      });
-    }
-  } catch (err) {
-    console.warn("Supabase reception/admin payment broadcast error:", err);
-  }
-  try {
-    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-      const bc = new BroadcastChannel("aura_dine_sync_channel");
-      bc.postMessage(payload);
-    }
-  } catch { }
+  await safeBroadcast(channelName, "reception_admin_billing", payload);
 }
 
 
@@ -937,24 +897,7 @@ export async function notifyKitchenServiceRequest(serviceReq: ServiceRequest) {
     target: "kitchen",
     service: serviceReq,
   };
-
-  try {
-    if (isSupabaseConfigured()) {
-      await supabase.channel(channelName).send({
-        type: "broadcast",
-        event: "kitchen_service_request",
-        payload,
-      });
-    }
-  } catch (err) {
-    console.warn("Supabase kitchen service broadcast error:", err);
-  }
-  try {
-    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-      const bc = new BroadcastChannel("aura_dine_sync_channel");
-      bc.postMessage(payload);
-    }
-  } catch { }
+  await safeBroadcast(channelName, "kitchen_service_request", payload);
 }
 
 export async function notifyCustomerServiceRequestStatus(serviceReq: Partial<ServiceRequest> & { id: string; table_number?: string; status: string }) {
@@ -964,24 +907,7 @@ export async function notifyCustomerServiceRequestStatus(serviceReq: Partial<Ser
     target: "customer",
     service: serviceReq,
   };
-
-  try {
-    if (isSupabaseConfigured()) {
-      await supabase.channel(channelName).send({
-        type: "broadcast",
-        event: "service_request_status",
-        payload,
-      });
-    }
-  } catch (err) {
-    console.warn("Supabase customer service status broadcast error:", err);
-  }
-  try {
-    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-      const bc = new BroadcastChannel("aura_dine_sync_channel");
-      bc.postMessage(payload);
-    }
-  } catch { }
+  await safeBroadcast(channelName, "service_request_status", payload);
 }
 
 export async function getAllServiceRequests(): Promise<ServiceRequest[]> {
