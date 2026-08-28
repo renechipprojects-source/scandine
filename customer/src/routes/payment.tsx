@@ -176,7 +176,7 @@ function Payment() {
     const activeTable = order?.table_number || tableNumber;
     const invoiceId = `INV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
 
-    if (isAutoPaid || payCategory === "cash") {
+    if (isAutoPaid) {
       if (order) {
         const updateSuccess = await updateOrderPayment(order.id, payMethodName, order.order_id, transactionId);
         console.log("[PAYMENT DB UPDATE RESULT]", { orderId: order.id, secondaryId: order.order_id, updateSuccess });
@@ -200,7 +200,7 @@ function Payment() {
       toast.success(`Payment Successful! Reference: ${invoiceId}`);
     } else {
       setState("pending_approval" as any);
-      toast.info(`Payment submitted for Table ${activeTable}. Awaiting Reception verification.`);
+      toast.info(`Cash payment request submitted for Table ${activeTable}. Please pay cash at the counter.`);
     }
   };
 
@@ -614,6 +614,19 @@ function Payment() {
                   <div className="font-display text-xl font-bold mt-4">Payment failed</div>
                   <div className="text-xs text-muted-foreground mt-1">Please try another method</div>
                   <button onClick={() => setState("idle")} className="mt-5 rounded-full gradient-primary text-white text-sm font-semibold px-6 py-2">Try again</button>
+                </>
+              )}
+              {(state as string) === "pending_approval" && (
+                <>
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring" }}>
+                    <Banknote className="h-14 w-14 mx-auto text-amber-500" />
+                  </motion.div>
+                  <div className="font-display text-xl font-bold mt-4">Cash Payment Requested</div>
+                  <div className="text-xs text-muted-foreground mt-1">Please pay ₹{total.toFixed(2)} cash at the counter or to your server.</div>
+                  <div className="mt-5 flex gap-2 justify-center">
+                    <button onClick={() => nav({ to: "/track", search: { orderId: order?.id || activeId } as any })} className="rounded-full gradient-primary text-white text-sm font-semibold px-4 py-2">Track Order</button>
+                    <button onClick={() => setState("idle")} className="rounded-full border text-sm font-semibold px-4 py-2">Close</button>
+                  </div>
                 </>
               )}
             </motion.div>

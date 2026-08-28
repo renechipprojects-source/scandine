@@ -171,9 +171,9 @@ function CustomerMenu() {
     const orderId = `ORD-${Date.now().toString().slice(-6)}`;
     const invId = `INV-${Date.now().toString().slice(-6)}`;
     const grandTotal = total * 1.08;
-    const isPaid = paymentMethod === "GPay";
-    const txnId = isPaid ? `TXN-GPAY-${Date.now().toString().slice(-8)}` : undefined;
-    const payStatus = isPaid ? "Paid" : "Pending";
+    const isPaid = false;
+    const txnId = undefined;
+    const payStatus = "Pending";
 
     const orderPayload = {
       order_id: orderId,
@@ -182,7 +182,7 @@ function CustomerMenu() {
       item: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price })),
       total: parseFloat(grandTotal.toFixed(2)),
       status: "pending" as const,
-      payment: isPaid ? ("paid" as const) : ("unpaid" as const),
+      payment: "unpaid" as const,
       order_time: new Date().toISOString(),
     };
 
