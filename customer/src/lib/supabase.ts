@@ -216,10 +216,10 @@ export function mapRowToDbOrder(row: any): DbOrder {
   const rawCategory = String(row.payment_category || row.category || firstItem.payment_category || firstItem.category || "").trim().toLowerCase();
   const rzpId = row.razorpay_payment_id || row.razorpay_order_id || firstItem.razorpay_payment_id || firstItem.razorpay_order_id;
 
-  let resolvedMethod = rawMethod && rawMethod !== "—" ? rawMethod : undefined;
-  if (!resolvedMethod && (rawCategory === "upi" || rawMethod.toLowerCase().includes("upi") || rzpId)) {
+  let resolvedMethod = isPaid && rawMethod && rawMethod !== "—" ? rawMethod : undefined;
+  if (isPaid && !resolvedMethod && (rawCategory === "upi" || rawMethod.toLowerCase().includes("upi") || rzpId)) {
     resolvedMethod = "UPI";
-  } else if (!resolvedMethod && (rawCategory === "cash" || rawMethod.toLowerCase().includes("cash"))) {
+  } else if (isPaid && !resolvedMethod && (rawCategory === "cash" || rawMethod.toLowerCase().includes("cash"))) {
     resolvedMethod = "Cash";
   }
 
@@ -238,7 +238,7 @@ export function mapRowToDbOrder(row: any): DbOrder {
     status: (row.status || "pending") as OrderStatus,
     payment_status: isPaid ? "paid" : "unpaid",
     payment_method: resolvedMethod,
-    payment_category: rawCategory || (resolvedMethod ? (resolvedMethod.toLowerCase().includes("upi") ? "upi" : "cash") : undefined),
+    payment_category: isPaid ? (rawCategory || (resolvedMethod ? (resolvedMethod.toLowerCase().includes("upi") ? "upi" : "cash") : undefined)) : undefined,
     created_at: row.created_at || row.order_time || new Date().toISOString(),
     updated_at: row.updated_at || new Date().toISOString(),
   };

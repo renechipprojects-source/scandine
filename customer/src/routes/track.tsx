@@ -206,9 +206,9 @@ function TrackOrder() {
                       Paid / {order.payment_method || "Cash"}
                     </div>
                   ) : (
-                    <div className="text-xs text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-                      Live Sync Active
+                    <div className="text-xs text-amber-600 font-semibold mt-1 flex items-center gap-1.5 bg-amber-500/10 px-2.5 py-1 rounded-full w-fit border border-amber-500/20">
+                      <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                      Cash at Counter / Payment Pending
                     </div>
                   )}
                 </div>
