@@ -13,7 +13,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useSupabaseTable, type Order } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/admin/components/ui/dialog";
-import { resolvePaymentStatus, resolvePaymentMethod, resolveTransactionId, resolveInvoiceId, resolveCustomerName } from "@/lib/payment-utils";
+import { parseItemsArray, resolvePaymentStatus, resolvePaymentMethod, resolveTransactionId, resolveInvoiceId, resolveCustomerName } from "@/lib/payment-utils";
 
 export const Route = createFileRoute("/admin/_app/orders")({
   head: () => ({
@@ -29,50 +29,68 @@ function matchesOrderQuery(o: Order, searchQuery: string): boolean {
   const q = searchQuery.trim().toLowerCase();
   if (!q) return true;
 
-  // 1. Order ID & Canonical Database ID
-  const idStr = String(o.id || "").toLowerCase();
-  const orderIdStr = String(o.order_id || "").toLowerCase();
-  const rawId = String(o.order_id || o.id || "").toLowerCase();
-  const formattedHash = `#${rawId}`;
-  const formattedPrefix = `ord-#${rawId}`;
+  const cleanQueryDigits = q.replace(/\D/g, "");
+
+  // 1. Order ID & Canonical Identifiers
+  const rawId = String(o.id || "").toLowerCase();
+  const rawOrdId = String(o.order_id || "").toLowerCase();
+  const cleanId = rawId.replace(/[^a-zA-Z0-9]/g, "");
+  const cleanOrdId = rawOrdId.replace(/[^a-zA-Z0-9]/g, "");
+
   if (
-    idStr.includes(q) ||
-    orderIdStr.includes(q) ||
-    formattedHash.includes(q) ||
-    formattedPrefix.includes(q)
+    rawId.includes(q) ||
+    rawOrdId.includes(q) ||
+    cleanId.includes(q) ||
+    cleanOrdId.includes(q) ||
+    `#${rawOrdId}`.includes(q) ||
+    `#${rawId}`.includes(q) ||
+    `ord-#${rawOrdId}`.includes(q) ||
+    `ord-#${rawId}`.includes(q)
   ) {
     return true;
   }
 
-  // 2. Customer Name (direct column or inside item[0] metadata)
+  // 2. Customer Name (direct column or resolved metadata)
   const custName = resolveCustomerName(o).toLowerCase();
   const rawCustName = String(o.customer || (o as any).customer_name || "").toLowerCase();
   if (custName.includes(q) || rawCustName.includes(q)) return true;
 
-  // 3. Customer Phone Number
-  const firstItem = Array.isArray(o.item || (o as any).items) ? (o.item || (o as any).items)[0] || {} : {};
-  const phoneNum = String(
+  // 3. Customer Phone & Email (safely parsed from items JSONB or top level)
+  const itemsArr = parseItemsArray(o.item || (o as any).items);
+  const firstItem = itemsArr[0] || {};
+  const rawPhone = String(
     (o as any).phone ||
     (o as any).phone_number ||
     (o as any).customer_phone ||
+    (o as any).mobile ||
     (firstItem as any).phone ||
+    (firstItem as any).phone_number ||
     (firstItem as any).customer_phone ||
     ""
   ).toLowerCase();
-  if (phoneNum && phoneNum.includes(q)) return true;
+  const phoneDigits = rawPhone.replace(/\D/g, "");
 
-  // 4. Table Number (safe numeric/string comparison)
+  if (rawPhone.includes(q) || (cleanQueryDigits.length >= 3 && phoneDigits.includes(cleanQueryDigits))) {
+    return true;
+  }
+
+  const rawEmail = String((o as any).email || (o as any).customer_email || (firstItem as any).email || "").toLowerCase();
+  if (rawEmail.includes(q)) return true;
+
+  // 4. Table Number (supports "5", "table 5", "table5", "t-5", "t5", "tbl 5", "tbl5", "#5")
   const tblNum = o.table_number ?? (o as any).tableNumber;
   if (tblNum !== undefined && tblNum !== null) {
     const tblStr = String(tblNum).toLowerCase();
-    const tblDisplay = `table ${tblStr}`;
-    const tblShort = `t-${tblStr}`;
-    const tblHash = `#${tblStr}`;
     if (
+      tblStr === q ||
       tblStr.includes(q) ||
-      tblDisplay.includes(q) ||
-      tblShort.includes(q) ||
-      tblHash.includes(q)
+      `table ${tblStr}`.includes(q) ||
+      `table${tblStr}`.includes(q) ||
+      `t-${tblStr}`.includes(q) ||
+      `t${tblStr}`.includes(q) ||
+      `tbl ${tblStr}`.includes(q) ||
+      `tbl${tblStr}`.includes(q) ||
+      `#${tblStr}`.includes(q)
     ) {
       return true;
     }
@@ -82,20 +100,41 @@ function matchesOrderQuery(o: Order, searchQuery: string): boolean {
   const ordStatus = String(o.status || "").toLowerCase();
   if (ordStatus.includes(q)) return true;
 
-  // 6. Payment Status
+  // 6. Payment Status (exact match for "paid" / "unpaid" to avoid "unpaid" matching "paid")
   const normPaymentStatus = resolvePaymentStatus(o).toLowerCase();
   const rawPaymentStatus = String(o.payment || (o as any).payment_status || "").toLowerCase();
-  if (normPaymentStatus.includes(q) || rawPaymentStatus.includes(q)) return true;
+  if (q === "paid") {
+    if (normPaymentStatus === "paid" || rawPaymentStatus === "paid") return true;
+  } else if (q === "unpaid") {
+    if (normPaymentStatus === "unpaid" || rawPaymentStatus === "unpaid") return true;
+  } else if (normPaymentStatus.includes(q) || rawPaymentStatus.includes(q)) {
+    return true;
+  }
 
-  // 7. Payment Method
+  // 7. Payment Method & Category
   const normPaymentMethod = resolvePaymentMethod(o).toLowerCase();
   const rawPaymentMethod = String(
     (o as any).payment_method ||
     (o as any).payment_type ||
     (firstItem as any).payment_method ||
+    (firstItem as any).method ||
     ""
   ).toLowerCase();
-  if (normPaymentMethod.includes(q) || rawPaymentMethod.includes(q)) return true;
+  const rawPaymentCategory = String(
+    (o as any).payment_category ||
+    (o as any).category ||
+    (firstItem as any).payment_category ||
+    (firstItem as any).category ||
+    ""
+  ).toLowerCase();
+
+  if (
+    normPaymentMethod.includes(q) ||
+    rawPaymentMethod.includes(q) ||
+    rawPaymentCategory.includes(q)
+  ) {
+    return true;
+  }
 
   // 8. Order Date / Time
   const timeVal = o.order_time || (o as any).created_at;
@@ -111,10 +150,14 @@ function matchesOrderQuery(o: Order, searchQuery: string): boolean {
     }
   }
 
-  // 9. Items / Product Names
-  const itemsArr = Array.isArray(o.item || (o as any).items) ? (o.item || (o as any).items) : [];
+  // 9. Food Items (Name, Category, Notes, Price)
   for (const it of itemsArr) {
-    if (it && it.name && String(it.name).toLowerCase().includes(q)) {
+    if (!it) continue;
+    const name = String(it.name || it.title || it.dish || "").toLowerCase();
+    const cat = String(it.category || it.category_name || "").toLowerCase();
+    const note = String(it.note || it.notes || it.description || "").toLowerCase();
+
+    if (name.includes(q) || cat.includes(q) || note.includes(q)) {
       return true;
     }
   }
@@ -122,7 +165,17 @@ function matchesOrderQuery(o: Order, searchQuery: string): boolean {
   // 10. Transaction / Invoice / Razorpay ID
   const txnId = resolveTransactionId(o).toLowerCase();
   const invId = resolveInvoiceId(o).toLowerCase();
-  if (txnId.includes(q) || invId.includes(q)) return true;
+  const rzpId = String(
+    (o as any).razorpay_payment_id ||
+    (firstItem as any).razorpay_payment_id ||
+    (o as any).razorpay_order_id ||
+    (firstItem as any).razorpay_order_id ||
+    ""
+  ).toLowerCase();
+
+  if (txnId.includes(q) || invId.includes(q) || rzpId.includes(q)) {
+    return true;
+  }
 
   return false;
 }
