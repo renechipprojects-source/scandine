@@ -1,7 +1,24 @@
+export function parseItemsArray(raw: any): any[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === "object") return [parsed];
+    } catch {
+      return [];
+    }
+  }
+  if (typeof raw === "object") return [raw];
+  return [];
+}
+
 export function resolvePaymentStatus(item: any): "Paid" | "Unpaid" | "Pending" | "Refunded" | "Failed" {
   if (!item) return "Unpaid";
 
-  const firstItem = Array.isArray(item.items || item.item) ? (item.items || item.item)[0] || {} : {};
+  const items = parseItemsArray(item.items || item.item);
+  const firstItem = items[0] || {};
   const rawPayment = String(
     item.payment ||
     item.payment_status ||
@@ -68,7 +85,8 @@ export function resolvePaymentMethod(item: any): string {
     return "—";
   }
 
-  const firstItem = Array.isArray(item.items || item.item) ? (item.items || item.item)[0] || {} : {};
+  const items = parseItemsArray(item.items || item.item);
+  const firstItem = items[0] || {};
 
   // Priority 1: Top-level payment_method / payment_category or item[0] payment_method / payment_category
   const topMethod = String(item.payment_method || item.paymentMethod || item.method || item.payment_type || item.paymentType || "").trim();
@@ -165,7 +183,8 @@ export function resolvePaymentMethod(item: any): string {
 export function resolveTransactionId(item: any): string {
   if (!item) return "—";
 
-  const firstItem = Array.isArray(item.items || item.item) ? (item.items || item.item)[0] || {} : {};
+  const items = parseItemsArray(item.items || item.item);
+  const firstItem = items[0] || {};
 
   const rzpPaymentId = String(
     item.razorpay_payment_id ||
@@ -241,7 +260,8 @@ export function resolveInvoiceId(item: any): string {
 export function resolveCustomerName(item: any): string {
   if (!item) return "Customer";
 
-  const firstItem = Array.isArray(item.items || item.item) ? (item.items || item.item)[0] || {} : {};
+  const items = parseItemsArray(item.items || item.item);
+  const firstItem = items[0] || {};
 
   const name = String(
     item.customer_name ||

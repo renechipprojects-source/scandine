@@ -96,7 +96,23 @@ function CashCollectionPage() {
 
       console.log("[CASH COLLECTION] Updating single sd_orders row:", { targetId, orderDisplayId, txnId });
 
-      const currentItems = Array.isArray(targetOrder.item) ? targetOrder.item : [];
+      let currentItems: any[] = [];
+      if (Array.isArray(targetOrder.item)) {
+        currentItems = targetOrder.item;
+      } else if (typeof targetOrder.item === "string") {
+        try {
+          const parsed = JSON.parse(targetOrder.item);
+          if (Array.isArray(parsed)) currentItems = parsed;
+          else if (parsed && typeof parsed === "object") currentItems = [parsed];
+        } catch {}
+      } else if (targetOrder.item && typeof targetOrder.item === "object") {
+        currentItems = [targetOrder.item];
+      }
+
+      if (currentItems.length === 0) {
+        currentItems = [{ name: "Food Order", price: Number(targetOrder.total || 0), qty: 1 }];
+      }
+
       const updatedItems = currentItems.map((it: any, idx: number) => ({
         ...it,
         ...(idx === 0

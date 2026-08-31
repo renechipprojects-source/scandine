@@ -122,9 +122,22 @@ router.post("/verify", async (req: Request, res: Response) => {
 
       const targetId = dbOrder?.id || order_id;
 
-      const currentItems = dbOrder && Array.isArray(dbOrder.item) && dbOrder.item.length > 0
-        ? dbOrder.item
-        : [{ name: "Food Order", price: Number(dbOrder?.total || 0), qty: 1 }];
+      let currentItems: any[] = [];
+      if (dbOrder && Array.isArray(dbOrder.item)) {
+        currentItems = dbOrder.item;
+      } else if (dbOrder && typeof dbOrder.item === "string") {
+        try {
+          const parsed = JSON.parse(dbOrder.item);
+          if (Array.isArray(parsed)) currentItems = parsed;
+          else if (parsed && typeof parsed === "object") currentItems = [parsed];
+        } catch {}
+      } else if (dbOrder && dbOrder.item && typeof dbOrder.item === "object") {
+        currentItems = [dbOrder.item];
+      }
+
+      if (currentItems.length === 0) {
+        currentItems = [{ name: "Food Order", price: Number(dbOrder?.total || 0), qty: 1 }];
+      }
 
       const updatedItems = currentItems.map((it: any, idx: number) => ({
         ...it,

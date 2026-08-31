@@ -665,7 +665,23 @@ export async function updateOrderPayment(orderId: string, paymentMethod: string 
       if (data && data.length > 0) {
         const row = data[0];
         const updatedRowId = row.id;
-        const currentItems = Array.isArray(row.item) ? row.item : [];
+        let currentItems: any[] = [];
+        if (Array.isArray(row.item)) {
+          currentItems = row.item;
+        } else if (typeof row.item === "string") {
+          try {
+            const parsed = JSON.parse(row.item);
+            if (Array.isArray(parsed)) currentItems = parsed;
+            else if (parsed && typeof parsed === "object") currentItems = [parsed];
+          } catch {}
+        } else if (row.item && typeof row.item === "object") {
+          currentItems = [row.item];
+        }
+
+        if (currentItems.length === 0) {
+          currentItems = [{ name: "Food Order", price: Number(row.total || 0), qty: 1 }];
+        }
+
         const newItems = currentItems.map((it: any, idx: number) => ({
           ...it,
           ...(idx === 0 ? {

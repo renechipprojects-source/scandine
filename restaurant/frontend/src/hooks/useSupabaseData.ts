@@ -628,7 +628,23 @@ export async function markPaymentAndInvoiceAsPaid(
           .select();
 
         if (byId && byId.length > 0) {
-          const items = Array.isArray(byId[0].item) ? byId[0].item : [];
+          let items: any[] = [];
+          if (Array.isArray(byId[0].item)) {
+            items = byId[0].item;
+          } else if (typeof byId[0].item === "string") {
+            try {
+              const parsed = JSON.parse(byId[0].item);
+              if (Array.isArray(parsed)) items = parsed;
+              else if (parsed && typeof parsed === "object") items = [parsed];
+            } catch {}
+          } else if (byId[0].item && typeof byId[0].item === "object") {
+            items = [byId[0].item];
+          }
+
+          if (items.length === 0) {
+            items = [{ name: "Food Order", price: Number(byId[0].total || 0), qty: 1 }];
+          }
+
           const updatedItems = items.map((it: any, idx: number) => ({
             ...it,
             ...(idx === 0 ? { payment_method: methodVal, payment_category: category } : {})
@@ -646,7 +662,23 @@ export async function markPaymentAndInvoiceAsPaid(
           .select();
 
         if (byOrder && byOrder.length > 0) {
-          const items = Array.isArray(byOrder[0].item) ? byOrder[0].item : [];
+          let items: any[] = [];
+          if (Array.isArray(byOrder[0].item)) {
+            items = byOrder[0].item;
+          } else if (typeof byOrder[0].item === "string") {
+            try {
+              const parsed = JSON.parse(byOrder[0].item);
+              if (Array.isArray(parsed)) items = parsed;
+              else if (parsed && typeof parsed === "object") items = [parsed];
+            } catch {}
+          } else if (byOrder[0].item && typeof byOrder[0].item === "object") {
+            items = [byOrder[0].item];
+          }
+
+          if (items.length === 0) {
+            items = [{ name: "Food Order", price: Number(byOrder[0].total || 0), qty: 1 }];
+          }
+
           const updatedItems = items.map((it: any, idx: number) => ({
             ...it,
             ...(idx === 0 ? { payment_method: methodVal, payment_category: category } : {})
