@@ -104,7 +104,7 @@ function CustomerLoginPortal() {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full overflow-y-auto overflow-x-hidden flex flex-col justify-center items-center px-3.5 py-4 sm:px-4 sm:py-6 relative select-none text-slate-900 bg-slate-50 [perspective:1000px]">
+    <div className="min-h-[100dvh] w-full overflow-y-auto overflow-x-hidden flex flex-col justify-center items-center px-3.5 py-4 sm:px-4 sm:py-6 relative select-none bg-background text-foreground [perspective:1000px]">
       {/* CSS Keyframe Animations for Professional 3D Motion & Parallax */}
       <style>{`
         @media (prefers-reduced-motion: reduce) {
@@ -171,66 +171,60 @@ function CustomerLoginPortal() {
         .anim-entrance { animation: cardEntrance 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       `}</style>
 
-      {/* Light Restaurant Background Atmosphere */}
+      {/* Restaurant Background Atmosphere */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden w-full h-full">
-        {/* Photorealistic Luxury Restaurant Background Image */}
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat filter blur-[2px] opacity-25 scale-105"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat filter blur-[2px] opacity-15 dark:opacity-20 scale-105"
           style={{ backgroundImage: `url('/customer-dining-bg.jpg')` }}
         />
 
-        {/* Soft Warm Light Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-50/92 via-amber-50/50 to-slate-50/92 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/80 to-background/95 backdrop-blur-[2px]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(249,115,22,0.1),transparent_50%)]" />
 
-        {/* Ambient Moving Light Effect */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[340px] h-[340px] rounded-full bg-gradient-to-br from-orange-300/35 via-amber-200/25 to-transparent blur-3xl anim-ambient-light" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[340px] h-[340px] rounded-full bg-gradient-to-br from-orange-500/20 via-amber-500/15 to-transparent blur-3xl anim-ambient-light" />
       </div>
 
-      {/* FULL-SCREEN MOBILE APP CONTAINER (Zero Horizontal Overflow) */}
+      {/* FULL-SCREEN MOBILE APP CONTAINER */}
       <main className="w-full max-w-[400px] sm:max-w-md mx-auto my-auto relative z-10 flex flex-col items-center">
         <div className="relative w-full anim-glass-float overflow-visible">
-          {/* 3D Translucent Dinner Plate 1 (Top-Left offset) */}
+          {/* 3D Translucent Dinner Plates */}
           <div
-            className="absolute -top-7 -left-7 w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-white/75 via-orange-100/40 to-white/90 backdrop-blur-md border-2 border-white/85 shadow-[0_10px_25px_rgba(0,0,0,0.08)] anim-plate-1 pointer-events-none z-0 flex items-center justify-center"
+            className="absolute -top-7 -left-7 w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-card/75 via-orange-500/10 to-card/90 backdrop-blur-md border-2 border-border/80 shadow-[0_10px_25px_rgba(0,0,0,0.08)] anim-plate-1 pointer-events-none z-0 flex items-center justify-center"
             aria-hidden="true"
           >
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-white/60 bg-white/30" />
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-border/60 bg-muted/30" />
           </div>
 
-          {/* 3D Translucent Dinner Plate 2 (Bottom-Right offset) */}
           <div
-            className="absolute -bottom-7 -right-7 w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-gradient-to-bl from-white/75 via-amber-100/40 to-white/90 backdrop-blur-md border-2 border-white/85 shadow-[0_10px_25px_rgba(0,0,0,0.08)] anim-plate-2 pointer-events-none z-0 flex items-center justify-center"
+            className="absolute -bottom-7 -right-7 w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-gradient-to-bl from-card/75 via-amber-500/10 to-card/90 backdrop-blur-md border-2 border-border/80 shadow-[0_10px_25px_rgba(0,0,0,0.08)] anim-plate-2 pointer-events-none z-0 flex items-center justify-center"
             aria-hidden="true"
           >
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border border-white/60 bg-white/30" />
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border border-border/60 bg-muted/30" />
           </div>
 
-          {/* 3D Translucent Dinner Plate 3 (Top-Right offset) */}
           <div
-            className="absolute -top-5 -right-5 w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-white/80 via-orange-50/50 to-white/65 backdrop-blur-sm border-2 border-white/75 shadow-md anim-plate-3 pointer-events-none z-0 flex items-center justify-center"
+            className="absolute -top-5 -right-5 w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-card/80 via-orange-500/5 to-card/65 backdrop-blur-sm border-2 border-border/75 shadow-md anim-plate-3 pointer-events-none z-0 flex items-center justify-center"
             aria-hidden="true"
           >
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-white/50 bg-white/20" />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-border/50 bg-muted/20" />
           </div>
 
-          {/* 3D Translucent Dinner Plate 4 (Bottom-Left offset) */}
           <div
-            className="absolute -bottom-5 -left-5 w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-gradient-to-tr from-white/80 via-amber-50/50 to-white/60 backdrop-blur-sm border border-white/70 shadow-sm anim-plate-4 pointer-events-none z-0 flex items-center justify-center"
+            className="absolute -bottom-5 -left-5 w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-gradient-to-tr from-card/80 via-amber-500/5 to-card/60 backdrop-blur-sm border border-border/70 shadow-sm anim-plate-4 pointer-events-none z-0 flex items-center justify-center"
             aria-hidden="true"
           >
-            <div className="w-14 h-14 sm:w-15 sm:h-15 rounded-full border border-white/40 bg-white/20" />
+            <div className="w-14 h-14 sm:w-15 sm:h-15 rounded-full border border-border/40 bg-muted/20" />
           </div>
 
-          {/* Subtle Ambient Dining Floating Particles */}
+          {/* Floating Particles */}
           <div className="absolute -top-3 left-1/4 w-3 h-3 rounded-full bg-gradient-to-tr from-amber-400 to-orange-400 opacity-40 blur-[1px] anim-particle-1 pointer-events-none z-0" aria-hidden="true" />
           <div className="absolute bottom-2 right-1/3 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-orange-300 to-yellow-300 opacity-40 blur-[1px] anim-particle-2 pointer-events-none z-0" aria-hidden="true" />
-          <div className="absolute top-1/2 -right-3 w-3.5 h-3.5 rounded-full bg-white/70 backdrop-blur-xs border border-orange-200/60 opacity-50 anim-particle-3 pointer-events-none z-0" aria-hidden="true" />
+          <div className="absolute top-1/2 -right-3 w-3.5 h-3.5 rounded-full bg-card/70 backdrop-blur-xs border border-orange-500/20 opacity-50 anim-particle-3 pointer-events-none z-0" aria-hidden="true" />
 
           {/* SINGLE COMPACT GLASSMORPHISM MOBILE SURFACE */}
-          <div className="relative z-10 w-full rounded-3xl bg-white/85 backdrop-blur-2xl border border-slate-200/80 p-4 sm:p-5 shadow-[0_20px_50px_-15px_rgba(15,23,42,0.12)] anim-entrance">
+          <div className="relative z-10 w-full rounded-3xl bg-card/85 dark:bg-card/75 backdrop-blur-2xl border border-border/80 p-4 sm:p-5 shadow-[0_20px_50px_-15px_rgba(15,23,42,0.12)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] anim-entrance">
             {/* Specular Soft Highlight */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent rounded-t-3xl" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 dark:via-white/20 to-transparent rounded-t-3xl" />
 
             {/* Header */}
             <div className="text-center mb-3 sm:mb-4">
@@ -238,19 +232,19 @@ function CustomerLoginPortal() {
                 <img
                   src="/scandine-customer-logo.png"
                   alt="ScanDine"
-                  className="h-10 sm:h-12 w-auto object-contain mx-auto transition-transform duration-300 group-hover:scale-105"
+                  className="h-10 sm:h-12 w-auto object-contain mx-auto transition-transform duration-300 group-hover:scale-105 drop-shadow-md dark:brightness-110 dark:drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]"
                 />
               </Link>
 
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/10 text-orange-600 border border-orange-500/20 mb-1.5">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 mb-1.5">
                 <Sparkles className="h-3 w-3" />
                 <span>Smart Dining Portal</span>
               </div>
 
-              <h1 className="font-display text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+              <h1 className="font-display text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">
                 {mode === "customer" ? "Customer Sign In" : "Staff Access Sign In"}
               </h1>
-              <p className="text-[11px] text-slate-600 font-medium leading-tight mt-0.5">
+              <p className="text-[11px] text-muted-foreground font-medium leading-tight mt-0.5">
                 {mode === "customer"
                   ? "Sign in to save table sessions, view rewards & order history."
                   : "Staff access for Admin, Kitchen, and Reception modules."}
@@ -258,14 +252,14 @@ function CustomerLoginPortal() {
             </div>
 
             {/* Dual Portal Switcher Tabs */}
-            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100/90 rounded-xl mb-3 border border-slate-200/80">
+            <div className="grid grid-cols-2 gap-1 p-1 bg-muted/80 rounded-xl mb-3 border border-border/80">
               <button
                 type="button"
                 onClick={() => setMode("customer")}
                 className={`py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   mode === "customer"
                     ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <UtensilsCrossed className="h-3.5 w-3.5" /> Customer Portal
@@ -276,8 +270,8 @@ function CustomerLoginPortal() {
                 onClick={() => setMode("staff")}
                 className={`py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   mode === "staff"
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-foreground text-background shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <ShieldCheck className="h-3.5 w-3.5 text-amber-400" /> Staff Access
@@ -285,16 +279,16 @@ function CustomerLoginPortal() {
             </div>
 
             {/* Food-Tech Feature Highlights */}
-            <div className="flex flex-wrap items-center justify-center gap-1.5 px-2 py-1.5 rounded-xl bg-slate-50/80 border border-slate-200/60 mb-3 text-[10px] font-semibold text-slate-600">
-              <span className="flex items-center gap-1 text-orange-600">
+            <div className="flex flex-wrap items-center justify-center gap-1.5 px-2 py-1.5 rounded-xl bg-muted/40 border border-border/60 mb-3 text-[10px] font-semibold text-muted-foreground">
+              <span className="flex items-center gap-1 text-orange-500">
                 ⚡ Instant Sync
               </span>
-              <span className="text-slate-300 hidden sm:inline">•</span>
-              <span className="flex items-center gap-1 text-amber-600">
+              <span className="text-border hidden sm:inline">•</span>
+              <span className="flex items-center gap-1 text-amber-500">
                 📱 QR Menu
               </span>
-              <span className="text-slate-300 hidden sm:inline">•</span>
-              <span className="flex items-center gap-1 text-orange-600">
+              <span className="text-border hidden sm:inline">•</span>
+              <span className="flex items-center gap-1 text-orange-500">
                 🎁 Rewards
               </span>
             </div>
@@ -303,11 +297,11 @@ function CustomerLoginPortal() {
             {mode === "customer" ? (
               <form onSubmit={handleCustomerLogin} className="space-y-2.5">
                 <div>
-                  <label htmlFor="cust-login-name" className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-0.5">
+                  <label htmlFor="cust-login-name" className="text-[11px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                     Full Name <span className="text-orange-500">*</span>
                   </label>
-                  <div className="relative flex items-center rounded-xl border border-slate-200 bg-slate-50/80 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-orange-500/20 hover:border-slate-300">
-                    <User className="absolute left-3 h-3.5 w-3.5 text-slate-400 transition-colors" />
+                  <div className="relative flex items-center rounded-xl border border-border bg-muted/40 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/20 hover:border-border/80">
+                    <User className="absolute left-3 h-3.5 w-3.5 text-muted-foreground transition-colors" />
                     <input
                       id="cust-login-name"
                       name="name"
@@ -316,17 +310,17 @@ function CustomerLoginPortal() {
                       value={custName}
                       onChange={(e) => setCustName(e.target.value)}
                       placeholder="Enter your name"
-                      className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-slate-900 placeholder:text-slate-400 outline-none min-h-[40px]"
+                      className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[40px]"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="cust-login-phone" className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-0.5">
+                  <label htmlFor="cust-login-phone" className="text-[11px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                     Mobile Phone Number <span className="text-orange-500">*</span>
                   </label>
-                  <div className="relative flex items-center rounded-xl border border-slate-200 bg-slate-50/80 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-orange-500/20 hover:border-slate-300">
-                    <Phone className="absolute left-3 h-3.5 w-3.5 text-slate-400 transition-colors" />
+                  <div className="relative flex items-center rounded-xl border border-border bg-muted/40 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/20 hover:border-border/80">
+                    <Phone className="absolute left-3 h-3.5 w-3.5 text-muted-foreground transition-colors" />
                     <input
                       id="cust-login-phone"
                       name="phone"
@@ -337,17 +331,17 @@ function CustomerLoginPortal() {
                       value={custPhone}
                       onChange={(e) => setCustPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                       placeholder="10-digit mobile number"
-                      className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-slate-900 placeholder:text-slate-400 outline-none min-h-[40px]"
+                      className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[40px]"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="cust-login-email" className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-0.5">
-                    Email Address <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                  <label htmlFor="cust-login-email" className="text-[11px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
+                    Email Address <span className="text-muted-foreground font-normal lowercase">(optional)</span>
                   </label>
-                  <div className="relative flex items-center rounded-xl border border-slate-200 bg-slate-50/80 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-orange-500/20 hover:border-slate-300">
-                    <Mail className="absolute left-3 h-3.5 w-3.5 text-slate-400 transition-colors" />
+                  <div className="relative flex items-center rounded-xl border border-border bg-muted/40 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/20 hover:border-border/80">
+                    <Mail className="absolute left-3 h-3.5 w-3.5 text-muted-foreground transition-colors" />
                     <input
                       id="cust-login-email"
                       name="email"
@@ -355,7 +349,7 @@ function CustomerLoginPortal() {
                       value={custEmail}
                       onChange={(e) => setCustEmail(e.target.value)}
                       placeholder="you@domain.com"
-                      className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-slate-900 placeholder:text-slate-400 outline-none min-h-[40px]"
+                      className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[40px]"
                     />
                   </div>
                 </div>
@@ -381,12 +375,12 @@ function CustomerLoginPortal() {
               /* STAFF FORM MODE */
               <form onSubmit={handleStaffLogin} className="space-y-2.5">
                 {/* Role Selection inside Staff Mode */}
-                <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100/90 rounded-lg mb-2.5 border border-slate-200/80">
+                <div className="grid grid-cols-3 gap-1 p-1 bg-muted/80 rounded-lg mb-2.5 border border-border/80">
                   <button
                     type="button"
                     onClick={() => setRole("admin")}
                     className={`py-1 px-1.5 rounded-md text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                      role === "admin" ? "bg-amber-500/20 text-amber-700 border border-amber-500/30" : "text-slate-600 hover:text-slate-900"
+                      role === "admin" ? "bg-amber-500/20 text-amber-500 border border-amber-500/30" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <ShieldCheck className="h-3 w-3" /> Admin
@@ -395,7 +389,7 @@ function CustomerLoginPortal() {
                     type="button"
                     onClick={() => setRole("kitchen")}
                     className={`py-1 px-1.5 rounded-md text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                      role === "kitchen" ? "bg-emerald-500/20 text-emerald-700 border border-emerald-500/30" : "text-slate-600 hover:text-slate-900"
+                      role === "kitchen" ? "bg-emerald-500/20 text-emerald-500 border border-emerald-500/30" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <ChefHat className="h-3 w-3" /> Kitchen
@@ -404,7 +398,7 @@ function CustomerLoginPortal() {
                     type="button"
                     onClick={() => setRole("reception")}
                     className={`py-1 px-1.5 rounded-md text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                      role === "reception" ? "bg-blue-500/20 text-blue-700 border border-blue-500/30" : "text-slate-600 hover:text-slate-900"
+                      role === "reception" ? "bg-blue-500/20 text-blue-500 border border-blue-500/30" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <Building2 className="h-3 w-3" /> Reception
@@ -412,11 +406,11 @@ function CustomerLoginPortal() {
                 </div>
 
                 <div>
-                  <label htmlFor="staff-login-email" className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-0.5">
+                  <label htmlFor="staff-login-email" className="text-[11px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                     Staff Email / ID
                   </label>
-                  <div className="relative flex items-center rounded-xl border border-slate-200 bg-slate-50/80 transition-all duration-300 focus-within:border-amber-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-amber-500/20 hover:border-slate-300">
-                    <Mail className="absolute left-3 h-3.5 w-3.5 text-slate-400 transition-colors" />
+                  <div className="relative flex items-center rounded-xl border border-border bg-muted/40 transition-all duration-300 focus-within:border-amber-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-amber-500/20 hover:border-border/80">
+                    <Mail className="absolute left-3 h-3.5 w-3.5 text-muted-foreground transition-colors" />
                     <input
                       id="staff-login-email"
                       name="email"
@@ -425,17 +419,17 @@ function CustomerLoginPortal() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder={`e.g. ${role}@restaurant.com`}
-                      className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-slate-900 placeholder:text-slate-400 outline-none min-h-[40px]"
+                      className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[40px]"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="staff-login-password" className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-0.5">
+                  <label htmlFor="staff-login-password" className="text-[11px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                     Password
                   </label>
-                  <div className="relative flex items-center rounded-xl border border-slate-200 bg-slate-50/80 transition-all duration-300 focus-within:border-amber-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-amber-500/20 hover:border-slate-300">
-                    <KeyRound className="absolute left-3 h-3.5 w-3.5 text-slate-400 transition-colors" />
+                  <div className="relative flex items-center rounded-xl border border-border bg-muted/40 transition-all duration-300 focus-within:border-amber-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-amber-500/20 hover:border-border/80">
+                    <KeyRound className="absolute left-3 h-3.5 w-3.5 text-muted-foreground transition-colors" />
                     <input
                       id="staff-login-password"
                       name="password"
@@ -444,7 +438,7 @@ function CustomerLoginPortal() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-slate-900 placeholder:text-slate-400 outline-none min-h-[40px]"
+                      className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[40px]"
                     />
                   </div>
                 </div>
@@ -468,15 +462,15 @@ function CustomerLoginPortal() {
             )}
 
             {/* Footer badge */}
-            <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-center text-[10px] text-slate-500 font-medium">
-              <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+            <div className="mt-2.5 pt-2 border-t border-border/60 flex items-center justify-center text-[10px] text-muted-foreground font-medium">
+              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
                 <CheckCircle2 className="h-3 w-3" /> ScanDine Session Protected
               </span>
             </div>
           </div>
         </div>
 
-        <footer className="mt-2.5 text-center text-[11px] text-slate-500 font-medium">
+        <footer className="mt-2.5 text-center text-[11px] text-muted-foreground font-medium">
           © 2026 Renechip Private Limited. All Rights Reserved.
         </footer>
       </main>

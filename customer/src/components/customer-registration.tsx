@@ -96,7 +96,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
               <img
                 src="/scandine-customer-logo.png"
                 alt="ScanDine"
-                className="h-11 sm:h-13 w-auto object-contain drop-shadow-md"
+                className="h-11 sm:h-13 w-auto object-contain drop-shadow-md dark:brightness-110 dark:drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]"
               />
             </div>
 
