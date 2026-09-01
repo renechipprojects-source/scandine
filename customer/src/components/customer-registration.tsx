@@ -61,16 +61,6 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
     }
   };
 
-  const panelVariants: Variants = {
-    hidden: { opacity: 0, y: 24, scale: 0.98 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
-    },
-  };
-
   const heroImageVariants: Variants = {
     hidden: { opacity: 0, scale: 1.08 },
     visible: {
@@ -90,13 +80,22 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
     },
   };
 
+  const surfaceVariants: Variants = {
+    hidden: { opacity: 0, y: 24 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+    },
+  };
+
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.08,
-        delayChildren: 0.25,
+        staggerChildren: 0.09,
+        delayChildren: 0.15,
       },
     },
   };
@@ -121,7 +120,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
   };
 
   return (
-    <div className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col justify-center items-center p-3.5 sm:p-5 bg-background text-foreground select-none relative">
+    <div className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col justify-between items-center bg-background text-foreground select-none relative">
       <style>{`
         @media (prefers-reduced-motion: reduce) {
           .anim-ken-burns, .anim-shimmer-btn, .anim-logo-float, .anim-particle-glow {
@@ -142,8 +141,8 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
         }
 
         @keyframes particleGlow {
-          0%, 100% { opacity: 0.4; transform: translateY(0px) scale(1); }
-          50% { opacity: 0.8; transform: translateY(-6px) scale(1.15); }
+          0%, 100% { opacity: 0.35; transform: translateY(0px) scale(1); }
+          50% { opacity: 0.8; transform: translateY(-5px) scale(1.12); }
         }
 
         .anim-ken-burns {
@@ -160,31 +159,29 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
         }
       `}</style>
 
-      {/* MOBILE ENTRY PANEL CONTAINER */}
-      <motion.main
-        initial="hidden"
-        animate="visible"
-        variants={panelVariants}
-        className="w-full max-w-[430px] mx-auto my-auto flex flex-col flex-1 rounded-[2.5rem] bg-card border border-border/80 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.18)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] overflow-hidden relative z-10"
-      >
-        {/* TOP INTEGRATED FOOD EXPERIENCE HERO AREA */}
-        <div className="relative w-full h-[27vh] min-h-[170px] max-h-[220px] overflow-hidden flex flex-col justify-end">
+      {/* Background Ambient Warm Glow */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden w-full h-full">
+        <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-full max-w-md h-[300px] bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent blur-3xl" />
+      </div>
+
+      {/* MOBILE APP CONTAINER SHELL */}
+      <div className="w-full max-w-[430px] min-h-[100dvh] mx-auto flex flex-col justify-between relative z-10 overflow-x-hidden">
+        
+        {/* TOP RESTAURANT IMAGE HEADER */}
+        <div className="relative w-full h-[32vh] min-h-[200px] max-h-[260px] overflow-hidden flex flex-col justify-end">
           <motion.div
             variants={heroImageVariants}
+            initial="hidden"
+            animate="visible"
             className="absolute inset-0 bg-cover bg-center anim-ken-burns"
             style={{ backgroundImage: `url('/customer-dining-bg.jpg')` }}
           />
 
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-card/30 to-card" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(249,115,22,0.25),transparent_70%)]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-black/40" />
 
-          {/* Floating Decorative Particles INSIDE Entry Section */}
-          <div className="absolute top-3 left-4 w-2 h-2 rounded-full bg-amber-400/60 blur-[0.5px] anim-particle-glow pointer-events-none" />
-          <div className="absolute top-8 right-6 w-2.5 h-2.5 rounded-full bg-orange-400/60 blur-[0.5px] anim-particle-glow pointer-events-none" style={{ animationDelay: "1.5s" }} />
-
-          {/* Table Badge & ScanDine Logo */}
-          <div className="relative z-10 text-center pb-2 px-3">
-            <motion.div variants={logoVariants} className="flex flex-col items-center">
+          {/* Table Badge & Logo */}
+          <div className="relative z-10 text-center pb-8 px-3">
+            <motion.div variants={logoVariants} initial="hidden" animate="visible" className="flex flex-col items-center">
               <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/20 text-primary border border-primary/30 mb-1 backdrop-blur-xs">
                 <QrCode className="h-3 w-3 animate-pulse" /> {tableNumber ? `Table Scanned · ${tableNumber}` : "ScanDine Guest"}
               </div>
@@ -197,23 +194,38 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 <img
                   src="/scandine-customer-logo.png"
                   alt="ScanDine"
-                  className="h-10 sm:h-12 w-auto object-contain mx-auto drop-shadow-lg dark:brightness-110 dark:drop-shadow-[0_0_14px_rgba(255,255,255,0.3)]"
+                  className="h-11 sm:h-13 w-auto object-contain mx-auto drop-shadow-lg dark:brightness-110 dark:drop-shadow-[0_0_14px_rgba(255,255,255,0.3)]"
                 />
               </motion.div>
 
-              <h1 className="font-display text-xl sm:text-2xl font-extrabold text-foreground tracking-tight drop-shadow-xs">
-                Scan<span className="bg-gradient-to-r from-orange-500 via-amber-400 to-orange-500 bg-clip-text text-transparent">Dine</span>
+              <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow-md">
+                Scan<span className="bg-gradient-to-r from-orange-400 via-amber-300 to-orange-400 bg-clip-text text-transparent">Dine</span>
               </h1>
-              <div className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-muted-foreground">
+              <div className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-white/90 drop-shadow-xs">
                 SCAN • ORDER • DINE
               </div>
             </motion.div>
           </div>
         </div>
 
-        {/* LOWER REGISTRATION AREA */}
-        <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between relative z-10 pt-1">
-          <motion.div variants={containerVariants} initial="hidden" animate="visible" className="w-full flex-1 flex flex-col justify-between">
+        {/* REDESIGNED LOWER MAIN REGISTRATION SECTION */}
+        <motion.div
+          variants={surfaceVariants}
+          initial="hidden"
+          animate="visible"
+          className="relative -mt-6 z-20 flex-1 w-full rounded-t-[2.25rem] bg-gradient-to-b from-card via-card/95 to-orange-500/5 dark:from-card dark:via-card/95 dark:to-orange-950/10 backdrop-blur-2xl border-t border-border/80 p-4 sm:p-5 shadow-[0_-15px_40px_rgba(0,0,0,0.15)] flex flex-col justify-between overflow-hidden"
+        >
+          {/* Curved Transition Specular Highlight Bar */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-400/50 dark:via-orange-400/20 to-transparent rounded-t-[2.25rem]" />
+
+          {/* Soft Orange Backdrop Glow */}
+          <div className="pointer-events-none absolute -bottom-6 left-1/2 -translate-x-1/2 w-56 h-28 rounded-full bg-gradient-to-tr from-orange-500/20 via-amber-500/15 to-transparent blur-2xl" />
+
+          {/* Subtle Floating Light Particles */}
+          <div className="absolute top-4 left-5 w-2 h-2 rounded-full bg-amber-400/40 blur-[0.5px] anim-particle-glow pointer-events-none" />
+          <div className="absolute bottom-10 right-6 w-2.5 h-2.5 rounded-full bg-orange-400/40 blur-[0.5px] anim-particle-glow pointer-events-none" style={{ animationDelay: "1.5s" }} />
+
+          <motion.div variants={containerVariants} initial="hidden" animate="visible" className="w-full flex-1 flex flex-col justify-between relative z-10">
             <form onSubmit={handleSubmit} className="space-y-2.5">
               <motion.div variants={itemVariants} className="text-center mb-2">
                 <p className="text-xs text-muted-foreground font-medium leading-relaxed max-w-xs mx-auto">
@@ -226,8 +238,10 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 <label htmlFor="reg-name" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                   Full Name <span className="text-orange-500">*</span>
                 </label>
-                <div className="relative flex items-center rounded-2xl border border-border bg-muted/40 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] hover:border-border/80">
-                  <User className="absolute left-3.5 h-4 w-4 text-muted-foreground transition-colors duration-300 focus-within:text-orange-500" />
+                <div className="group relative flex items-center gap-2 p-1 rounded-2xl border border-border/80 bg-muted/50 dark:bg-muted/30 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
+                    <User className="h-4 w-4" />
+                  </div>
                   <input
                     id="reg-name"
                     type="text"
@@ -235,7 +249,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Enter your name"
-                    className="w-full bg-transparent pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[44px] sm:min-h-[46px]"
+                    className="w-full bg-transparent pr-3 py-2 text-xs sm:text-sm font-semibold text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[42px]"
                   />
                 </div>
               </motion.div>
@@ -245,8 +259,10 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 <label htmlFor="reg-phone" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                   Mobile Phone Number <span className="text-orange-500">*</span>
                 </label>
-                <div className="relative flex items-center rounded-2xl border border-border bg-muted/40 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] hover:border-border/80">
-                  <Phone className="absolute left-3.5 h-4 w-4 text-muted-foreground transition-colors duration-300 focus-within:text-orange-500" />
+                <div className="group relative flex items-center gap-2 p-1 rounded-2xl border border-border/80 bg-muted/50 dark:bg-muted/30 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
+                    <Phone className="h-4 w-4" />
+                  </div>
                   <input
                     id="reg-phone"
                     type="text"
@@ -256,7 +272,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                     value={phone}
                     onChange={handlePhoneChange}
                     placeholder="10-digit mobile number"
-                    className="w-full bg-transparent pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[44px] sm:min-h-[46px]"
+                    className="w-full bg-transparent pr-3 py-2 text-xs sm:text-sm font-semibold text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[42px]"
                   />
                 </div>
               </motion.div>
@@ -266,40 +282,46 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 <label htmlFor="reg-email" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                   Email Address <span className="text-muted-foreground font-normal lowercase">(optional)</span>
                 </label>
-                <div className="relative flex items-center rounded-2xl border border-border bg-muted/40 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] hover:border-border/80">
-                  <Mail className="absolute left-3.5 h-4 w-4 text-muted-foreground transition-colors duration-300 focus-within:text-orange-500" />
+                <div className="group relative flex items-center gap-2 p-1 rounded-2xl border border-border/80 bg-muted/50 dark:bg-muted/30 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
+                    <Mail className="h-4 w-4" />
+                  </div>
                   <input
                     id="reg-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@domain.com"
-                    className="w-full bg-transparent pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[44px] sm:min-h-[46px]"
+                    className="w-full bg-transparent pr-3 py-2 text-xs sm:text-sm font-semibold text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[42px]"
                   />
                 </div>
               </motion.div>
 
               {/* Start Ordering Button (Item 4 - Enters Last) */}
-              <motion.div variants={buttonVariants}>
-                <motion.button
-                  whileHover={{ scale: 1.015 }}
-                  whileTap={{ scale: 0.97 }}
-                  type="submit"
-                  disabled={loading}
-                  className="group relative mt-1.5 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white shadow-[0_10px_25px_-5px_rgba(249,115,22,0.4)] transition-all duration-300 hover:shadow-[0_14px_30px_-5px_rgba(249,115,22,0.5)] active:scale-[0.97] disabled:opacity-80 cursor-pointer min-h-[48px] sm:min-h-[50px] anim-shimmer-btn"
-                  style={{ backgroundImage: "linear-gradient(135deg, #f97316 0%, #ea580c 50%, #f59e0b 100%)" }}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" /> Saving Details…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" /> Start Ordering
-                      <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                    </>
-                  )}
-                </motion.button>
+              <motion.div variants={buttonVariants} className="pt-1">
+                <div className="relative group">
+                  <div className="absolute inset-0 rounded-2xl bg-orange-500/30 blur-md transition-all duration-300 group-hover:bg-orange-500/40" />
+
+                  <motion.button
+                    whileHover={{ scale: 1.015 }}
+                    whileTap={{ scale: 0.97 }}
+                    type="submit"
+                    disabled={loading}
+                    className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white shadow-md transition-all duration-300 active:scale-[0.97] disabled:opacity-80 cursor-pointer min-h-[46px] sm:min-h-[48px] anim-shimmer-btn z-10"
+                    style={{ backgroundImage: "linear-gradient(135deg, #f97316 0%, #ea580c 50%, #f59e0b 100%)" }}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" /> Saving Details…
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" /> Start Ordering
+                        <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                      </>
+                    )}
+                  </motion.button>
+                </div>
               </motion.div>
             </form>
 
@@ -312,8 +334,8 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
               © 2026 Renechip Private Limited. All Rights Reserved.
             </motion.footer>
           </motion.div>
-        </div>
-      </motion.main>
+        </motion.div>
+      </div>
     </div>
   );
 }
