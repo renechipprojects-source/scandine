@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, type Variants } from "framer-motion";
-import { QrCode, User, Phone, Mail, Sparkles, ArrowRight, Loader2, UtensilsCrossed } from "lucide-react";
+import { QrCode, User, Phone, Mail, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { customerStore } from "@/lib/customer-store";
 import { toast } from "sonner";
 
@@ -80,8 +80,8 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
     },
   };
 
-  const surfaceVariants: Variants = {
-    hidden: { opacity: 0, y: 24 },
+  const glassSurfaceVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
@@ -123,7 +123,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
     <div className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col justify-between items-center bg-background text-foreground select-none relative">
       <style>{`
         @media (prefers-reduced-motion: reduce) {
-          .anim-ken-burns, .anim-shimmer-btn, .anim-logo-float, .anim-particle-glow {
+          .anim-ken-burns, .anim-shimmer-btn, .anim-glass-shine, .anim-particle-glow {
             animation: none !important;
             transform: none !important;
           }
@@ -140,6 +140,13 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
           100% { background-position: 0% 50%; }
         }
 
+        @keyframes glassShine {
+          0% { transform: translateX(-150%) rotate(25deg); opacity: 0; }
+          20% { opacity: 0.6; }
+          40% { transform: translateX(250%) rotate(25deg); opacity: 0; }
+          100% { transform: translateX(250%) rotate(25deg); opacity: 0; }
+        }
+
         @keyframes particleGlow {
           0%, 100% { opacity: 0.35; transform: translateY(0px) scale(1); }
           50% { opacity: 0.8; transform: translateY(-5px) scale(1.12); }
@@ -152,6 +159,10 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
         .anim-shimmer-btn {
           background-size: 200% 200%;
           animation: shimmerGlow 6s ease infinite;
+        }
+
+        .anim-glass-shine {
+          animation: glassShine 8s ease-in-out infinite;
         }
 
         .anim-particle-glow {
@@ -208,22 +219,25 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
           </div>
         </div>
 
-        {/* REDESIGNED LOWER MAIN REGISTRATION SECTION */}
+        {/* PREMIUM MOBILE GLASSMORPHISM DETAILS FORM SECTION */}
         <motion.div
-          variants={surfaceVariants}
+          variants={glassSurfaceVariants}
           initial="hidden"
           animate="visible"
-          className="relative -mt-6 z-20 flex-1 w-full rounded-t-[2.25rem] bg-gradient-to-b from-card via-card/95 to-orange-500/5 dark:from-card dark:via-card/95 dark:to-orange-950/10 backdrop-blur-2xl border-t border-border/80 p-4 sm:p-5 shadow-[0_-15px_40px_rgba(0,0,0,0.15)] flex flex-col justify-between overflow-hidden"
+          className="relative -mt-6 z-20 flex-1 w-full rounded-t-[2.25rem] bg-card/80 dark:bg-card/70 backdrop-blur-2xl border-t border-white/30 dark:border-white/15 p-4 sm:p-5 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] flex flex-col justify-between overflow-hidden"
         >
-          {/* Curved Transition Specular Highlight Bar */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-400/50 dark:via-orange-400/20 to-transparent rounded-t-[2.25rem]" />
+          {/* Translucent Glass Top Edge Reflection */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 dark:via-white/30 to-transparent rounded-t-[2.25rem]" />
 
-          {/* Soft Orange Backdrop Glow */}
-          <div className="pointer-events-none absolute -bottom-6 left-1/2 -translate-x-1/2 w-56 h-28 rounded-full bg-gradient-to-tr from-orange-500/20 via-amber-500/15 to-transparent blur-2xl" />
+          {/* Continuous Slow Light Reflection Sweep across Glass Surface */}
+          <div className="pointer-events-none absolute top-0 left-0 w-24 h-full bg-gradient-to-r from-transparent via-white/20 dark:via-white/10 to-transparent anim-glass-shine" />
+
+          {/* Soft Orange Backdrop Glow under Glass Surface */}
+          <div className="pointer-events-none absolute -bottom-6 left-1/2 -translate-x-1/2 w-56 h-28 rounded-full bg-gradient-to-tr from-orange-500/25 via-amber-500/20 to-transparent blur-2xl" />
 
           {/* Subtle Floating Light Particles */}
-          <div className="absolute top-4 left-5 w-2 h-2 rounded-full bg-amber-400/40 blur-[0.5px] anim-particle-glow pointer-events-none" />
-          <div className="absolute bottom-10 right-6 w-2.5 h-2.5 rounded-full bg-orange-400/40 blur-[0.5px] anim-particle-glow pointer-events-none" style={{ animationDelay: "1.5s" }} />
+          <div className="absolute top-4 left-5 w-2 h-2 rounded-full bg-orange-400/50 blur-[0.5px] anim-particle-glow pointer-events-none" />
+          <div className="absolute bottom-10 right-6 w-2.5 h-2.5 rounded-full bg-amber-400/50 blur-[0.5px] anim-particle-glow pointer-events-none" style={{ animationDelay: "1.5s" }} />
 
           <motion.div variants={containerVariants} initial="hidden" animate="visible" className="w-full flex-1 flex flex-col justify-between relative z-10">
             <form onSubmit={handleSubmit} className="space-y-2.5">
@@ -233,13 +247,13 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 </p>
               </motion.div>
 
-              {/* Full Name Field (Item 1) */}
+              {/* Full Name Field (Item 1 - Glassmorphism Input Control) */}
               <motion.div variants={itemVariants}>
                 <label htmlFor="reg-name" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                   Full Name <span className="text-orange-500">*</span>
                 </label>
-                <div className="group relative flex items-center gap-2 p-1 rounded-2xl border border-border/80 bg-muted/50 dark:bg-muted/30 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] shadow-xs">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
+                <div className="group relative flex items-center gap-2.5 p-1 rounded-2xl border border-white/30 dark:border-white/15 bg-white/40 dark:bg-black/30 backdrop-blur-md transition-all duration-300 focus-within:border-orange-500 focus-within:bg-card/95 focus-within:ring-2 focus-within:ring-orange-500/30 focus-within:scale-[1.015] shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-orange-500/15 text-orange-500 backdrop-blur-xs flex items-center justify-center group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
                     <User className="h-4 w-4" />
                   </div>
                   <input
@@ -254,13 +268,13 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 </div>
               </motion.div>
 
-              {/* Phone Field (Item 2) */}
+              {/* Phone Field (Item 2 - Glassmorphism Input Control) */}
               <motion.div variants={itemVariants}>
                 <label htmlFor="reg-phone" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                   Mobile Phone Number <span className="text-orange-500">*</span>
                 </label>
-                <div className="group relative flex items-center gap-2 p-1 rounded-2xl border border-border/80 bg-muted/50 dark:bg-muted/30 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] shadow-xs">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
+                <div className="group relative flex items-center gap-2.5 p-1 rounded-2xl border border-white/30 dark:border-white/15 bg-white/40 dark:bg-black/30 backdrop-blur-md transition-all duration-300 focus-within:border-orange-500 focus-within:bg-card/95 focus-within:ring-2 focus-within:ring-orange-500/30 focus-within:scale-[1.015] shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-orange-500/15 text-orange-500 backdrop-blur-xs flex items-center justify-center group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
                     <Phone className="h-4 w-4" />
                   </div>
                   <input
@@ -277,13 +291,13 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 </div>
               </motion.div>
 
-              {/* Email Field (Item 3) */}
+              {/* Email Field (Item 3 - Glassmorphism Input Control) */}
               <motion.div variants={itemVariants}>
                 <label htmlFor="reg-email" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                   Email Address <span className="text-muted-foreground font-normal lowercase">(optional)</span>
                 </label>
-                <div className="group relative flex items-center gap-2 p-1 rounded-2xl border border-border/80 bg-muted/50 dark:bg-muted/30 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] shadow-xs">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
+                <div className="group relative flex items-center gap-2.5 p-1 rounded-2xl border border-white/30 dark:border-white/15 bg-white/40 dark:bg-black/30 backdrop-blur-md transition-all duration-300 focus-within:border-orange-500 focus-within:bg-card/95 focus-within:ring-2 focus-within:ring-orange-500/30 focus-within:scale-[1.015] shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-orange-500/15 text-orange-500 backdrop-blur-xs flex items-center justify-center group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
                     <Mail className="h-4 w-4" />
                   </div>
                   <input
@@ -297,17 +311,17 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 </div>
               </motion.div>
 
-              {/* Start Ordering Button (Item 4 - Enters Last) */}
+              {/* Start Ordering Button (Item 4 - Glassmorphism CTA Depth) */}
               <motion.div variants={buttonVariants} className="pt-1">
                 <div className="relative group">
-                  <div className="absolute inset-0 rounded-2xl bg-orange-500/30 blur-md transition-all duration-300 group-hover:bg-orange-500/40" />
+                  <div className="absolute inset-0 rounded-2xl bg-orange-500/35 blur-md transition-all duration-300 group-hover:bg-orange-500/50" />
 
                   <motion.button
                     whileHover={{ scale: 1.015 }}
                     whileTap={{ scale: 0.97 }}
                     type="submit"
                     disabled={loading}
-                    className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white shadow-md transition-all duration-300 active:scale-[0.97] disabled:opacity-80 cursor-pointer min-h-[46px] sm:min-h-[48px] anim-shimmer-btn z-10"
+                    className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white shadow-md transition-all duration-300 active:scale-[0.97] disabled:opacity-80 cursor-pointer min-h-[46px] sm:min-h-[48px] anim-shimmer-btn z-10 border border-white/20"
                     style={{ backgroundImage: "linear-gradient(135deg, #f97316 0%, #ea580c 50%, #f59e0b 100%)" }}
                   >
                     {loading ? (

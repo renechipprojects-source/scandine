@@ -103,7 +103,7 @@ function CustomerLoginPortal() {
     }
   };
 
-  // Animation Variants for Lower Surface & Staggered Elements
+  // Animation Variants for Page, Logo, Glass Surface, and Staggered Form
   const heroImageVariants: Variants = {
     hidden: { opacity: 0, scale: 1.08 },
     visible: {
@@ -123,8 +123,8 @@ function CustomerLoginPortal() {
     },
   };
 
-  const surfaceVariants: Variants = {
-    hidden: { opacity: 0, y: 24 },
+  const glassSurfaceVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
@@ -164,10 +164,10 @@ function CustomerLoginPortal() {
 
   return (
     <div className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col justify-between items-center bg-background text-foreground select-none relative">
-      {/* Keyframe Animations Styles */}
+      {/* Dynamic Keyframe Animation Styles */}
       <style>{`
         @media (prefers-reduced-motion: reduce) {
-          .anim-ken-burns, .anim-shimmer-btn, .anim-logo-float, .anim-particle-glow {
+          .anim-ken-burns, .anim-shimmer-btn, .anim-glass-shine, .anim-particle-glow {
             animation: none !important;
             transform: none !important;
           }
@@ -184,6 +184,13 @@ function CustomerLoginPortal() {
           100% { background-position: 0% 50%; }
         }
 
+        @keyframes glassShine {
+          0% { transform: translateX(-150%) rotate(25deg); opacity: 0; }
+          20% { opacity: 0.6; }
+          40% { transform: translateX(250%) rotate(25deg); opacity: 0; }
+          100% { transform: translateX(250%) rotate(25deg); opacity: 0; }
+        }
+
         @keyframes particleGlow {
           0%, 100% { opacity: 0.35; transform: translateY(0px) scale(1); }
           50% { opacity: 0.8; transform: translateY(-5px) scale(1.12); }
@@ -196,6 +203,10 @@ function CustomerLoginPortal() {
         .anim-shimmer-btn {
           background-size: 200% 200%;
           animation: shimmerGlow 6s ease infinite;
+        }
+
+        .anim-glass-shine {
+          animation: glassShine 8s ease-in-out infinite;
         }
 
         .anim-particle-glow {
@@ -211,7 +222,7 @@ function CustomerLoginPortal() {
       {/* MOBILE APP CONTAINER SHELL (320px - 430px Responsive) */}
       <div className="w-full max-w-[430px] min-h-[100dvh] mx-auto flex flex-col justify-between relative z-10 overflow-x-hidden">
         
-        {/* TOP RESTAURANT IMAGE HEADER (PRESERVED AS SATISFACTORY) */}
+        {/* TOP RESTAURANT IMAGE HEADER (PRESERVED) */}
         <div className="relative w-full h-[32vh] min-h-[200px] max-h-[260px] overflow-hidden flex flex-col justify-end">
           {/* Photorealistic Restaurant Image with Ken-Burns Motion */}
           <motion.div
@@ -263,22 +274,25 @@ function CustomerLoginPortal() {
           </div>
         </div>
 
-        {/* REDESIGNED LOWER MAIN REGISTRATION SECTION (OVERLAPPING CURVED SURFACE) */}
+        {/* PREMIUM MOBILE GLASSMORPHISM DETAILS FORM SECTION */}
         <motion.div
-          variants={surfaceVariants}
+          variants={glassSurfaceVariants}
           initial="hidden"
           animate="visible"
-          className="relative -mt-6 z-20 flex-1 w-full rounded-t-[2.25rem] bg-gradient-to-b from-card via-card/95 to-orange-500/5 dark:from-card dark:via-card/95 dark:to-orange-950/10 backdrop-blur-2xl border-t border-border/80 p-4 sm:p-5 shadow-[0_-15px_40px_rgba(0,0,0,0.15)] flex flex-col justify-between overflow-hidden"
+          className="relative -mt-6 z-20 flex-1 w-full rounded-t-[2.25rem] bg-card/80 dark:bg-card/70 backdrop-blur-2xl border-t border-white/30 dark:border-white/15 p-4 sm:p-5 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] flex flex-col justify-between overflow-hidden"
         >
-          {/* Curved Transition Specular Highlight Bar */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-400/50 dark:via-orange-400/20 to-transparent rounded-t-[2.25rem]" />
+          {/* Translucent Glass Top Edge Reflection */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 dark:via-white/30 to-transparent rounded-t-[2.25rem]" />
 
-          {/* Soft Orange Backdrop Glow behind Form */}
-          <div className="pointer-events-none absolute -bottom-6 left-1/2 -translate-x-1/2 w-56 h-28 rounded-full bg-gradient-to-tr from-orange-500/20 via-amber-500/15 to-transparent blur-2xl" />
+          {/* Continuous Slow Light Reflection Sweep across Glass Surface */}
+          <div className="pointer-events-none absolute top-0 left-0 w-24 h-full bg-gradient-to-r from-transparent via-white/20 dark:via-white/10 to-transparent anim-glass-shine" />
 
-          {/* Subtle Floating Light Particles inside Lower Section */}
-          <div className="absolute top-4 left-5 w-2 h-2 rounded-full bg-amber-400/40 blur-[0.5px] anim-particle-glow pointer-events-none" />
-          <div className="absolute bottom-10 right-6 w-2.5 h-2.5 rounded-full bg-orange-400/40 blur-[0.5px] anim-particle-glow pointer-events-none" style={{ animationDelay: "1.5s" }} />
+          {/* Soft Orange Backdrop Glow under Glass Surface */}
+          <div className="pointer-events-none absolute -bottom-6 left-1/2 -translate-x-1/2 w-56 h-28 rounded-full bg-gradient-to-tr from-orange-500/25 via-amber-500/20 to-transparent blur-2xl" />
+
+          {/* Subtle Floating Light Particles inside Glass Section */}
+          <div className="absolute top-4 left-5 w-2 h-2 rounded-full bg-orange-400/50 blur-[0.5px] anim-particle-glow pointer-events-none" />
+          <div className="absolute bottom-10 right-6 w-2.5 h-2.5 rounded-full bg-amber-400/50 blur-[0.5px] anim-particle-glow pointer-events-none" style={{ animationDelay: "1.5s" }} />
 
           <motion.div variants={containerVariants} initial="hidden" animate="visible" className="w-full flex-1 flex flex-col justify-between relative z-10">
             <div>
@@ -295,7 +309,7 @@ function CustomerLoginPortal() {
               </motion.div>
 
               {/* Dual Portal Mode Switcher Tabs */}
-              <motion.div variants={itemVariants} className="grid grid-cols-2 gap-1 p-1 bg-muted/80 rounded-xl mb-3 border border-border/80 relative">
+              <motion.div variants={itemVariants} className="grid grid-cols-2 gap-1 p-1 bg-muted/70 backdrop-blur-md rounded-xl mb-3 border border-border/80 relative">
                 <button
                   type="button"
                   onClick={() => setMode("customer")}
@@ -342,18 +356,18 @@ function CustomerLoginPortal() {
                     key="customer-form"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
+                    exit={{ opacity: 0, x: -8 }}
                     transition={{ duration: 0.2 }}
                     onSubmit={handleCustomerLogin}
                     className="space-y-2.5"
                   >
-                    {/* Full Name Field (Item 2 - Enters 1st Form Input) */}
+                    {/* Full Name Field (Item 2 - Glassmorphism Input Control) */}
                     <motion.div variants={itemVariants}>
                       <label htmlFor="cust-login-name" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                         Full Name <span className="text-orange-500">*</span>
                       </label>
-                      <div className="group relative flex items-center gap-2 p-1 rounded-2xl border border-border/80 bg-muted/50 dark:bg-muted/30 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] shadow-xs">
-                        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
+                      <div className="group relative flex items-center gap-2.5 p-1 rounded-2xl border border-white/30 dark:border-white/15 bg-white/40 dark:bg-black/30 backdrop-blur-md transition-all duration-300 focus-within:border-orange-500 focus-within:bg-card/95 focus-within:ring-2 focus-within:ring-orange-500/30 focus-within:scale-[1.015] shadow-xs">
+                        <div className="w-9 h-9 rounded-xl bg-orange-500/15 text-orange-500 backdrop-blur-xs flex items-center justify-center group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
                           <User className="h-4 w-4" />
                         </div>
                         <input
@@ -369,13 +383,13 @@ function CustomerLoginPortal() {
                       </div>
                     </motion.div>
 
-                    {/* Phone Field (Item 3 - Enters 2nd Form Input) */}
+                    {/* Phone Field (Item 3 - Glassmorphism Input Control) */}
                     <motion.div variants={itemVariants}>
                       <label htmlFor="cust-login-phone" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                         Mobile Phone Number <span className="text-orange-500">*</span>
                       </label>
-                      <div className="group relative flex items-center gap-2 p-1 rounded-2xl border border-border/80 bg-muted/50 dark:bg-muted/30 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] shadow-xs">
-                        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
+                      <div className="group relative flex items-center gap-2.5 p-1 rounded-2xl border border-white/30 dark:border-white/15 bg-white/40 dark:bg-black/30 backdrop-blur-md transition-all duration-300 focus-within:border-orange-500 focus-within:bg-card/95 focus-within:ring-2 focus-within:ring-orange-500/30 focus-within:scale-[1.015] shadow-xs">
+                        <div className="w-9 h-9 rounded-xl bg-orange-500/15 text-orange-500 backdrop-blur-xs flex items-center justify-center group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
                           <Phone className="h-4 w-4" />
                         </div>
                         <input
@@ -393,13 +407,13 @@ function CustomerLoginPortal() {
                       </div>
                     </motion.div>
 
-                    {/* Email Field (Item 4 - Enters 3rd Form Input) */}
+                    {/* Email Field (Item 4 - Glassmorphism Input Control) */}
                     <motion.div variants={itemVariants}>
                       <label htmlFor="cust-login-email" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                         Email Address <span className="text-muted-foreground font-normal lowercase">(optional)</span>
                       </label>
-                      <div className="group relative flex items-center gap-2 p-1 rounded-2xl border border-border/80 bg-muted/50 dark:bg-muted/30 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] shadow-xs">
-                        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
+                      <div className="group relative flex items-center gap-2.5 p-1 rounded-2xl border border-white/30 dark:border-white/15 bg-white/40 dark:bg-black/30 backdrop-blur-md transition-all duration-300 focus-within:border-orange-500 focus-within:bg-card/95 focus-within:ring-2 focus-within:ring-orange-500/30 focus-within:scale-[1.015] shadow-xs">
+                        <div className="w-9 h-9 rounded-xl bg-orange-500/15 text-orange-500 backdrop-blur-xs flex items-center justify-center group-focus-within:bg-orange-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
                           <Mail className="h-4 w-4" />
                         </div>
                         <input
@@ -414,18 +428,18 @@ function CustomerLoginPortal() {
                       </div>
                     </motion.div>
 
-                    {/* Start Ordering Button (Item 5 - Enters Last) */}
+                    {/* Start Ordering Button (Item 5 - Glassmorphism CTA Depth) */}
                     <motion.div variants={buttonVariants} className="pt-1">
                       <div className="relative group">
-                        {/* Soft Orange CTA Glow Backdrop */}
-                        <div className="absolute inset-0 rounded-2xl bg-orange-500/30 blur-md transition-all duration-300 group-hover:bg-orange-500/40" />
+                        {/* Soft Ambient Glow Underneath */}
+                        <div className="absolute inset-0 rounded-2xl bg-orange-500/35 blur-md transition-all duration-300 group-hover:bg-orange-500/50" />
 
                         <motion.button
                           whileHover={{ scale: 1.015 }}
                           whileTap={{ scale: 0.97 }}
                           type="submit"
                           disabled={loading}
-                          className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white shadow-md transition-all duration-300 active:scale-[0.97] disabled:opacity-80 cursor-pointer min-h-[46px] sm:min-h-[48px] anim-shimmer-btn z-10"
+                          className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white shadow-md transition-all duration-300 active:scale-[0.97] disabled:opacity-80 cursor-pointer min-h-[46px] sm:min-h-[48px] anim-shimmer-btn z-10 border border-white/20"
                           style={{ backgroundImage: "linear-gradient(135deg, #f97316 0%, #ea580c 50%, #f59e0b 100%)" }}
                         >
                           {loading ? (
@@ -447,12 +461,12 @@ function CustomerLoginPortal() {
                     key="staff-form"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
+                    exit={{ opacity: 0, x: 8 }}
                     transition={{ duration: 0.2 }}
                     onSubmit={handleStaffLogin}
                     className="space-y-2.5"
                   >
-                    <div className="grid grid-cols-3 gap-1 p-1 bg-muted/80 rounded-lg mb-2 border border-border/80 relative">
+                    <div className="grid grid-cols-3 gap-1 p-1 bg-muted/70 backdrop-blur-md rounded-lg mb-2 border border-border/80 relative">
                       <button
                         type="button"
                         onClick={() => setRole("admin")}
@@ -507,8 +521,8 @@ function CustomerLoginPortal() {
                       <label htmlFor="staff-login-email" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                         Staff Email / ID
                       </label>
-                      <div className="group relative flex items-center gap-2 p-1 rounded-2xl border border-border/80 bg-muted/50 dark:bg-muted/30 transition-all duration-300 focus-within:border-amber-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-amber-500/25 focus-within:scale-[1.015] shadow-xs">
-                        <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 group-focus-within:bg-amber-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
+                      <div className="group relative flex items-center gap-2.5 p-1 rounded-2xl border border-white/30 dark:border-white/15 bg-white/40 dark:bg-black/30 backdrop-blur-md transition-all duration-300 focus-within:border-amber-500 focus-within:bg-card/95 focus-within:ring-2 focus-within:ring-amber-500/30 focus-within:scale-[1.015] shadow-xs">
+                        <div className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-500 backdrop-blur-xs flex items-center justify-center group-focus-within:bg-amber-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
                           <Mail className="h-4 w-4" />
                         </div>
                         <input
@@ -528,8 +542,8 @@ function CustomerLoginPortal() {
                       <label htmlFor="staff-login-password" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                         Password
                       </label>
-                      <div className="group relative flex items-center gap-2 p-1 rounded-2xl border border-border/80 bg-muted/50 dark:bg-muted/30 transition-all duration-300 focus-within:border-amber-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-amber-500/25 focus-within:scale-[1.015] shadow-xs">
-                        <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 group-focus-within:bg-amber-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
+                      <div className="group relative flex items-center gap-2.5 p-1 rounded-2xl border border-white/30 dark:border-white/15 bg-white/40 dark:bg-black/30 backdrop-blur-md transition-all duration-300 focus-within:border-amber-500 focus-within:bg-card/95 focus-within:ring-2 focus-within:ring-amber-500/30 focus-within:scale-[1.015] shadow-xs">
+                        <div className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-500 backdrop-blur-xs flex items-center justify-center group-focus-within:bg-amber-500 group-focus-within:text-white transition-all duration-300 shadow-xs">
                           <KeyRound className="h-4 w-4" />
                         </div>
                         <input
