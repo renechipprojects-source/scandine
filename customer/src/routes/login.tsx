@@ -103,18 +103,28 @@ function CustomerLoginPortal() {
     }
   };
 
-  // Animation Variants
-  const pageVariants: Variants = {
-    hidden: { opacity: 0, y: 24 },
+  // Animation Variants for Page, Logo, and Staggered Form
+  const panelVariants: Variants = {
+    hidden: { opacity: 0, y: 24, scale: 0.98 },
     visible: {
       opacity: 1,
       y: 0,
+      scale: 1,
       transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
     },
   };
 
+  const heroImageVariants: Variants = {
+    hidden: { opacity: 0, scale: 1.08 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { duration: 0.7, ease: "easeOut" },
+    },
+  };
+
   const logoVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.85, y: 12 },
+    hidden: { opacity: 0, scale: 0.8, y: 14 },
     visible: {
       opacity: 1,
       scale: 1,
@@ -128,8 +138,8 @@ function CustomerLoginPortal() {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.09,
-        delayChildren: 0.2,
+        staggerChildren: 0.08,
+        delayChildren: 0.25,
       },
     },
   };
@@ -143,17 +153,22 @@ function CustomerLoginPortal() {
     },
   };
 
+  const buttonVariants: Variants = {
+    hidden: { opacity: 0, scale: 0.95, y: 12 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] },
+    },
+  };
+
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={pageVariants}
-      className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col justify-between p-3.5 sm:p-5 bg-background text-foreground select-none relative"
-    >
-      {/* Dynamic Keyframe Animation Styles */}
+    <div className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col justify-center items-center p-3.5 sm:p-5 bg-background text-foreground select-none relative">
+      {/* Keyframe Animations Styles */}
       <style>{`
         @media (prefers-reduced-motion: reduce) {
-          .anim-ken-burns, .anim-shimmer-btn, .anim-badge-float {
+          .anim-ken-burns, .anim-shimmer-btn, .anim-logo-float, .anim-particle-glow {
             animation: none !important;
             transform: none !important;
           }
@@ -170,6 +185,11 @@ function CustomerLoginPortal() {
           100% { background-position: 0% 50%; }
         }
 
+        @keyframes particleGlow {
+          0%, 100% { opacity: 0.4; transform: translateY(0px) scale(1); }
+          50% { opacity: 0.8; transform: translateY(-6px) scale(1.15); }
+        }
+
         .anim-ken-burns {
           animation: kenBurnsSlow 14s ease-in-out infinite;
         }
@@ -178,85 +198,79 @@ function CustomerLoginPortal() {
           background-size: 200% 200%;
           animation: shimmerGlow 6s ease infinite;
         }
+
+        .anim-particle-glow {
+          animation: particleGlow 4s ease-in-out infinite;
+        }
       `}</style>
 
-      {/* Background Lighting Glow Pools */}
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden w-full h-full">
-        <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-full max-w-md h-[300px] bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent blur-3xl" />
-      </div>
-
-      {/* MOBILE APP CONTAINER SHELL (320px - 430px Responsive) */}
-      <div className="w-full max-w-[430px] mx-auto flex-1 flex flex-col justify-between space-y-3">
-        
-        {/* TOP LAYERED RESTAURANT HERO CANVAS */}
-        <motion.div
-          initial={{ opacity: 0, scale: 1.05 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.55, ease: "easeOut" }}
-          className="relative w-full h-[28vh] min-h-[170px] max-h-[220px] rounded-3xl overflow-hidden border border-border/80 shadow-xl bg-card group"
-        >
-          {/* Photorealistic Restaurant Image with Ken-Burns Motion */}
-          <div
+      {/* MOBILE ENTRY PANEL CONTAINER (320px - 430px Responsive) */}
+      <motion.main
+        initial="hidden"
+        animate="visible"
+        variants={panelVariants}
+        className="w-full max-w-[430px] mx-auto my-auto flex flex-col flex-1 rounded-[2.5rem] bg-card border border-border/80 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.18)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] overflow-hidden relative z-10"
+      >
+        {/* TOP INTEGRATED FOOD EXPERIENCE HERO AREA */}
+        <div className="relative w-full h-[27vh] min-h-[170px] max-h-[220px] overflow-hidden flex flex-col justify-end">
+          {/* Restaurant Food Image with Ken-Burns Motion */}
+          <motion.div
+            variants={heroImageVariants}
             className="absolute inset-0 bg-cover bg-center anim-ken-burns"
             style={{ backgroundImage: `url('/customer-dining-bg.jpg')` }}
           />
 
-          {/* Layered Gradient Atmosphere Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-black/40" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(249,115,22,0.2),transparent_70%)]" />
+          {/* Soft Gradient Overlay Blending Image into the Panel Surface */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-card/30 to-card" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(249,115,22,0.25),transparent_70%)]" />
 
-          {/* Floating Glass Badges over Hero Image */}
-          <motion.div
-            animate={{ y: [0, -3, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-black/45 text-white backdrop-blur-md border border-white/20 shadow-md"
-          >
+          {/* Floating Decorative Particles INSIDE Entry Section */}
+          <div className="absolute top-3 left-4 w-2 h-2 rounded-full bg-amber-400/60 blur-[0.5px] anim-particle-glow pointer-events-none" />
+          <div className="absolute top-8 right-6 w-2.5 h-2.5 rounded-full bg-orange-400/60 blur-[0.5px] anim-particle-glow pointer-events-none" style={{ animationDelay: "1.5s" }} />
+
+          {/* Floating Badges inside Hero Section */}
+          <div className="absolute top-3.5 left-3.5 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-black/40 text-white backdrop-blur-md border border-white/20 shadow-sm">
             <Sparkles className="h-3 w-3 text-amber-400 animate-pulse" />
             <span>Smart Dining</span>
-          </motion.div>
+          </div>
 
-          <motion.div
-            animate={{ y: [0, 3, 0] }}
-            transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-3 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-orange-500/85 text-white backdrop-blur-md shadow-md border border-orange-400/30"
-          >
+          <div className="absolute top-3.5 right-3.5 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-orange-500/85 text-white backdrop-blur-md shadow-sm border border-orange-400/30">
             <UtensilsCrossed className="h-3 w-3" />
-            <span>Instant Menu</span>
-          </motion.div>
+            <span>Instant Ordering</span>
+          </div>
 
-          {/* Center Brand Header Overlay */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10 p-2 pt-4">
-            <motion.div variants={logoVariants} initial="hidden" animate="visible" className="flex flex-col items-center">
-              <Link to="/" className="inline-block group mb-0.5">
-                <motion.img
-                  whileHover={{ scale: 1.08 }}
-                  src="/scandine-customer-logo.png"
-                  alt="ScanDine"
-                  className="h-10 sm:h-12 w-auto object-contain mx-auto drop-shadow-md dark:brightness-110 dark:drop-shadow-[0_0_14px_rgba(255,255,255,0.3)]"
-                />
-              </Link>
-              <h1 className="font-display text-xl sm:text-2xl font-extrabold text-white tracking-tight drop-shadow-sm">
-                Scan<span className="bg-gradient-to-r from-orange-400 via-amber-300 to-orange-400 bg-clip-text text-transparent">Dine</span>
+          {/* ScanDine Brand Header Overlaid with Logo Entrance & Floating Motion */}
+          <div className="relative z-10 text-center pb-2 px-3">
+            <motion.div variants={logoVariants} className="flex flex-col items-center">
+              <motion.div
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                className="inline-block"
+              >
+                <Link to="/" className="inline-block mb-0.5">
+                  <motion.img
+                    whileHover={{ scale: 1.08 }}
+                    src="/scandine-customer-logo.png"
+                    alt="ScanDine"
+                    className="h-10 sm:h-12 w-auto object-contain mx-auto drop-shadow-lg dark:brightness-110 dark:drop-shadow-[0_0_14px_rgba(255,255,255,0.3)]"
+                  />
+                </Link>
+              </motion.div>
+              <h1 className="font-display text-xl sm:text-2xl font-extrabold text-foreground tracking-tight drop-shadow-xs">
+                Scan<span className="bg-gradient-to-r from-orange-500 via-amber-400 to-orange-500 bg-clip-text text-transparent">Dine</span>
               </h1>
-              <div className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-white/90 drop-shadow-xs">
+              <div className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-muted-foreground">
                 SCAN • ORDER • DINE
               </div>
             </motion.div>
           </div>
-        </motion.div>
+        </div>
 
-        {/* BOTTOM INTEGRATED LAYERED FORM SURFACE WITH GENTLE FLOATING */}
-        <motion.div
-          animate={{ y: [0, -4, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="w-full flex-1 rounded-3xl bg-card/95 dark:bg-card/85 backdrop-blur-2xl border border-border/80 p-4 sm:p-5 shadow-2xl flex flex-col justify-between relative overflow-hidden"
-        >
-          {/* Top Glass Specular Highlight Edge */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 dark:via-white/20 to-transparent" />
-
+        {/* LOWER REGISTRATION AREA (Integrated Mobile Controls) */}
+        <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between relative z-10 pt-1">
           <motion.div variants={containerVariants} initial="hidden" animate="visible" className="w-full flex-1 flex flex-col justify-between">
             <div>
-              {/* Header Text (Item 1) */}
+              {/* Header Text */}
               <motion.div variants={itemVariants} className="text-center mb-2.5">
                 <h2 className="font-display text-base sm:text-lg font-extrabold text-foreground tracking-tight">
                   {mode === "customer" ? "Customer Sign In" : "Staff Access Sign In"}
@@ -268,7 +282,7 @@ function CustomerLoginPortal() {
                 </p>
               </motion.div>
 
-              {/* Mode Switcher Tabs */}
+              {/* Dual Portal Mode Switcher Tabs */}
               <motion.div variants={itemVariants} className="grid grid-cols-2 gap-1 p-1 bg-muted/80 rounded-xl mb-3 border border-border/80 relative">
                 <button
                   type="button"
@@ -321,13 +335,13 @@ function CustomerLoginPortal() {
                     onSubmit={handleCustomerLogin}
                     className="space-y-2.5"
                   >
-                    {/* Full Name Field (Item 2) */}
+                    {/* Full Name Field (Item 1) */}
                     <motion.div variants={itemVariants}>
                       <label htmlFor="cust-login-name" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                         Full Name <span className="text-orange-500">*</span>
                       </label>
-                      <div className="relative flex items-center rounded-xl border border-border bg-muted/30 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/30 focus-within:scale-[1.015] hover:border-border/80">
-                        <User className="absolute left-3.5 h-4 w-4 text-muted-foreground transition-all duration-300 focus-within:text-orange-500" />
+                      <div className="relative flex items-center rounded-2xl border border-border bg-muted/40 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] hover:border-border/80">
+                        <User className="absolute left-3.5 h-4 w-4 text-muted-foreground transition-colors duration-300 focus-within:text-orange-500" />
                         <input
                           id="cust-login-name"
                           name="name"
@@ -336,18 +350,18 @@ function CustomerLoginPortal() {
                           value={custName}
                           onChange={(e) => setCustName(e.target.value)}
                           placeholder="Enter your name"
-                          className="w-full bg-transparent pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[42px] sm:min-h-[44px]"
+                          className="w-full bg-transparent pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[44px] sm:min-h-[46px]"
                         />
                       </div>
                     </motion.div>
 
-                    {/* Phone Field (Item 3) */}
+                    {/* Phone Field (Item 2) */}
                     <motion.div variants={itemVariants}>
                       <label htmlFor="cust-login-phone" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                         Mobile Phone Number <span className="text-orange-500">*</span>
                       </label>
-                      <div className="relative flex items-center rounded-xl border border-border bg-muted/30 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/30 focus-within:scale-[1.015] hover:border-border/80">
-                        <Phone className="absolute left-3.5 h-4 w-4 text-muted-foreground transition-all duration-300 focus-within:text-orange-500" />
+                      <div className="relative flex items-center rounded-2xl border border-border bg-muted/40 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] hover:border-border/80">
+                        <Phone className="absolute left-3.5 h-4 w-4 text-muted-foreground transition-colors duration-300 focus-within:text-orange-500" />
                         <input
                           id="cust-login-phone"
                           name="phone"
@@ -358,18 +372,18 @@ function CustomerLoginPortal() {
                           value={custPhone}
                           onChange={(e) => setCustPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                           placeholder="10-digit mobile number"
-                          className="w-full bg-transparent pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[42px] sm:min-h-[44px]"
+                          className="w-full bg-transparent pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[44px] sm:min-h-[46px]"
                         />
                       </div>
                     </motion.div>
 
-                    {/* Email Field (Item 4) */}
+                    {/* Email Field (Item 3) */}
                     <motion.div variants={itemVariants}>
                       <label htmlFor="cust-login-email" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                         Email Address <span className="text-muted-foreground font-normal lowercase">(optional)</span>
                       </label>
-                      <div className="relative flex items-center rounded-xl border border-border bg-muted/30 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/30 focus-within:scale-[1.015] hover:border-border/80">
-                        <Mail className="absolute left-3.5 h-4 w-4 text-muted-foreground transition-all duration-300 focus-within:text-orange-500" />
+                      <div className="relative flex items-center rounded-2xl border border-border bg-muted/40 transition-all duration-300 focus-within:border-orange-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-orange-500/25 focus-within:scale-[1.015] hover:border-border/80">
+                        <Mail className="absolute left-3.5 h-4 w-4 text-muted-foreground transition-colors duration-300 focus-within:text-orange-500" />
                         <input
                           id="cust-login-email"
                           name="email"
@@ -377,19 +391,19 @@ function CustomerLoginPortal() {
                           value={custEmail}
                           onChange={(e) => setCustEmail(e.target.value)}
                           placeholder="you@domain.com"
-                          className="w-full bg-transparent pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[42px] sm:min-h-[44px]"
+                          className="w-full bg-transparent pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[44px] sm:min-h-[46px]"
                         />
                       </div>
                     </motion.div>
 
-                    {/* Start Ordering Button (Item 5) */}
-                    <motion.div variants={itemVariants}>
+                    {/* Start Ordering Button (Item 4 - Enters Last) */}
+                    <motion.div variants={buttonVariants}>
                       <motion.button
                         whileHover={{ scale: 1.015 }}
                         whileTap={{ scale: 0.97 }}
                         type="submit"
                         disabled={loading}
-                        className="group relative mt-1.5 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-xs sm:text-sm font-bold text-white shadow-[0_10px_25px_-5px_rgba(249,115,22,0.4)] transition-all duration-300 hover:shadow-[0_14px_30px_-5px_rgba(249,115,22,0.5)] active:scale-[0.97] disabled:opacity-80 cursor-pointer min-h-[46px] sm:min-h-[48px] anim-shimmer-btn"
+                        className="group relative mt-1.5 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white shadow-[0_10px_25px_-5px_rgba(249,115,22,0.4)] transition-all duration-300 hover:shadow-[0_14px_30px_-5px_rgba(249,115,22,0.5)] active:scale-[0.97] disabled:opacity-80 cursor-pointer min-h-[48px] sm:min-h-[50px] anim-shimmer-btn"
                         style={{ backgroundImage: "linear-gradient(135deg, #f97316 0%, #ea580c 50%, #f59e0b 100%)" }}
                       >
                         {loading ? (
@@ -470,8 +484,8 @@ function CustomerLoginPortal() {
                       <label htmlFor="staff-login-email" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                         Staff Email / ID
                       </label>
-                      <div className="relative flex items-center rounded-xl border border-border bg-muted/30 transition-all duration-300 focus-within:border-amber-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-amber-500/30 focus-within:scale-[1.015] hover:border-border/80">
-                        <Mail className="absolute left-3.5 h-4 w-4 text-muted-foreground transition-all duration-300 focus-within:text-amber-500" />
+                      <div className="relative flex items-center rounded-2xl border border-border bg-muted/40 transition-all duration-300 focus-within:border-amber-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-amber-500/25 focus-within:scale-[1.015] hover:border-border/80">
+                        <Mail className="absolute left-3.5 h-4 w-4 text-muted-foreground transition-colors duration-300 focus-within:text-amber-500" />
                         <input
                           id="staff-login-email"
                           name="email"
@@ -480,7 +494,7 @@ function CustomerLoginPortal() {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder={`e.g. ${role}@restaurant.com`}
-                          className="w-full bg-transparent pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[42px] sm:min-h-[44px]"
+                          className="w-full bg-transparent pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[44px] sm:min-h-[46px]"
                         />
                       </div>
                     </motion.div>
@@ -489,8 +503,8 @@ function CustomerLoginPortal() {
                       <label htmlFor="staff-login-password" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
                         Password
                       </label>
-                      <div className="relative flex items-center rounded-xl border border-border bg-muted/30 transition-all duration-300 focus-within:border-amber-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-amber-500/30 focus-within:scale-[1.015] hover:border-border/80">
-                        <KeyRound className="absolute left-3.5 h-4 w-4 text-muted-foreground transition-all duration-300 focus-within:text-amber-500" />
+                      <div className="relative flex items-center rounded-2xl border border-border bg-muted/40 transition-all duration-300 focus-within:border-amber-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-amber-500/25 focus-within:scale-[1.015] hover:border-border/80">
+                        <KeyRound className="absolute left-3.5 h-4 w-4 text-muted-foreground transition-colors duration-300 focus-within:text-amber-500" />
                         <input
                           id="staff-login-password"
                           name="password"
@@ -499,18 +513,18 @@ function CustomerLoginPortal() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="w-full bg-transparent pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[42px] sm:min-h-[44px]"
+                          className="w-full bg-transparent pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[44px] sm:min-h-[46px]"
                         />
                       </div>
                     </motion.div>
 
-                    <motion.div variants={itemVariants}>
+                    <motion.div variants={buttonVariants}>
                       <motion.button
                         whileHover={{ scale: 1.015 }}
                         whileTap={{ scale: 0.97 }}
                         type="submit"
                         disabled={loading}
-                        className="w-full mt-1.5 rounded-xl px-4 py-3 text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-amber-500 to-orange-600 shadow-[0_10px_25px_-5px_rgba(245,158,11,0.4)] flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-[0_14px_30px_-5px_rgba(245,158,11,0.5)] active:scale-[0.97] disabled:opacity-80 cursor-pointer min-h-[46px] sm:min-h-[48px]"
+                        className="w-full mt-1.5 rounded-2xl px-4 py-3 text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-amber-500 to-orange-600 shadow-[0_10px_25px_-5px_rgba(245,158,11,0.4)] flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-[0_14px_30px_-5px_rgba(245,158,11,0.5)] active:scale-[0.97] disabled:opacity-80 cursor-pointer min-h-[48px] sm:min-h-[50px]"
                       >
                         {loading ? (
                           <>
@@ -538,8 +552,8 @@ function CustomerLoginPortal() {
               © 2026 Renechip Private Limited. All Rights Reserved.
             </motion.footer>
           </motion.div>
-        </motion.div>
-      </div>
-    </motion.div>
+        </div>
+      </motion.main>
+    </div>
   );
 }
