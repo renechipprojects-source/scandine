@@ -108,132 +108,115 @@ function CustomerLoginPortal() {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.06,
-        delayChildren: 0.08,
+        staggerChildren: 0.05,
+        delayChildren: 0.05,
       },
     },
   };
 
   const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 12 },
+    hidden: { opacity: 0, y: 10 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.3, ease: "easeOut" },
+      transition: { duration: 0.28, ease: "easeOut" },
     },
   };
 
   return (
-    <div className="min-h-[100dvh] w-full overflow-y-auto overflow-x-hidden flex flex-col justify-center items-center px-3 py-3 sm:px-4 sm:py-6 relative select-none bg-background text-foreground [perspective:1000px]">
-      {/* Keyframe Animations for Parallax Floating & Lighting */}
-      <style>{`
-        @media (prefers-reduced-motion: reduce) {
-          .anim-float-hero, .anim-ambient-pulse, .anim-particle-float {
-            animation: none !important;
-            transform: none !important;
-          }
-        }
-
-        @keyframes heroFloat {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-4px) rotate(0.5deg); }
-        }
-
-        @keyframes floatParticle1 {
-          0%, 100% { transform: translate3d(0px, 0px, 0px) rotate(0deg); opacity: 0.4; }
-          50% { transform: translate3d(12px, -18px, 0px) rotate(180deg); opacity: 0.75; }
-        }
-        @keyframes floatParticle2 {
-          0%, 100% { transform: translate3d(0px, 0px, 0px) rotate(0deg); opacity: 0.35; }
-          50% { transform: translate3d(-14px, 14px, 0px) rotate(-180deg); opacity: 0.7; }
-        }
-
-        @keyframes ambientPulse {
-          0%, 100% { transform: scale(1); opacity: 0.35; filter: blur(45px); }
-          50% { transform: scale(1.15); opacity: 0.65; filter: blur(60px); }
-        }
-
-        .anim-float-hero { animation: heroFloat 5.5s ease-in-out infinite; }
-        .anim-particle-1 { animation: floatParticle1 10s ease-in-out infinite; }
-        .anim-particle-2 { animation: floatParticle2 12s ease-in-out infinite 1s; }
-        .anim-ambient-pulse { animation: ambientPulse 9s ease-in-out infinite; }
-      `}</style>
-
-      {/* Atmospheric Background Backdrop */}
+    <div className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col items-center justify-between relative bg-background text-foreground select-none">
+      {/* Background Lighting & Particles */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden w-full h-full">
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat filter blur-[2px] opacity-15 dark:opacity-20 scale-105"
-          style={{ backgroundImage: `url('/customer-dining-bg.jpg')` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/85 to-background/95 backdrop-blur-[2px]" />
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[340px] h-[340px] rounded-full bg-gradient-to-br from-orange-500/20 via-amber-500/15 to-transparent blur-3xl anim-ambient-pulse" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-[400px] bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent blur-3xl" />
       </div>
 
-      {/* MOBILE-FIRST COMPACT CONTAINER */}
-      <main className="w-full max-w-[390px] sm:max-w-md mx-auto my-auto relative z-10 flex flex-col items-center">
-        {/* Floating Background Ambient Particles */}
-        <div className="absolute -top-2 left-6 w-3 h-3 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 opacity-40 blur-[1px] anim-particle-1 pointer-events-none z-0" aria-hidden="true" />
-        <div className="absolute -bottom-2 right-8 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-orange-400 to-yellow-400 opacity-40 blur-[1px] anim-particle-2 pointer-events-none z-0" aria-hidden="true" />
-
-        {/* COMPACT INTEGRATED GLASS CARD */}
+      {/* MOBILE APP VIEWPORT CONTAINER (320px - 430px Responsive Shell) */}
+      <div className="w-full max-w-[430px] min-h-[100dvh] mx-auto flex flex-col justify-between relative z-10 overflow-x-hidden">
+        
+        {/* TOP IMMERSIVE RESTAURANT HERO VISUAL (40% Viewport Height) */}
         <motion.div
-          initial={{ opacity: 0, y: 16, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-          className="relative z-10 w-full rounded-3xl bg-card/90 dark:bg-card/80 backdrop-blur-2xl border border-border/80 p-4 sm:p-5 shadow-[0_20px_50px_-15px_rgba(15,23,42,0.12)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden"
+          initial={{ opacity: 0, scale: 1.06 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="relative w-full h-[36vh] min-h-[210px] max-h-[280px] rounded-b-[2.25rem] overflow-hidden shadow-lg border-b border-border/40"
         >
-          {/* Top Specular Glass Edge Highlight */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 dark:via-white/20 to-transparent rounded-t-3xl" />
+          {/* Photorealistic Restaurant Image Background */}
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 hover:scale-105"
+            style={{ backgroundImage: `url('/customer-dining-bg.jpg')` }}
+          />
 
-          {/* INTEGRATED RESTAURANT FOOD HERO BANNER */}
+          {/* Luxury Atmosphere Gradient Overlays */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/35 to-black/40" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(249,115,22,0.25),transparent_60%)]" />
+
+          {/* Floating Food Badges Over Image */}
           <motion.div
-            initial={{ opacity: 0, scale: 1.04 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="relative w-full h-24 sm:h-28 rounded-2xl overflow-hidden mb-3.5 shadow-xs border border-border/60 group"
+            initial={{ y: 0 }}
+            animate={{ y: [0, -4, 0] }}
+            transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-black/45 text-white backdrop-blur-md border border-white/20 shadow-md"
           >
-            {/* Photorealistic Food & Restaurant Visual */}
-            <div
-              className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
-              style={{ backgroundImage: `url('/customer-dining-bg.jpg')` }}
-            />
-            {/* Warm Gradient Overlay for Contrast */}
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-orange-950/30 via-transparent to-amber-950/30" />
-
-            {/* Overlaid Logo & Restaurant Badge */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-center z-10">
-              <Link to="/" className="inline-block group/logo">
-                <motion.img
-                  whileHover={{ scale: 1.08 }}
-                  transition={{ duration: 0.25 }}
-                  src="/scandine-customer-logo.png"
-                  alt="ScanDine"
-                  className="h-9 sm:h-11 w-auto object-contain mx-auto drop-shadow-lg dark:brightness-110 dark:drop-shadow-[0_0_14px_rgba(255,255,255,0.25)]"
-                />
-              </Link>
-              <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-background/90 dark:bg-card/90 text-primary border border-primary/20 backdrop-blur-md shadow-xs mt-1">
-                <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 animate-pulse" />
-                <span>Smart Dining Portal</span>
-              </div>
-            </div>
+            <Sparkles className="h-3 w-3 text-amber-400 animate-pulse" />
+            <span>Smart Dining Portal</span>
           </motion.div>
 
+          <motion.div
+            initial={{ y: 0 }}
+            animate={{ y: [0, 4, 0] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-9 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-orange-500/85 text-white backdrop-blur-md shadow-md border border-orange-400/30"
+          >
+            <UtensilsCrossed className="h-3 w-3" />
+            <span>Instant Ordering</span>
+          </motion.div>
+
+          {/* Center Brand Header Overlay */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10 pt-2">
+            <Link to="/" className="inline-block group mb-1">
+              <motion.img
+                whileHover={{ scale: 1.08 }}
+                transition={{ duration: 0.25 }}
+                src="/scandine-customer-logo.png"
+                alt="ScanDine"
+                className="h-11 sm:h-13 w-auto object-contain mx-auto drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] dark:brightness-110 dark:drop-shadow-[0_0_16px_rgba(255,255,255,0.3)]"
+              />
+            </Link>
+
+            <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow-md">
+              Scan<span className="bg-gradient-to-r from-orange-400 via-amber-300 to-orange-400 bg-clip-text text-transparent">Dine</span>
+            </h1>
+            <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.25em] text-white/90 drop-shadow-xs mt-0.5">
+              SCAN • ORDER • DINE
+            </div>
+          </div>
+        </motion.div>
+
+        {/* BOTTOM INTEGRATED SHEET SURFACE (Form Container) */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="relative -mt-6 z-20 flex-1 w-full rounded-t-[2.25rem] bg-card/95 dark:bg-card/85 backdrop-blur-2xl border-t border-border/80 px-4 py-4 sm:px-5 sm:py-5 shadow-[0_-15px_40px_rgba(0,0,0,0.15)] flex flex-col justify-between"
+        >
+          {/* Top Glass Edge Specular Highlight */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 dark:via-white/20 to-transparent rounded-t-[2.25rem]" />
+
           <motion.div variants={containerVariants} initial="hidden" animate="visible" className="w-full">
-            {/* Header Text */}
+            {/* Header Title */}
             <motion.div variants={itemVariants} className="text-center mb-3">
-              <h1 className="font-display text-lg sm:text-xl font-extrabold text-foreground tracking-tight">
-                {mode === "customer" ? "Customer Sign In" : "Staff Access Sign In"}
-              </h1>
-              <p className="text-[10px] sm:text-[11px] text-muted-foreground font-medium leading-tight mt-0.5">
+              <h2 className="font-display text-base sm:text-lg font-bold text-foreground tracking-tight">
+                {mode === "customer" ? "Sign In & Order" : "Staff Access Sign In"}
+              </h2>
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground font-medium leading-tight mt-0.5 max-w-xs mx-auto">
                 {mode === "customer"
-                  ? "Sign in to save table sessions, view rewards & order history."
-                  : "Staff access for Admin, Kitchen, and Reception modules."}
+                  ? "Enter your details to view menu and place instant orders."
+                  : "Sign in for Admin, Kitchen, or Reception portal."}
               </p>
             </motion.div>
 
-            {/* Dual Portal Switcher Tabs */}
-            <motion.div variants={itemVariants} className="grid grid-cols-2 gap-1 p-1 bg-muted/80 rounded-xl mb-2.5 border border-border/80 relative">
+            {/* Dual Mode Switcher Tabs */}
+            <motion.div variants={itemVariants} className="grid grid-cols-2 gap-1 p-1 bg-muted/80 rounded-xl mb-3 border border-border/80 relative">
               <button
                 type="button"
                 onClick={() => setMode("customer")}
@@ -250,7 +233,7 @@ function CustomerLoginPortal() {
                     transition={{ type: "spring", stiffness: 450, damping: 32 }}
                   />
                 )}
-                <UtensilsCrossed className="h-3 w-3" /> Customer Portal
+                <UtensilsCrossed className="h-3.5 w-3.5" /> Customer Portal
               </button>
 
               <button
@@ -269,7 +252,7 @@ function CustomerLoginPortal() {
                     transition={{ type: "spring", stiffness: 450, damping: 32 }}
                   />
                 )}
-                <ShieldCheck className="h-3 w-3 text-amber-400" /> Staff Access
+                <ShieldCheck className="h-3.5 w-3.5 text-amber-400" /> Staff Access
               </button>
             </motion.div>
 
@@ -283,7 +266,7 @@ function CustomerLoginPortal() {
                   exit={{ opacity: 0, x: 8 }}
                   transition={{ duration: 0.2 }}
                   onSubmit={handleCustomerLogin}
-                  className="space-y-2"
+                  className="space-y-2.5"
                 >
                   <motion.div variants={itemVariants}>
                     <label htmlFor="cust-login-name" className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 block mb-0.5">
@@ -299,7 +282,7 @@ function CustomerLoginPortal() {
                         value={custName}
                         onChange={(e) => setCustName(e.target.value)}
                         placeholder="Enter your name"
-                        className="w-full bg-transparent pl-9 pr-3 py-1.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[38px] sm:min-h-[40px]"
+                        className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[40px]"
                       />
                     </div>
                   </motion.div>
@@ -320,7 +303,7 @@ function CustomerLoginPortal() {
                         value={custPhone}
                         onChange={(e) => setCustPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                         placeholder="10-digit mobile number"
-                        className="w-full bg-transparent pl-9 pr-3 py-1.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[38px] sm:min-h-[40px]"
+                        className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[40px]"
                       />
                     </div>
                   </motion.div>
@@ -338,7 +321,7 @@ function CustomerLoginPortal() {
                         value={custEmail}
                         onChange={(e) => setCustEmail(e.target.value)}
                         placeholder="you@domain.com"
-                        className="w-full bg-transparent pl-9 pr-3 py-1.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[38px] sm:min-h-[40px]"
+                        className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[40px]"
                       />
                     </div>
                   </motion.div>
@@ -348,7 +331,7 @@ function CustomerLoginPortal() {
                     whileTap={{ scale: 0.98 }}
                     type="submit"
                     disabled={loading}
-                    className="group relative mt-1 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-2.5 sm:py-3 text-xs font-bold text-white shadow-[0_8px_20px_-4px_rgba(249,115,22,0.4)] transition-all duration-300 hover:shadow-[0_12px_26px_-4px_rgba(249,115,22,0.5)] active:scale-[0.99] disabled:opacity-80 cursor-pointer min-h-[40px] sm:min-h-[42px]"
+                    className="group relative mt-1 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-xs font-bold text-white shadow-[0_8px_20px_-4px_rgba(249,115,22,0.4)] transition-all duration-300 hover:shadow-[0_12px_26px_-4px_rgba(249,115,22,0.5)] active:scale-[0.99] disabled:opacity-80 cursor-pointer min-h-[42px]"
                     style={{ backgroundImage: "linear-gradient(135deg, #f97316 0%, #ea580c 50%, #f59e0b 100%)" }}
                   >
                     {loading ? (
@@ -371,7 +354,7 @@ function CustomerLoginPortal() {
                   exit={{ opacity: 0, x: -8 }}
                   transition={{ duration: 0.2 }}
                   onSubmit={handleStaffLogin}
-                  className="space-y-2"
+                  className="space-y-2.5"
                 >
                   {/* Role Selection inside Staff Mode */}
                   <div className="grid grid-cols-3 gap-1 p-1 bg-muted/80 rounded-lg mb-2 border border-border/80 relative">
@@ -439,7 +422,7 @@ function CustomerLoginPortal() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder={`e.g. ${role}@restaurant.com`}
-                        className="w-full bg-transparent pl-9 pr-3 py-1.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[38px] sm:min-h-[40px]"
+                        className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[40px]"
                       />
                     </div>
                   </motion.div>
@@ -458,7 +441,7 @@ function CustomerLoginPortal() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full bg-transparent pl-9 pr-3 py-1.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[38px] sm:min-h-[40px]"
+                        className="w-full bg-transparent pl-9 pr-3 py-2 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none min-h-[40px]"
                       />
                     </div>
                   </motion.div>
@@ -468,7 +451,7 @@ function CustomerLoginPortal() {
                     whileTap={{ scale: 0.98 }}
                     type="submit"
                     disabled={loading}
-                    className="w-full mt-1 rounded-xl px-4 py-2.5 sm:py-3 text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-orange-600 shadow-[0_8px_20px_-4px_rgba(245,158,11,0.4)] flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-[0_12px_26px_-4px_rgba(245,158,11,0.5)] active:scale-[0.99] disabled:opacity-80 cursor-pointer min-h-[40px] sm:min-h-[42px]"
+                    className="w-full mt-1 rounded-xl px-4 py-3 text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-orange-600 shadow-[0_8px_20px_-4px_rgba(245,158,11,0.4)] flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-[0_12px_26px_-4px_rgba(245,158,11,0.5)] active:scale-[0.99] disabled:opacity-80 cursor-pointer min-h-[42px]"
                   >
                     {loading ? (
                       <>
@@ -484,17 +467,18 @@ function CustomerLoginPortal() {
               )}
             </AnimatePresence>
           </motion.div>
-        </motion.div>
 
-        <motion.footer
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="mt-2 text-center text-[10px] sm:text-[11px] text-muted-foreground font-medium"
-        >
-          © 2026 Renechip Private Limited. All Rights Reserved.
-        </motion.footer>
-      </main>
+          {/* Footer Copyright */}
+          <motion.footer
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-3 text-center text-[10px] text-muted-foreground font-medium"
+          >
+            © 2026 Renechip Private Limited. All Rights Reserved.
+          </motion.footer>
+        </motion.div>
+      </div>
     </div>
   );
 }
