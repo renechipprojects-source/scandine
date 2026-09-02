@@ -113,7 +113,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
   };
 
   return (
-    <div className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col justify-between items-center text-[#172033] select-none relative z-10">
+    <div className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col justify-between items-center text-[#172033] select-none relative">
       {/* Keyframe Animations & Prefers-Reduced-Motion Rules */}
       <style>{`
         @media (prefers-reduced-motion: reduce) {
@@ -162,17 +162,26 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
         }
       `}</style>
 
-      {/* DEDICATED FULL-VIEWPORT RESTAURANT DINING BACKGROUND LAYER (FULLY VISIBLE BEHIND ENTIRE PAGE & GLASS PANEL) */}
+      {/* DEDICATED FULL-VIEWPORT RESTAURANT DINING BACKGROUND LAYER (BEHIND ENTIRE PAGE & GLASS PANEL) */}
       <div
-        className="fixed inset-0 z-0 w-full h-full pointer-events-none overflow-hidden"
+        className="fixed inset-0 w-full h-full pointer-events-none overflow-hidden"
         style={{
+          zIndex: 0,
           backgroundImage: `url(${diningBgImage})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
         }}
       >
-        {/* Subtle Warm Light Overlay for Text Readability — Restaurant Image Remains 100% Visibly Clear */}
+        <img
+          src={diningBgImage}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "/customer-dining-bg.jpg";
+          }}
+          alt="ScanDine Restaurant Atmosphere"
+          className="w-full h-full object-cover object-center anim-ken-burns brightness-95"
+        />
+        {/* Subtle Light Warm Overlay for Readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-amber-950/15 to-black/30 pointer-events-none" />
       </div>
 
@@ -180,7 +189,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
       <div className="w-full max-w-[430px] min-h-[100dvh] mx-auto flex flex-col justify-between relative z-10 overflow-x-hidden pb-4">
         
         {/* TOP RESTAURANT BRANDING HERO HEADER */}
-        <div className="relative w-full h-[35vh] min-h-[220px] max-h-[280px] flex flex-col justify-end">
+        <div className="relative w-full h-[35vh] min-h-[220px] max-h-[280px] flex flex-col justify-end z-10">
           <div className="relative z-10 text-center pb-10 px-3">
             <motion.div variants={logoVariants} initial="hidden" animate="visible" className="flex flex-col items-center">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold bg-white/85 text-[#1e293b] border border-orange-500/30 mb-2 backdrop-blur-md shadow-xs">

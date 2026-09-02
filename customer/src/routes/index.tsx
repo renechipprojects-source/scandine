@@ -6,8 +6,8 @@ import { restaurant } from "@/lib/mock-data";
 import { useTable } from "@/lib/table-store";
 import { useCustomer } from "@/lib/customer-store";
 import { CustomerRegistration } from "@/components/customer-registration";
-import { InvalidQrScreen } from "@/components/invalid-qr";
 import { getOrdersBySession, subscribeToOrdersBySession, type DbOrder } from "@/lib/supabase";
+import diningBgImage from "@/assets/customer-dining-bg.jpg";
 
 export const Route = createFileRoute("/")({
   component: Welcome,
@@ -69,24 +69,41 @@ function Welcome() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Ambient background */}
-      <div className="absolute inset-0 gradient-hero pointer-events-none" />
-      <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/20 blur-3xl animate-float pointer-events-none" />
-      <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-accent/20 blur-3xl animate-float pointer-events-none" />
+    <div className="min-h-screen relative overflow-hidden text-[#172033]">
+      {/* Full-screen Restaurant Background Layer */}
+      <div
+        className="fixed inset-0 w-full h-full pointer-events-none overflow-hidden"
+        style={{
+          zIndex: 0,
+          backgroundImage: `url(${diningBgImage})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        <img
+          src={diningBgImage}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "/customer-dining-bg.jpg";
+          }}
+          alt="ScanDine Restaurant Atmosphere"
+          className="w-full h-full object-cover object-center brightness-95"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-amber-950/20 to-black/40 pointer-events-none" />
+      </div>
 
-      <div className="relative">
+      <div className="relative z-10">
         {/* Cover */}
         <div className="relative h-[48vh] md:h-[56vh] overflow-hidden">
           <img src={restaurant.cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/20" />
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pt-4 pb-8"
           >
-            <div className="glass rounded-full px-4 py-1.5 text-xs font-medium flex items-center gap-2 mb-4">
+            <div className="glass rounded-full px-4 py-1.5 text-xs font-medium flex items-center gap-2 mb-4 text-white">
               <QrCode className="h-3.5 w-3.5 text-primary" /> Verified • {tableNumber}
             </div>
             <div className="flex justify-center mb-3">
@@ -112,17 +129,23 @@ function Welcome() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="glass shadow-glass rounded-3xl p-6 md:p-8"
+            className="shadow-xl rounded-3xl p-6 md:p-8"
+            style={{
+              backgroundColor: "rgba(255, 255, 255, 0.72)",
+              backdropFilter: "blur(20px) saturate(140%)",
+              WebkitBackdropFilter: "blur(20px) saturate(140%)",
+              border: "1px solid rgba(255, 255, 255, 0.8)",
+            }}
           >
             <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
               <div>
-                <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-[#475569] font-bold">
                   <Sparkles className="h-3.5 w-3.5 text-primary" /> Welcome {customer.fullName}
                 </div>
-                <h2 className="font-display text-2xl md:text-3xl font-bold mt-1">
+                <h2 className="font-display text-2xl md:text-3xl font-extrabold mt-1 text-[#172033]">
                   {tableNumber} is ready for you.
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm text-[#475569] font-semibold mt-1">
                   Browse the menu, customise dishes and pay — all from your phone.
                 </p>
               </div>
@@ -144,7 +167,7 @@ function Welcome() {
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-primary uppercase tracking-wider">Live Order Status ({tableNumber})</div>
-                    <div className="font-bold text-sm">
+                    <div className="font-bold text-sm text-[#172033]">
                       Order {activeOrder.order_number} · <span className="capitalize text-emerald-600">{activeOrder.status}</span>
                     </div>
                   </div>
