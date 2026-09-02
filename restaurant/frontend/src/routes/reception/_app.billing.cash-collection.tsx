@@ -75,11 +75,52 @@ function CashCollectionPage() {
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return unpaidOrders;
+
+    const qDigits = q.replace(/\D/g, "");
+
     return unpaidOrders.filter((ord) => {
       const orderIdStr = String(ord.order_id || ord.id || "").toLowerCase();
-      const custStr = String((ord as any).customer_name || ord.customer || "").toLowerCase();
-      const tableStr = String(ord.table_number || "").toLowerCase();
-      return orderIdStr.includes(q) || custStr.includes(q) || tableStr.includes(q);
+      const custStr = String((ord as any).customer_name || ord.customer || (ord as any).customerName || "").toLowerCase();
+      
+      const rawTable = ord.table_number ?? (ord as any).table ?? (ord as any).table_no ?? (ord as any).tableNumber ?? (ord as any).table_id ?? "";
+      const rawTableStr = String(rawTable).trim().toLowerCase();
+      const tableDigits = rawTableStr.replace(/\D/g, "");
+
+      const tableVariants = new Set<string>();
+      if (rawTableStr) {
+        tableVariants.add(rawTableStr);
+        tableVariants.add(`table ${rawTableStr}`);
+        tableVariants.add(`table${rawTableStr}`);
+        tableVariants.add(`t${rawTableStr}`);
+        tableVariants.add(`t-${rawTableStr}`);
+      }
+      if (tableDigits) {
+        tableVariants.add(tableDigits);
+        tableVariants.add(`table ${tableDigits}`);
+        tableVariants.add(`table${tableDigits}`);
+        tableVariants.add(`t${tableDigits}`);
+        tableVariants.add(`t-${tableDigits}`);
+      }
+
+      let itemsStr = "";
+      if (Array.isArray(ord.item)) {
+        itemsStr = ord.item.map((i: any) => String(i.name || "").toLowerCase()).join(" ");
+      } else if (ord.item) {
+        itemsStr = String(ord.item).toLowerCase();
+      }
+
+      const tableMatchesVariant = Array.from(tableVariants).some((v) => v.includes(q) || q.includes(v));
+      const isTableQuery = q.startsWith("table") || q.startsWith("t") || (qDigits.length > 0 && q.length <= 4);
+      const tableMatchesDigits = isTableQuery && qDigits.length > 0 && tableDigits === qDigits;
+
+      const tableMatch = tableMatchesVariant || tableMatchesDigits;
+
+      return (
+        tableMatch ||
+        orderIdStr.includes(q) ||
+        custStr.includes(q) ||
+        itemsStr.includes(q)
+      );
     });
   }, [unpaidOrders, searchQuery]);
 
@@ -301,7 +342,13 @@ function CashCollectionPage() {
                       {ord.order_id || ord.id}
                     </TableCell>
                     <TableCell className="font-semibold text-xs">
-                      Table {ord.table_number}
+                      {(() => {
+                        const rawTbl = ord.table_number ?? (ord as any).table ?? (ord as any).table_no ?? (ord as any).tableNumber ?? (ord as any).table_id ?? "";
+                        const strTbl = String(rawTbl).trim();
+                        if (!strTbl) return "Table —";
+                        if (strTbl.toLowerCase().startsWith("table")) return strTbl;
+                        return `Table ${strTbl}`;
+                      })()}
                     </TableCell>
                     <TableCell className="font-medium text-foreground">
                       {(ord as any).customer_name || ord.customer || "Guest Customer"}

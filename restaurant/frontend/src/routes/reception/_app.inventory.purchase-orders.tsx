@@ -47,7 +47,42 @@ interface PurchaseOrderRecord {
 
 function POPage() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderRecord[]>([]);
-  const [customSuppliers, setCustomSuppliers] = useState<SupplierRecord[]>([]);
+  const [customSuppliers, setCustomSuppliers] = useState<SupplierRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem("sd_custom_suppliers");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [
+      { id: "sup_1", name: "Golden Gate Produce Co.", phone: "+1 415 555 0199", address: "100 Market St, San Francisco, CA" },
+      { id: "sup_2", name: "Pacific Seafood Distributors", phone: "+1 415 555 0288", address: "Pier 39, San Francisco, CA" },
+    ];
+  });
+
+  const [deletedSupplierNames, setDeletedSupplierNames] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("sd_deleted_supplier_names");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return new Set(parsed.map((s: string) => s.toLowerCase()));
+      }
+    } catch {}
+    return new Set();
+  });
+
+  const [deletedSupplierIds, setDeletedSupplierIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("sd_deleted_supplier_ids");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return new Set(parsed);
+      }
+    } catch {}
+    return new Set();
+  });
+
   const [loadingPOs, setLoadingPOs] = useState(true);
 
   const [selectedPO, setSelectedPO] = useState<PurchaseOrderRecord | null>(null);
@@ -68,32 +103,39 @@ function POPage() {
     return "Prepaid";
   };
 
-  // Dynamic suppliers list compiled from sd_purchase_orders and customSuppliers
+  // Dynamic suppliers list compiled from sd_purchase_orders and customSuppliers, excluding deleted suppliers
   const suppliers: SupplierRecord[] = useMemo(() => {
     const map = new Map<string, SupplierRecord>();
 
     (customSuppliers || []).forEach((s) => {
       if (s && s.name && typeof s.name === "string") {
-        map.set(s.name.toLowerCase(), s);
+        const nameLower = s.name.trim().toLowerCase();
+        if (!deletedSupplierNames.has(nameLower) && !deletedSupplierIds.has(s.id)) {
+          map.set(nameLower, s);
+        }
       }
     });
 
     (purchaseOrders || []).forEach((po) => {
       if (!po) return;
       const name = po.supplier;
-      if (name && typeof name === "string" && !map.has(name.toLowerCase())) {
-        map.set(name.toLowerCase(), {
-          id: `sup_${name.replace(/\W+/g, "_").toLowerCase()}`,
-          name: name,
-          phone: "",
-          address: "",
-          created_at: po.created_at,
-        });
+      if (name && typeof name === "string") {
+        const nameLower = name.trim().toLowerCase();
+        const genId = `sup_${nameLower.replace(/\W+/g, "_")}`;
+        if (!map.has(nameLower) && !deletedSupplierNames.has(nameLower) && !deletedSupplierIds.has(genId)) {
+          map.set(nameLower, {
+            id: genId,
+            name: name,
+            phone: "",
+            address: "",
+            created_at: po.created_at,
+          });
+        }
       }
     });
 
     return Array.from(map.values());
-  }, [purchaseOrders, customSuppliers]);
+  }, [purchaseOrders, customSuppliers, deletedSupplierNames, deletedSupplierIds]);
 
   // New PO form state
   const [selectedSupplierId, setSelectedSupplierId] = useState("");
@@ -180,7 +222,46 @@ function POPage() {
         created_at: new Date().toISOString(),
       };
 
-      setCustomSuppliers((prev) => [newSup, ...prev]);
+      const nameLower = trimmedName.toLowerCase();
+
+      // Clear any prior deleted tracking for this supplier name/ID
+      setDeletedSupplierNames((prev) => {
+        const next = new Set(prev);
+        next.delete(nameLower);
+        try {
+          localStorage.setItem("sd_deleted_supplier_names", JSON.stringify(Array.from(next)));
+        } catch {}
+        return next;
+      });
+
+      setDeletedSupplierIds((prev) => {
+        const next = new Set(prev);
+        next.delete(newSup.id);
+        try {
+          localStorage.setItem("sd_deleted_supplier_ids", JSON.stringify(Array.from(next)));
+        } catch {}
+        return next;
+      });
+
+      setCustomSuppliers((prev) => {
+        const updated = [newSup, ...prev.filter((s) => s.id !== newSup.id && s.name.trim().toLowerCase() !== nameLower)];
+        try {
+          localStorage.setItem("sd_custom_suppliers", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      // Optionally persist to database suppliers table
+      try {
+        await supabase.from("suppliers").insert([{
+          id: newSup.id,
+          name: trimmedName,
+          phone: trimmedPhone,
+          address: trimmedAddress,
+          created_at: newSup.created_at,
+        }]);
+      } catch {}
+
       setSelectedSupplierId(newSup.id);
       setPoSupplier(newSup.name);
 
@@ -290,10 +371,49 @@ function POPage() {
     }
   };
 
-  // REMOVE SUPPLIER FROM LOCAL LIST
-  const handleDeleteSupplier = (id: string, name: string) => {
-    setCustomSuppliers((prev) => prev.filter((s) => s.id !== id));
-    toast.success(`Supplier "${name}" removed`);
+  // REMOVE SUPPLIER PERMANENTLY FROM LOCAL LIST & SUPABASE DB
+  const handleDeleteSupplier = async (id: string, name: string) => {
+    const nameLower = name.trim().toLowerCase();
+
+    // 1. Persist deleted supplier names & IDs in tracking sets
+    setDeletedSupplierNames((prev) => {
+      const next = new Set(prev);
+      next.add(nameLower);
+      try {
+        localStorage.setItem("sd_deleted_supplier_names", JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+
+    setDeletedSupplierIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      try {
+        localStorage.setItem("sd_deleted_supplier_ids", JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+
+    // 2. Remove supplier from customSuppliers state and localStorage
+    setCustomSuppliers((prev) => {
+      const updated = prev.filter(
+        (s) => s.id !== id && s.name.trim().toLowerCase() !== nameLower
+      );
+      try {
+        localStorage.setItem("sd_custom_suppliers", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    // 3. Attempt DB deletion if table exists in Supabase
+    try {
+      await supabase.from("suppliers").delete().eq("id", id);
+      await supabase.from("suppliers").delete().ilike("name", name.trim());
+    } catch (err) {
+      console.warn("Supabase supplier delete notice:", err);
+    }
+
+    toast.success(`Supplier "${name}" deleted successfully`);
   };
 
   // DELETE PURCHASE ORDER FROM SUPABASE

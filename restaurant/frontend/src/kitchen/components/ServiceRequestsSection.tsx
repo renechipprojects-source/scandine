@@ -345,76 +345,82 @@ export function ServiceRequestsSection() {
             {requests.map((req) => (
               <div
                 key={req.id}
-                className={`relative rounded-2xl border p-4 transition-all shadow-xs ${
+                className={`relative rounded-2xl border p-4 transition-all shadow-xs flex flex-col justify-between ${
                   req.status === "accepted" || req.status === "dispatched"
                     ? "bg-amber-500/5 border-amber-500/30"
                     : "bg-card border-border hover:border-primary/40"
                 }`}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    {getServiceIcon(req.service_type, req.label)}
-                    <span className="font-display font-bold text-sm">
-                      Table {req.table_number}
+                <div>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      {getServiceIcon(req.service_type, req.label)}
+                      <span className="font-display font-bold text-sm">
+                        Table {req.table_number}
+                      </span>
+                    </div>
+                    <Badge
+                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                        req.status === "accepted" || req.status === "dispatched"
+                          ? "bg-amber-500/20 text-amber-700"
+                          : "bg-blue-500/20 text-blue-700 animate-pulse"
+                      }`}
+                    >
+                      {req.status === "accepted" || req.status === "dispatched" ? "In Progress" : "Pending"}
+                    </Badge>
+                  </div>
+
+                  <div className="mt-2 text-base font-semibold text-foreground">
+                    {req.label || req.service_type || "Service Request"}
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground border-t pt-2">
+                    <span className="flex items-center gap-1">
+                      <User className="h-3 w-3 shrink-0" />
+                      <span className="truncate max-w-[120px] font-medium">{req.customer_name || "Guest"}</span>
+                    </span>
+                    <span className="flex items-center gap-1 font-mono text-[11px]">
+                      <Clock className="h-3 w-3 shrink-0" />
+                      {formatTime(req.created_at)}
                     </span>
                   </div>
-                  <Badge
-                    className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                      req.status === "accepted" || req.status === "dispatched"
-                        ? "bg-amber-500/20 text-amber-700"
-                        : "bg-blue-500/20 text-blue-700 animate-pulse"
-                    }`}
-                  >
-                    {req.status === "accepted" || req.status === "dispatched" ? "In Progress" : "Pending"}
-                  </Badge>
-                </div>
-
-                <div className="mt-2 text-base font-semibold text-foreground">
-                  {req.label || req.service_type || "Service Request"}
-                </div>
-
-                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground border-t pt-2">
-                  <span className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    <span className="truncate max-w-[120px] font-medium">{req.customer_name || "Guest"}</span>
-                  </span>
-                  <span className="flex items-center gap-1 font-mono text-[11px]">
-                    <Clock className="h-3 w-3" />
-                    {formatTime(req.created_at)}
-                  </span>
                 </div>
 
                 {/* Actions */}
-                <div className="mt-3 flex gap-1.5 border-t pt-2">
+                <div className="mt-3 grid grid-cols-3 gap-1.5 border-t pt-2.5 items-center w-full">
                   {req.status === "pending" ? (
                     <Button
                       size="sm"
-                      className="flex-1 h-8 text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs px-2"
+                      className="h-8 w-full text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1 whitespace-nowrap"
                       onClick={() => handleAccept(req)}
                     >
-                      <Check className="mr-1 h-3 w-3" /> Accept
+                      <Check className="h-3 w-3 shrink-0" />
+                      <span className="truncate">Accept</span>
                     </Button>
                   ) : (
-                    <div className="flex-1 flex items-center justify-center text-[11px] font-semibold text-amber-600 bg-amber-500/10 rounded-lg px-2">
-                      Accepted ✓
+                    <div className="h-8 w-full text-[11px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 rounded-md px-1.5 flex items-center justify-center gap-1 whitespace-nowrap shadow-xs">
+                      <Check className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
+                      <span className="truncate">Accepted</span>
                     </div>
                   )}
 
                   <Button
                     size="sm"
                     variant="outline"
-                    className="flex-1 h-8 text-[11px] border-rose-500/30 text-rose-600 hover:bg-rose-50 hover:text-rose-700 font-semibold shadow-xs px-2"
+                    className="h-8 w-full text-[11px] border-rose-500/30 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/40 font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1 whitespace-nowrap"
                     onClick={() => handleReject(req)}
                   >
-                    <XCircle className="mr-1 h-3 w-3" /> Reject
+                    <XCircle className="h-3 w-3 shrink-0 text-rose-500" />
+                    <span className="truncate">Reject</span>
                   </Button>
 
                   <Button
                     size="sm"
-                    className="flex-1 h-8 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs px-2"
+                    className="h-8 w-full text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1 whitespace-nowrap"
                     onClick={() => handleComplete(req)}
                   >
-                    <CheckCircle2 className="mr-1 h-3 w-3" /> Complete
+                    <CheckCircle2 className="h-3 w-3 shrink-0" />
+                    <span className="truncate">Complete</span>
                   </Button>
                 </div>
               </div>

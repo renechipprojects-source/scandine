@@ -197,42 +197,54 @@ function Services() {
         {/* Live Active Requests Log */}
         {combinedRequests.length > 0 && (
           <div className="mt-8">
-            <div className="font-display font-bold text-lg mb-3">Recent Requests</div>
-            <div className="space-y-2">
-              {combinedRequests.slice(0, 5).map((r) => (
-                <div key={r.id} className="glass rounded-2xl p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-xl gradient-primary text-white grid place-items-center font-bold text-xs">
-                      {r.table_number}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm">{r.label}</div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {new Date(r.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            <div className="font-display font-bold text-lg text-white drop-shadow-xs mb-3">Recent Requests</div>
+            <div className="space-y-2.5">
+              {combinedRequests.slice(0, 5).map((r) => {
+                const rawTbl = String(r.table_number || "").trim();
+                const formattedTable = rawTbl
+                  ? rawTbl.toLowerCase().startsWith("table")
+                    ? rawTbl
+                    : `Table ${rawTbl}`
+                  : `Table ${tableNumber}`;
+
+                return (
+                  <div
+                    key={r.id}
+                    className="glass rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-xs border border-white/10 hover:border-white/20 transition-all"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-8 px-2.5 rounded-xl gradient-primary text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs whitespace-nowrap">
+                        {formattedTable}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-sm text-white truncate">{r.label || r.service_type}</div>
+                        <div className="text-[11px] text-white/70 font-mono mt-0.5">
+                          {new Date(r.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <span
-                    className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                      r.status === "completed"
-                        ? "bg-emerald-500/10 text-emerald-600"
+                    <span
+                      className={`text-xs font-semibold px-3 py-1 rounded-full shrink-0 flex items-center justify-center whitespace-nowrap shadow-xs ${
+                        r.status === "completed"
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                          : r.status === "accepted" || r.status === "dispatched"
+                          ? "bg-blue-500/20 text-blue-300 border border-blue-500/30 animate-pulse"
+                          : r.status === "rejected"
+                          ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                          : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                      }`}
+                    >
+                      {r.status === "completed"
+                        ? "✓ Done"
                         : r.status === "accepted" || r.status === "dispatched"
-                        ? "bg-blue-500/10 text-blue-600 animate-pulse"
+                        ? "Accepted"
                         : r.status === "rejected"
-                        ? "bg-rose-500/10 text-rose-600"
-                        : "bg-amber-500/10 text-amber-600"
-                    }`}
-                  >
-                    {r.status === "completed"
-                      ? "✓ Done"
-                      : r.status === "accepted" || r.status === "dispatched"
-                      ? "Accepted"
-                      : r.status === "rejected"
-                      ? "Rejected"
-                      : "Pending"}
-                  </span>
-                </div>
-              ))}
+                        ? "Rejected"
+                        : "Pending"}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
