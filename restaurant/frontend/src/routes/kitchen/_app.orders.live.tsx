@@ -72,9 +72,9 @@ function OrderLiveCardItem({
   const items = Array.isArray(order.item) ? order.item : [];
 
   return (
-    <Card className="p-3.5 transition-all hover:shadow-md flex flex-col justify-between h-full border shadow-xs min-h-[220px]">
-      <div>
-        <div className="flex items-start justify-between gap-2">
+    <Card className="p-3.5 transition-all hover:shadow-md flex flex-col justify-between min-h-[230px] border shadow-xs w-full">
+      <div className="flex-1 flex flex-col">
+        <div className="flex items-start justify-between gap-2 shrink-0">
           <div>
             <div className="text-xs font-mono font-semibold text-muted-foreground">{order.order_id || order.id}</div>
             <div className="mt-0.5 flex items-center gap-1.5 font-display font-bold text-sm">
@@ -84,7 +84,7 @@ function OrderLiveCardItem({
           <StatusBadge status={order.payment} />
         </div>
 
-        <div className="mt-2.5 space-y-1.5 border-t pt-2 max-h-[120px] overflow-y-auto">
+        <div className="mt-2 space-y-1.5 border-t pt-2 h-[84px] overflow-y-auto pr-1 shrink-0">
           {items.map((it, i) => (
             <div key={i} className="flex items-center justify-between gap-2 text-xs">
               <span className="truncate flex-1 font-medium">
@@ -98,7 +98,7 @@ function OrderLiveCardItem({
           ))}
         </div>
 
-        <div className="mt-2.5 flex items-center justify-between border-t pt-2 text-[11px] text-muted-foreground gap-2">
+        <div className="mt-auto flex items-center justify-between border-t pt-2 text-[11px] text-muted-foreground gap-2 shrink-0">
           <span className="flex items-center gap-1.5 truncate">
             <User className="h-3 w-3 shrink-0" />
             <span className="truncate font-medium">{order.customer}</span>
@@ -111,7 +111,7 @@ function OrderLiveCardItem({
 
         {/* Preparation Timer Display */}
         {(order.status === "accepted" || order.status === "preparing") && (
-          <div className="mt-2.5 rounded-lg border border-info/30 bg-info/10 p-2 text-center">
+          <div className="mt-2 rounded-lg border border-info/30 bg-info/10 p-1.5 text-center shrink-0">
             <div className="flex items-center justify-center gap-1.5 font-mono text-xs font-bold text-info-foreground">
               <Timer className="h-3.5 w-3.5 animate-pulse text-info shrink-0" />
               <span>Prep Countdown: {formattedTime}</span>
@@ -126,7 +126,7 @@ function OrderLiveCardItem({
       </div>
 
       {/* Workflow Controls */}
-      <div className="mt-3 border-t pt-2.5 w-full shrink-0">
+      <div className="mt-auto border-t pt-2.5 w-full shrink-0">
         {order.status === "pending" && (
           <div className="grid grid-cols-2 gap-2 w-full">
             <Button
