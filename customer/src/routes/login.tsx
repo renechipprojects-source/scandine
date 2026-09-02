@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { customerStore } from "@/lib/customer-store";
 import { useTable } from "@/lib/table-store";
+import diningBgImage from "@/assets/customer-dining-bg.jpg";
 
 export const Route = createFileRoute("/login")({
   component: CustomerLoginPortal,
@@ -154,7 +155,7 @@ function CustomerLoginPortal() {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col justify-between items-center bg-transparent text-[#172033] select-none relative">
+    <div className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col justify-between items-center text-[#172033] select-none relative z-10">
       {/* Keyframe Animations & Prefers-Reduced-Motion Rules */}
       <style>{`
         @media (prefers-reduced-motion: reduce) {
@@ -203,15 +204,18 @@ function CustomerLoginPortal() {
         }
       `}</style>
 
-      {/* FULL-VIEWPORT RESTAURANT DINING BACKGROUND IMAGE LAYER (FULLY VISIBLE BEHIND ENTIRE PAGE & GLASS PANEL) */}
-      <div className="fixed inset-0 -z-10 w-full h-full overflow-hidden pointer-events-none">
-        <img
-          src="/customer-dining-bg.jpg"
-          alt="ScanDine Restaurant Atmosphere"
-          className="w-full h-full object-cover object-center anim-ken-burns brightness-95"
-        />
-        {/* Subtle Light Warm Vignette for Text Readability - Image Remains 100% Visibly Clear */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-amber-950/15 to-black/30" />
+      {/* DEDICATED FULL-VIEWPORT RESTAURANT DINING BACKGROUND LAYER (FULLY VISIBLE BEHIND ENTIRE PAGE & GLASS PANEL) */}
+      <div
+        className="fixed inset-0 z-0 w-full h-full pointer-events-none overflow-hidden"
+        style={{
+          backgroundImage: `url(${diningBgImage})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        {/* Subtle Warm Light Overlay for Text Readability — Restaurant Image Remains 100% Visibly Clear */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-amber-950/15 to-black/30 pointer-events-none" />
       </div>
 
       {/* MOBILE APP CONTAINER SHELL (320px - 480px Responsive Viewport) */}
@@ -502,7 +506,7 @@ function CustomerLoginPortal() {
                     key="staff-form"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
+                    exit={{ opacity: 0, x: 8 }}
                     transition={{ duration: 0.2 }}
                     onSubmit={handleStaffLogin}
                     className="space-y-2.5"
