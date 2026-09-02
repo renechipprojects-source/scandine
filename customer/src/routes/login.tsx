@@ -154,7 +154,7 @@ function CustomerLoginPortal() {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col justify-between items-center bg-[#faf8f5] text-[#172033] select-none relative">
+    <div className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col justify-between items-center bg-transparent text-[#172033] select-none relative">
       {/* Keyframe Animations & Prefers-Reduced-Motion Rules */}
       <style>{`
         @media (prefers-reduced-motion: reduce) {
@@ -203,14 +203,15 @@ function CustomerLoginPortal() {
         }
       `}</style>
 
-      {/* FULL-SCREEN RESTAURANT DINING BACKGROUND IMAGE WITH WARM IVORY OVERLAY */}
-      <div className="fixed inset-0 -z-10 w-full h-full overflow-hidden">
+      {/* FULL-VIEWPORT RESTAURANT DINING BACKGROUND IMAGE LAYER (FULLY VISIBLE BEHIND ENTIRE PAGE & GLASS PANEL) */}
+      <div className="fixed inset-0 -z-10 w-full h-full overflow-hidden pointer-events-none">
         <img
           src="/customer-dining-bg.jpg"
           alt="ScanDine Restaurant Atmosphere"
           className="w-full h-full object-cover object-center anim-ken-burns brightness-95"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-amber-950/40 via-amber-900/20 to-[#faf8f5]/80" />
+        {/* Subtle Light Warm Vignette for Text Readability - Image Remains 100% Visibly Clear */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-amber-950/15 to-black/30" />
       </div>
 
       {/* MOBILE APP CONTAINER SHELL (320px - 480px Responsive Viewport) */}
@@ -219,7 +220,7 @@ function CustomerLoginPortal() {
         {/* TOP RESTAURANT BRANDING HERO HEADER */}
         <div className="relative w-full h-[35vh] min-h-[220px] max-h-[280px] flex flex-col justify-end">
           {/* Floating Badges inside Hero Section */}
-          <div className="absolute top-3.5 left-3.5 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/80 text-[#1e293b] backdrop-blur-md border border-white/40 shadow-xs">
+          <div className="absolute top-3.5 left-3.5 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/85 text-[#1e293b] backdrop-blur-md border border-white/40 shadow-xs">
             <Sparkles className="h-3 w-3 text-amber-500 animate-pulse" />
             <span>Smart Dining</span>
           </div>
@@ -242,7 +243,7 @@ function CustomerLoginPortal() {
                     whileHover={{ scale: 1.08 }}
                     src="/scandine-customer-logo.png"
                     alt="ScanDine"
-                    className="h-11 sm:h-13 w-auto object-contain mx-auto drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)] brightness-105"
+                    className="h-11 sm:h-13 w-auto object-contain mx-auto drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)] brightness-105"
                   />
                 </Link>
               </motion.div>
@@ -256,7 +257,7 @@ function CustomerLoginPortal() {
           </div>
         </div>
 
-        {/* PREMIUM LIGHT GLASSMORPHISM REGISTRATION PANEL (EXPLICIT RGBA BACKGROUND & TEXT CONTRAST) */}
+        {/* PREMIUM LIGHT GLASSMORPHISM REGISTRATION PANEL (RESTUARANT IMAGE VISIBLE THROUGH GLASS SURFACE) */}
         <motion.div
           variants={glassPanelVariants}
           initial="hidden"
@@ -271,7 +272,7 @@ function CustomerLoginPortal() {
             borderBottomLeftRadius: "24px",
             borderBottomRightRadius: "24px",
             border: "1px solid rgba(255, 255, 255, 0.75)",
-            boxShadow: "0 20px 45px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 25px rgba(249, 115, 22, 0.12)",
+            boxShadow: "0 20px 45px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 25px rgba(249, 115, 22, 0.12)",
           }}
         >
           {/* Animated Soft Peach/Orange Glow Floating Directly Behind Light Glass Panel */}
@@ -288,7 +289,7 @@ function CustomerLoginPortal() {
                 <h2 className="font-display text-base sm:text-lg font-extrabold text-[#172033] tracking-tight">
                   {mode === "customer" ? "Customer Sign In" : "Staff Access Sign In"}
                 </h2>
-                <p className="text-[10px] sm:text-[11px] font-semibold leading-tight mt-0.5 max-w-xs mx-auto" style={{ color: "#475569" }}>
+                <p className="text-[10px] sm:text-[11px] font-bold leading-tight mt-0.5 max-w-xs mx-auto text-[#334155]">
                   {mode === "customer"
                     ? "Enter your details to view menu and start ordering."
                     : "Sign in for Admin, Kitchen, or Reception portal."}
@@ -300,7 +301,7 @@ function CustomerLoginPortal() {
                 variants={itemVariants}
                 className="grid grid-cols-2 gap-1 p-1 rounded-xl mb-3 relative shadow-xs"
                 style={{
-                  backgroundColor: "rgba(255, 255, 255, 0.50)",
+                  backgroundColor: "rgba(255, 255, 255, 0.55)",
                   border: "1px solid rgba(15, 23, 42, 0.12)",
                 }}
               >
@@ -310,7 +311,7 @@ function CustomerLoginPortal() {
                   className={`relative z-10 py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                     mode === "customer"
                       ? "text-white"
-                      : "text-[#475569] hover:text-[#172033]"
+                      : "text-[#334155] hover:text-[#172033]"
                   }`}
                 >
                   {mode === "customer" && (
@@ -329,7 +330,7 @@ function CustomerLoginPortal() {
                   className={`relative z-10 py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                     mode === "staff"
                       ? "text-background"
-                      : "text-[#475569] hover:text-[#172033]"
+                      : "text-[#334155] hover:text-[#172033]"
                   }`}
                 >
                   {mode === "staff" && (
@@ -357,13 +358,13 @@ function CustomerLoginPortal() {
                   >
                     {/* Full Name Field (Second Light Glass Layer Input) */}
                     <motion.div variants={itemVariants}>
-                      <label htmlFor="cust-login-name" className="text-[10px] font-bold uppercase tracking-wider block mb-1" style={{ color: "#334155" }}>
+                      <label htmlFor="cust-login-name" className="text-[10px] font-bold uppercase tracking-wider block mb-1 text-[#1e293b]">
                         Full Name <span style={{ color: "#f97316" }}>*</span>
                       </label>
                       <div
                         className="group relative flex items-center gap-2.5 p-1.5 transition-all duration-300 shadow-xs"
                         style={{
-                          backgroundColor: "rgba(255, 255, 255, 0.50)",
+                          backgroundColor: "rgba(255, 255, 255, 0.55)",
                           border: "1px solid rgba(15, 23, 42, 0.12)",
                           backdropFilter: "blur(10px)",
                           WebkitBackdropFilter: "blur(10px)",
@@ -373,7 +374,7 @@ function CustomerLoginPortal() {
                       >
                         <div
                           className="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs shrink-0 transition-transform duration-300 group-focus-within:scale-105"
-                          style={{ backgroundColor: "rgba(249, 115, 22, 0.15)", color: "#f97316" }}
+                          style={{ backgroundColor: "rgba(249, 115, 22, 0.18)", color: "#ea580c" }}
                         >
                           <User className="h-4 w-4" />
                         </div>
@@ -386,20 +387,20 @@ function CustomerLoginPortal() {
                           onChange={(e) => setCustName(e.target.value)}
                           placeholder="Enter your name"
                           className="w-full bg-transparent pr-3 py-2 text-xs sm:text-sm font-semibold outline-none min-h-[42px] transition-all duration-300 focus:outline-none"
-                          style={{ color: "#172033" }}
+                          style={{ color: "#0f172a" }}
                         />
                       </div>
                     </motion.div>
 
                     {/* Phone Field (Second Light Glass Layer Input) */}
                     <motion.div variants={itemVariants}>
-                      <label htmlFor="cust-login-phone" className="text-[10px] font-bold uppercase tracking-wider block mb-1" style={{ color: "#334155" }}>
+                      <label htmlFor="cust-login-phone" className="text-[10px] font-bold uppercase tracking-wider block mb-1 text-[#1e293b]">
                         Mobile Phone Number <span style={{ color: "#f97316" }}>*</span>
                       </label>
                       <div
                         className="group relative flex items-center gap-2.5 p-1.5 transition-all duration-300 shadow-xs"
                         style={{
-                          backgroundColor: "rgba(255, 255, 255, 0.50)",
+                          backgroundColor: "rgba(255, 255, 255, 0.55)",
                           border: "1px solid rgba(15, 23, 42, 0.12)",
                           backdropFilter: "blur(10px)",
                           WebkitBackdropFilter: "blur(10px)",
@@ -409,7 +410,7 @@ function CustomerLoginPortal() {
                       >
                         <div
                           className="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs shrink-0 transition-transform duration-300 group-focus-within:scale-105"
-                          style={{ backgroundColor: "rgba(249, 115, 22, 0.15)", color: "#f97316" }}
+                          style={{ backgroundColor: "rgba(249, 115, 22, 0.18)", color: "#ea580c" }}
                         >
                           <Phone className="h-4 w-4" />
                         </div>
@@ -424,20 +425,20 @@ function CustomerLoginPortal() {
                           onChange={(e) => setCustPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                           placeholder="10-digit mobile number"
                           className="w-full bg-transparent pr-3 py-2 text-xs sm:text-sm font-semibold outline-none min-h-[42px] transition-all duration-300 focus:outline-none"
-                          style={{ color: "#172033" }}
+                          style={{ color: "#0f172a" }}
                         />
                       </div>
                     </motion.div>
 
                     {/* Email Field (Second Light Glass Layer Input) */}
                     <motion.div variants={itemVariants}>
-                      <label htmlFor="cust-login-email" className="text-[10px] font-bold uppercase tracking-wider block mb-1" style={{ color: "#334155" }}>
-                        Email Address <span className="font-normal lowercase" style={{ color: "#64748b" }}>(optional)</span>
+                      <label htmlFor="cust-login-email" className="text-[10px] font-bold uppercase tracking-wider block mb-1 text-[#1e293b]">
+                        Email Address <span className="font-normal lowercase" style={{ color: "#475569" }}>(optional)</span>
                       </label>
                       <div
                         className="group relative flex items-center gap-2.5 p-1.5 transition-all duration-300 shadow-xs"
                         style={{
-                          backgroundColor: "rgba(255, 255, 255, 0.50)",
+                          backgroundColor: "rgba(255, 255, 255, 0.55)",
                           border: "1px solid rgba(15, 23, 42, 0.12)",
                           backdropFilter: "blur(10px)",
                           WebkitBackdropFilter: "blur(10px)",
@@ -447,7 +448,7 @@ function CustomerLoginPortal() {
                       >
                         <div
                           className="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs shrink-0 transition-transform duration-300 group-focus-within:scale-105"
-                          style={{ backgroundColor: "rgba(249, 115, 22, 0.15)", color: "#f97316" }}
+                          style={{ backgroundColor: "rgba(249, 115, 22, 0.18)", color: "#ea580c" }}
                         >
                           <Mail className="h-4 w-4" />
                         </div>
@@ -459,7 +460,7 @@ function CustomerLoginPortal() {
                           onChange={(e) => setCustEmail(e.target.value)}
                           placeholder="you@domain.com"
                           className="w-full bg-transparent pr-3 py-2 text-xs sm:text-sm font-semibold outline-none min-h-[42px] transition-all duration-300 focus:outline-none"
-                          style={{ color: "#172033" }}
+                          style={{ color: "#0f172a" }}
                         />
                       </div>
                     </motion.div>
@@ -487,7 +488,8 @@ function CustomerLoginPortal() {
                             </>
                           ) : (
                             <>
-                              Start Ordering <ArrowRight className="h-4 w-4 text-white transition-transform duration-300 group-hover:translate-x-1" />
+                              <Sparkles className="h-4 w-4 text-white" /> Start Ordering
+                              <ArrowRight className="h-4 w-4 text-white transition-transform duration-300 group-hover:translate-x-1" />
                             </>
                           )}
                         </motion.button>
@@ -500,7 +502,7 @@ function CustomerLoginPortal() {
                     key="staff-form"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: 8 }}
+                    exit={{ opacity: 0, x: -8 }}
                     transition={{ duration: 0.2 }}
                     onSubmit={handleStaffLogin}
                     className="space-y-2.5"
@@ -508,7 +510,7 @@ function CustomerLoginPortal() {
                     <div
                       className="grid grid-cols-3 gap-1 p-1 rounded-lg mb-2 relative"
                       style={{
-                        backgroundColor: "rgba(255, 255, 255, 0.50)",
+                        backgroundColor: "rgba(255, 255, 255, 0.55)",
                         border: "1px solid rgba(15, 23, 42, 0.12)",
                       }}
                     >
@@ -516,7 +518,7 @@ function CustomerLoginPortal() {
                         type="button"
                         onClick={() => setRole("admin")}
                         className={`relative z-10 py-1.5 px-1.5 rounded-md text-[10px] sm:text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                          role === "admin" ? "text-amber-600" : "text-[#475569] hover:text-[#172033]"
+                          role === "admin" ? "text-amber-600" : "text-[#334155] hover:text-[#172033]"
                         }`}
                       >
                         {role === "admin" && (
@@ -532,7 +534,7 @@ function CustomerLoginPortal() {
                         type="button"
                         onClick={() => setRole("kitchen")}
                         className={`relative z-10 py-1.5 px-1.5 rounded-md text-[10px] sm:text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                          role === "kitchen" ? "text-emerald-600" : "text-[#475569] hover:text-[#172033]"
+                          role === "kitchen" ? "text-emerald-600" : "text-[#334155] hover:text-[#172033]"
                         }`}
                       >
                         {role === "kitchen" && (
@@ -548,7 +550,7 @@ function CustomerLoginPortal() {
                         type="button"
                         onClick={() => setRole("reception")}
                         className={`relative z-10 py-1.5 px-1.5 rounded-md text-[10px] sm:text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                          role === "reception" ? "text-blue-600" : "text-[#475569] hover:text-[#172033]"
+                          role === "reception" ? "text-blue-600" : "text-[#334155] hover:text-[#172033]"
                         }`}
                       >
                         {role === "reception" && (
@@ -563,13 +565,13 @@ function CustomerLoginPortal() {
                     </div>
 
                     <motion.div variants={itemVariants}>
-                      <label htmlFor="staff-login-email" className="text-[10px] font-bold uppercase tracking-wider block mb-1" style={{ color: "#334155" }}>
+                      <label htmlFor="staff-login-email" className="text-[10px] font-bold uppercase tracking-wider block mb-1 text-[#1e293b]">
                         Staff Email / ID
                       </label>
                       <div
                         className="group relative flex items-center gap-2.5 p-1.5 transition-all duration-300 shadow-xs"
                         style={{
-                          backgroundColor: "rgba(255, 255, 255, 0.50)",
+                          backgroundColor: "rgba(255, 255, 255, 0.55)",
                           border: "1px solid rgba(15, 23, 42, 0.12)",
                           backdropFilter: "blur(10px)",
                           WebkitBackdropFilter: "blur(10px)",
@@ -589,19 +591,19 @@ function CustomerLoginPortal() {
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder={`e.g. ${role}@restaurant.com`}
                           className="w-full bg-transparent pr-3 py-2 text-xs sm:text-sm font-semibold outline-none min-h-[42px] transition-all duration-300 focus:outline-none"
-                          style={{ color: "#172033" }}
+                          style={{ color: "#0f172a" }}
                         />
                       </div>
                     </motion.div>
 
                     <motion.div variants={itemVariants}>
-                      <label htmlFor="staff-login-password" className="text-[10px] font-bold uppercase tracking-wider block mb-1" style={{ color: "#334155" }}>
+                      <label htmlFor="staff-login-password" className="text-[10px] font-bold uppercase tracking-wider block mb-1 text-[#1e293b]">
                         Password
                       </label>
                       <div
                         className="group relative flex items-center gap-2.5 p-1.5 transition-all duration-300 shadow-xs"
                         style={{
-                          backgroundColor: "rgba(255, 255, 255, 0.50)",
+                          backgroundColor: "rgba(255, 255, 255, 0.55)",
                           border: "1px solid rgba(15, 23, 42, 0.12)",
                           backdropFilter: "blur(10px)",
                           WebkitBackdropFilter: "blur(10px)",
@@ -621,7 +623,7 @@ function CustomerLoginPortal() {
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="••••••••"
                           className="w-full bg-transparent pr-3 py-2 text-xs sm:text-sm font-semibold outline-none min-h-[42px] transition-all duration-300 focus:outline-none"
-                          style={{ color: "#172033" }}
+                          style={{ color: "#0f172a" }}
                         />
                       </div>
                     </motion.div>
@@ -655,8 +657,8 @@ function CustomerLoginPortal() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="mt-3 text-center text-[10px] sm:text-[11px] font-medium"
-              style={{ color: "#64748b" }}
+              className="mt-3 text-center text-[10px] sm:text-[11px] font-semibold"
+              style={{ color: "#475569" }}
             >
               © 2026 Renechip Private Limited. All Rights Reserved.
             </motion.footer>
