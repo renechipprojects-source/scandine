@@ -15,7 +15,7 @@ import {
 import { useSupabaseTable, type Order } from "@/hooks/useSupabaseData";
 import { exportToCSV } from "@/admin/lib/exportUtils";
 import { toast } from "sonner";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRealtimeTable } from "@/hooks/useRealtime";
 
 export const Route = createFileRoute("/reception/_app/dashboard")({
@@ -33,6 +33,9 @@ const COLORS = ["oklch(0.68 0.19 40)", "oklch(0.62 0.22 25)", "oklch(0.75 0.15 7
 function DashboardPage() {
   const { data: dbOrders, fetchData: fetchOrders } = useSupabaseTable<Order>("sd_orders");
   const { data: dbEmployees, fetchData: fetchEmployees } = useSupabaseTable<any>("sd_employees");
+
+  // Filter state for Sales & Orders chart (Week, Month, Year)
+  const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("week");
 
   const handleRealtimePayload = useCallback(() => {
     fetchOrders();
@@ -123,30 +126,86 @@ function DashboardPage() {
     { name: "Ready", value: readyCount },
   ], [completedCount, preparingCount, pendingCount, readyCount]);
 
-  // Dynamic 7-day Sales Trend derived strictly from live orders
+  // Dynamic Sales Trend recalculating instantly when timeRange filter (Week, Month, Year) or dbOrders changes
   const salesTrend = useMemo(() => {
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const now = new Date();
-    const result: { day: string; sales: number; orders: number }[] = [];
 
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      const dayName = days[d.getDay()];
-      const dayOrders = (dbOrders || []).filter((o: any) => {
-        const orderDate = new Date(o.order_time || o.created_at || Date.now());
-        return orderDate.toDateString() === d.toDateString();
-      });
-      const dayPaid = dayOrders.filter((o: any) => {
-        const p = String(o.payment || o.payment_status || "").toLowerCase().trim();
-        const st = String(o.status || "").toLowerCase().trim();
-        return p === "paid" || st === "completed" || st === "served";
-      });
-      const daySales = dayPaid.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
-      result.push({ day: dayName, sales: daySales, orders: dayOrders.length });
+    if (timeRange === "week") {
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const result: { day: string; sales: number; orders: number }[] = [];
+
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const dayName = days[d.getDay()];
+        const dayOrders = (dbOrders || []).filter((o: any) => {
+          const orderDate = new Date(o.order_time || o.created_at || Date.now());
+          return orderDate.toDateString() === d.toDateString();
+        });
+        const dayPaid = dayOrders.filter((o: any) => {
+          const p = String(o.payment || o.payment_status || "").toLowerCase().trim();
+          const st = String(o.status || "").toLowerCase().trim();
+          return p === "paid" || st === "completed" || st === "served";
+        });
+        const daySales = dayPaid.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
+        result.push({ day: dayName, sales: daySales, orders: dayOrders.length });
+      }
+      return result;
     }
-    return result;
-  }, [dbOrders]);
+
+    if (timeRange === "month") {
+      const result: { day: string; sales: number; orders: number }[] = [];
+      for (let i = 3; i >= 0; i--) {
+        const startDay = new Date(now);
+        startDay.setDate(now.getDate() - (i * 7 + 6));
+        startDay.setHours(0, 0, 0, 0);
+
+        const endDay = new Date(now);
+        endDay.setDate(now.getDate() - (i * 7));
+        endDay.setHours(23, 59, 59, 999);
+
+        const label = `Wk ${4 - i}`;
+        const periodOrders = (dbOrders || []).filter((o: any) => {
+          const orderDate = new Date(o.order_time || o.created_at || Date.now());
+          return orderDate >= startDay && orderDate <= endDay;
+        });
+        const periodPaid = periodOrders.filter((o: any) => {
+          const p = String(o.payment || o.payment_status || "").toLowerCase().trim();
+          const st = String(o.status || "").toLowerCase().trim();
+          return p === "paid" || st === "completed" || st === "served";
+        });
+        const periodSales = periodPaid.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
+        result.push({ day: label, sales: periodSales, orders: periodOrders.length });
+      }
+      return result;
+    }
+
+    if (timeRange === "year") {
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const result: { day: string; sales: number; orders: number }[] = [];
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthIndex = d.getMonth();
+        const monthYear = d.getFullYear();
+        const monthLabel = months[monthIndex];
+
+        const monthOrders = (dbOrders || []).filter((o: any) => {
+          const orderDate = new Date(o.order_time || o.created_at || Date.now());
+          return orderDate.getMonth() === monthIndex && orderDate.getFullYear() === monthYear;
+        });
+        const monthPaid = monthOrders.filter((o: any) => {
+          const p = String(o.payment || o.payment_status || "").toLowerCase().trim();
+          const st = String(o.status || "").toLowerCase().trim();
+          return p === "paid" || st === "completed" || st === "served";
+        });
+        const monthSales = monthPaid.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
+        result.push({ day: monthLabel, sales: monthSales, orders: monthOrders.length });
+      }
+      return result;
+    }
+
+    return [];
+  }, [dbOrders, timeRange]);
 
   const handleExportCSV = () => {
     const exportData = [
@@ -159,9 +218,15 @@ function DashboardPage() {
       { Metric: "Completed Orders", Value: completedCount },
       { Metric: "Staff Count", Value: staffCount },
     ];
-    exportToCSV("reception_dashboard_kpis", exportData);
-    toast.success("Dashboard metrics exported to CSV!");
+    exportToCSV(`reception_dashboard_kpis_${timeRange}`, exportData);
+    toast.success(`Dashboard metrics (${timeRange}) exported to CSV!`);
   };
+
+  const chartSubtext = useMemo(() => {
+    if (timeRange === "month") return "Last 30 days performance";
+    if (timeRange === "year") return "Last 12 months performance";
+    return "Last 7 days performance";
+  }, [timeRange]);
 
   return (
     <div className="space-y-5">
@@ -195,13 +260,13 @@ function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle className="text-base font-semibold">Sales & orders</CardTitle>
-              <p className="text-xs text-muted-foreground">Last 7 days performance</p>
+              <p className="text-xs text-muted-foreground">{chartSubtext}</p>
             </div>
-            <Tabs defaultValue="week">
+            <Tabs value={timeRange} onValueChange={(val) => setTimeRange(val as "week" | "month" | "year")}>
               <TabsList className="h-8">
-                <TabsTrigger value="week" className="text-xs">Week</TabsTrigger>
-                <TabsTrigger value="month" className="text-xs">Month</TabsTrigger>
-                <TabsTrigger value="year" className="text-xs">Year</TabsTrigger>
+                <TabsTrigger value="week" className="text-xs cursor-pointer">Week</TabsTrigger>
+                <TabsTrigger value="month" className="text-xs cursor-pointer">Month</TabsTrigger>
+                <TabsTrigger value="year" className="text-xs cursor-pointer">Year</TabsTrigger>
               </TabsList>
             </Tabs>
           </CardHeader>
