@@ -360,8 +360,8 @@ export function useSupabaseTable<T extends { id: string }>(
         if (rows.length > 0) {
           const fetched = normalizeFetchedRows(tableName, rows as T[]);
 
-          if (tableName === "sd_menu_items") {
-            // Live database rows from Supabase are the single source of truth; replace state completely without merging stale deleted items
+          if (tableName === "sd_menu_items" || tableName === "sd_orders" || tableName === "sd_employees") {
+            // Live database rows from Supabase are the single source of truth; replace state completely without merging stale deleted/mock items
             updateLocalData(fetched, "fetch");
           } else {
             updateLocalData((prev) => {
@@ -369,27 +369,6 @@ export function useSupabaseTable<T extends { id: string }>(
               prev.forEach((item) => map.set(item.id, item));
 
               fetched.forEach((item: any) => {
-                const prevItem = (map.get(item.id) || Array.from(map.values()).find((p: any) => p.order_id === item.order_id)) as any;
-                if (prevItem && tableName === "sd_orders") {
-                  const STAGE_ORDER: Record<string, number> = {
-                    pending: 1,
-                    accepted: 2,
-                    preparing: 3,
-                    ready: 4,
-                    completed: 5,
-                    cancelled: 6,
-                  };
-                  const prevStage = STAGE_ORDER[prevItem.status] || 0;
-                  const fetchedStage = STAGE_ORDER[item.status] || 0;
-
-                  // Keep locally advanced stage if fetched stage from DB is older/behind
-                  if (prevStage > fetchedStage) {
-                    item.status = prevItem.status;
-                    item.accepted_at = prevItem.accepted_at || item.accepted_at;
-                    item.prep_time_minutes = prevItem.prep_time_minutes || item.prep_time_minutes;
-                    item.estimated_ready_at = prevItem.estimated_ready_at || item.estimated_ready_at;
-                  }
-                }
                 map.set(item.id, item);
               });
               return Array.from(map.values());
