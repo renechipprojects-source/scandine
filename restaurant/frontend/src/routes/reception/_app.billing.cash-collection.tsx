@@ -31,7 +31,7 @@ const formatINR = (val: number) => {
 };
 
 function CashCollectionPage() {
-  const { data: dbOrders, fetchData: fetchOrders, loading } = useSupabaseTable<Order>("sd_orders");
+  const { data: dbOrders, fetchData: fetchOrders, updateItem, loading } = useSupabaseTable<Order>("sd_orders");
   const [searchQuery, setSearchQuery] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
 
@@ -83,26 +83,27 @@ function CashCollectionPage() {
     });
   }, [unpaidOrders, searchQuery]);
 
-  // Handle cash collection for ONE specific sd_orders row only
+  // Handle cash collection for ONE specific sd_orders row with verification
   const handleCollectCash = async (targetOrder: Order) => {
     const targetId = targetOrder.id;
     const orderDisplayId = targetOrder.order_id || targetOrder.id;
 
     try {
       setProcessingId(targetId);
-      const txnId = `TXN_CASH_${orderDisplayId.replace(/[^a-zA-Z0-9]/g, "")}_${Date.now()}`;
+      const txnId = `TXN_CASH_${String(orderDisplayId).replace(/[^a-zA-Z0-9]/g, "")}_${Date.now()}`;
       const payMethodName = "Cash";
       const payCategory = "cash";
 
       console.log("[CASH COLLECTION] Updating single sd_orders row:", { targetId, orderDisplayId, txnId });
 
+      // 1. Extract and preserve existing item JSONB contents without losing food/order items
       let currentItems: any[] = [];
       if (Array.isArray(targetOrder.item)) {
-        currentItems = targetOrder.item;
+        currentItems = [...targetOrder.item];
       } else if (typeof targetOrder.item === "string") {
         try {
           const parsed = JSON.parse(targetOrder.item);
-          if (Array.isArray(parsed)) currentItems = parsed;
+          if (Array.isArray(parsed)) currentItems = [...parsed];
           else if (parsed && typeof parsed === "object") currentItems = [parsed];
         } catch {}
       } else if (targetOrder.item && typeof targetOrder.item === "object") {
@@ -124,22 +125,58 @@ function CashCollectionPage() {
           : {}),
       }));
 
-      // Single atomic update for target order matching either id or order_id
-      const { error: updateErr } = await supabase
+      // 2. Perform atomic update directly against canonical sd_orders table with row verification
+      let updateConfirmed = false;
+
+      // Strategy A: Primary key id exact match
+      const { data: res1, error: err1 } = await supabase
         .from("sd_orders")
         .update({
           payment: "paid",
           item: updatedItems,
         })
-        .or(`id.eq.${targetId},order_id.eq.${targetId}`);
+        .eq("id", targetId)
+        .select();
 
-      if (updateErr) {
-        console.warn("[CASH COLLECTION WARN] Single atomic update notice:", updateErr.message);
+      if (!err1 && res1 && res1.length > 0) {
+        updateConfirmed = true;
+      } else {
+        // Strategy B: Order identifier match (order_id)
+        const altId = targetOrder.order_id || targetId;
+        const { data: res2, error: err2 } = await supabase
+          .from("sd_orders")
+          .update({
+            payment: "paid",
+            item: updatedItems,
+          })
+          .eq("order_id", altId)
+          .select();
+
+        if (!err2 && res2 && res2.length > 0) {
+          updateConfirmed = true;
+        } else {
+          // Strategy C: Fallback using updateItem hook
+          try {
+            await updateItem(targetId, {
+              payment: "paid",
+              item: updatedItems,
+            } as any);
+            updateConfirmed = true;
+          } catch (hookErr: any) {
+            console.error("[CASH COLLECTION ERROR] Update failed:", err1?.message || err2?.message || hookErr?.message);
+            throw new Error(err1?.message || err2?.message || hookErr?.message || "Database update failed");
+          }
+        }
       }
 
-      // Refresh data cleanly
+      if (!updateConfirmed) {
+        throw new Error("Order payment status could not be updated in the database. Please try again.");
+      }
+
+      // 3. Immediately re-fetch and revalidate from canonical database
       await fetchOrders();
 
+      // 4. Show success ONLY when database update actually succeeds
       toast.success(`Cash collected for Order ${orderDisplayId}! Status updated to Paid.`);
     } catch (err: any) {
       console.error("Cash collection error:", err);
