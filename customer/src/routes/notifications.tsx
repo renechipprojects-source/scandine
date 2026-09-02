@@ -59,13 +59,13 @@ function Notifs() {
           }}
         />
       ) : (
-        <div className="min-h-screen bg-background pb-32">
+        <div className="min-h-screen bg-transparent pb-32">
           <CustomerNav />
           <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs uppercase tracking-widest text-muted-foreground">{tableNumber} Alerts</div>
-                <h1 className="font-display text-3xl md:text-4xl font-bold">Notifications</h1>
+                <div className="text-xs uppercase tracking-widest text-white/80 font-bold drop-shadow-xs">{tableNumber} Alerts</div>
+                <h1 className="font-display text-3xl md:text-4xl font-bold text-white drop-shadow-md">Notifications</h1>
               </div>
               <div className="flex gap-2">
                 <button

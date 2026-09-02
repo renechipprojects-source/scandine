@@ -165,7 +165,7 @@ function TrackOrder() {
           }}
         />
       ) : (
-        <div className="min-h-screen bg-background pb-32">
+        <div className="min-h-screen bg-transparent pb-32">
           <CustomerNav />
       <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6">
         <div className="text-xs uppercase tracking-widest text-muted-foreground">{tableNumber} Live Tracking</div>

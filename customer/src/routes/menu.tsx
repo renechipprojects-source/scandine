@@ -205,11 +205,11 @@ function Menu() {
           }}
         />
       ) : (
-        <div className="min-h-screen bg-background pb-32">
+        <div className="min-h-screen bg-transparent pb-32">
       <CustomerNav />
 
       {/* Sticky Search Header Bar */}
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b px-3.5 sm:px-4 md:px-8 py-2.5 sm:py-3 shadow-xs">
+      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b px-3.5 sm:px-4 md:px-8 py-2.5 sm:py-3 shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -220,14 +220,14 @@ function Menu() {
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search dishes…"
               aria-label="Search dishes"
-              className="pl-9 rounded-full bg-card border h-10 text-xs sm:text-sm min-h-[44px]"
+              className="pl-9 rounded-full bg-card/90 border h-10 text-xs sm:text-sm min-h-[44px]"
             />
           </div>
         </div>
       </div>
 
       {/* Sticky Horizontal Category Bar */}
-      <div className="sticky top-[53px] sm:top-[57px] z-20 bg-background/95 backdrop-blur border-b px-3.5 sm:px-4 md:px-8 py-2 sm:py-2.5 shadow-xs">
+      <div className="sticky top-[53px] sm:top-[57px] z-20 bg-background/80 backdrop-blur-md border-b px-3.5 sm:px-4 md:px-8 py-2 sm:py-2.5 shadow-xs">
         <div className="max-w-7xl mx-auto flex overflow-x-auto no-scrollbar gap-1.5 sm:gap-2">
           {MENU_CATEGORIES.map((c) => {
             const active = cat.toLowerCase() === c.id.toLowerCase();
@@ -305,10 +305,10 @@ function Menu() {
 
         {/* Category Header & Item Grid */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-2xl font-bold flex items-center gap-2">
+          <h2 className="font-display text-2xl font-bold flex items-center gap-2 text-white drop-shadow-md">
             <span>{MENU_CATEGORIES.find((c) => c.id.toLowerCase() === cat.toLowerCase())?.icon}</span>
             <span>{cat}</span>
-            <span className="text-sm font-normal text-muted-foreground">({list.length} items)</span>
+            <span className="text-sm font-semibold text-white/80">({list.length} items)</span>
           </h2>
         </div>
 

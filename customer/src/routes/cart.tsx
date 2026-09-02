@@ -117,7 +117,7 @@ function Cart() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-40">
+    <div className="min-h-screen bg-transparent pb-40">
       <CustomerNav />
       <div className="max-w-3xl mx-auto px-4 md:px-8 pt-6">
         <div className="text-xs uppercase tracking-widest text-muted-foreground">{tableNumber} Cart</div>

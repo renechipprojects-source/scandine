@@ -147,12 +147,12 @@ function Services() {
           }}
         />
       ) : (
-        <div className="min-h-screen bg-background pb-32">
+        <div className="min-h-screen bg-transparent pb-32">
           <CustomerNav />
       <div className="max-w-3xl mx-auto px-4 md:px-8 pt-6">
-        <div className="text-xs uppercase tracking-widest text-muted-foreground">{tableNumber} Services</div>
-        <h1 className="font-display text-3xl md:text-4xl font-bold">Quick Table Service</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <div className="text-xs uppercase tracking-widest text-white/80 font-bold drop-shadow-xs">{tableNumber} Services</div>
+        <h1 className="font-display text-3xl md:text-4xl font-bold text-white drop-shadow-md">Quick Table Service</h1>
+        <p className="text-sm text-white/90 font-medium drop-shadow-xs mt-1">
           Tap any service button below. Your request is sent live to the kitchen and waiter staff.
         </p>
 

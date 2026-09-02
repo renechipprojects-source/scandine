@@ -138,7 +138,7 @@ function Payment() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -426,7 +426,7 @@ function Payment() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32 overflow-x-hidden">
+    <div className="min-h-screen bg-transparent pb-32 overflow-x-hidden">
       <CustomerNav />
       <div className="max-w-3xl mx-auto px-3.5 sm:px-6 md:px-8 pt-4 sm:pt-6">
         <div className="text-xs uppercase tracking-widest text-muted-foreground">{tableName} Checkout</div>

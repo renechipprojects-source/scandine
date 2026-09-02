@@ -17,7 +17,7 @@ function Feedback() {
   const [text, setText] = useState("");
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-transparent pb-32">
       <CustomerNav />
       <div className="max-w-2xl mx-auto px-4 md:px-8 pt-6">
         <div className="text-xs uppercase tracking-widest text-muted-foreground">Tell us</div>

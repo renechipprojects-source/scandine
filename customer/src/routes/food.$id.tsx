@@ -115,7 +115,7 @@ function FoodDetail() {
 
   if (!food) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-transparent flex items-center justify-center p-4">
         <div className="text-center">
           <Utensils className="h-10 w-10 text-muted-foreground animate-pulse mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">Loading dish details…</p>
@@ -129,7 +129,7 @@ function FoodDetail() {
   const headerImgUrl = getKitchenImageUrl(food.image);
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-transparent pb-32">
       <div className="relative h-[42vh] bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-primary/20 flex items-center justify-center">
         {headerImgUrl ? (
           <img src={headerImgUrl} alt={food.name} className="absolute inset-0 h-full w-full object-cover" />

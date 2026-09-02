@@ -99,7 +99,7 @@ function Profile() {
           }}
         />
       ) : (
-        <div className="min-h-screen bg-background pb-32">
+        <div className="min-h-screen bg-transparent pb-32">
           <CustomerNav />
           <div className="max-w-3xl mx-auto px-4 md:px-8 pt-6">
             {/* Header Profile Card */}
@@ -232,7 +232,7 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
     <div className="mt-8">
       <div className="flex items-center gap-2 mb-3">
         <div className="h-8 w-8 rounded-lg gradient-primary text-white grid place-items-center">{icon}</div>
-        <div className="font-display font-bold text-lg">{title}</div>
+        <div className="font-display font-bold text-lg text-white drop-shadow-sm">{title}</div>
       </div>
       {children}
     </div>
