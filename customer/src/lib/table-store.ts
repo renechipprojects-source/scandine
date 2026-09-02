@@ -1,4 +1,5 @@
-import { useSyncExternalStore, useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
+import { useHydrated } from "./sync-manager";
 
 const TABLE_STORAGE_KEY = "aura_dine_table_number";
 
@@ -7,12 +8,19 @@ export function formatTableNumber(raw: string): string {
   try {
     const decoded = decodeURIComponent(raw);
     const trimmed = decoded.trim();
+    if (/^table\s*\d+$/i.test(trimmed)) {
+      const digits = trimmed.replace(/\D/g, "");
+      return `Table ${parseInt(digits, 10)}`;
+    }
     const digits = trimmed.replace(/\D/g, "");
     if (digits) {
       const num = parseInt(digits, 10);
       if (num > 0 && num <= 1000) {
         return `Table ${num}`;
       }
+    }
+    if (trimmed.length > 0 && trimmed.length <= 20) {
+      return trimmed;
     }
   } catch {}
   return "";
@@ -46,7 +54,7 @@ let currentTableNumber = ((): string => {
       }
     }
   } catch {}
-  return "";
+  return "Table 1";
 })();
 
 const listeners = new Set<() => void>();
@@ -54,18 +62,33 @@ const emit = () => listeners.forEach((l) => l());
 
 export const tableStore = {
   getTableNumber(): string {
-    return currentTableNumber;
+    if (currentTableNumber) return currentTableNumber;
+    try {
+      if (typeof window !== "undefined") {
+        const saved = localStorage.getItem(TABLE_STORAGE_KEY);
+        if (saved) {
+          const formatted = formatTableNumber(saved);
+          if (formatted) {
+            currentTableNumber = formatted;
+            return formatted;
+          }
+        }
+      }
+    } catch {}
+    return "Table 1";
   },
+
   setTableNumber(table: string) {
-    const formatted = formatTableNumber(table);
-    if (formatted) {
-      currentTableNumber = formatted;
-      try {
+    const formatted = formatTableNumber(table) || "Table 1";
+    currentTableNumber = formatted;
+    try {
+      if (typeof window !== "undefined") {
         localStorage.setItem(TABLE_STORAGE_KEY, formatted);
-      } catch {}
-      emit();
-    }
+      }
+    } catch {}
+    emit();
   },
+
   initFromUrl() {
     try {
       if (typeof window !== "undefined") {
@@ -95,8 +118,6 @@ export const tableStore = {
   },
 };
 
-import { useHydrated } from "./sync-manager";
-
 export function useTable(): string {
   const isHydrated = useHydrated();
   const table = useSyncExternalStore(
@@ -104,8 +125,8 @@ export function useTable(): string {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
-    () => (typeof window !== "undefined" ? currentTableNumber : ""),
-    () => ""
+    () => (typeof window !== "undefined" ? tableStore.getTableNumber() : "Table 1"),
+    () => "Table 1"
   );
-  return isHydrated ? table : "";
+  return isHydrated ? (table || "Table 1") : "Table 1";
 }

@@ -1,4 +1,4 @@
-import { useSyncExternalStore, useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import { supabase, isSupabaseConfigured } from "./supabase";
 import { tableStore } from "./table-store";
 import { cart } from "./cart-store";
@@ -24,7 +24,7 @@ let cachedCustomer: CustomerDetails | null = null;
 function loadCustomer(table: string): CustomerDetails | null {
   try {
     if (typeof window !== "undefined") {
-      const activeTable = table || localStorage.getItem("aura_dine_table_number") || "";
+      const activeTable = table || tableStore.getTableNumber() || localStorage.getItem("aura_dine_table_number") || "Table 1";
       const normTable = activeTable ? activeTable.toLowerCase().replace(/\s+/g, "") : "";
       
       const rawCurrent = localStorage.getItem("scandine_current_customer");
@@ -41,15 +41,15 @@ function loadCustomer(table: string): CustomerDetails | null {
         }
       }
 
-      // Priority 1: Current customer if table matches
+      // Priority 1: Current customer if exists
       let targetCust: CustomerDetails | null = null;
-      if (currentCust && normTable && currentCust.tableNumber && currentCust.tableNumber.toLowerCase().replace(/\s+/g, "") === normTable) {
+      if (currentCust && currentCust.fullName && currentCust.phone) {
         targetCust = currentCust;
-      } else if (tableCust && normTable && tableCust.tableNumber && tableCust.tableNumber.toLowerCase().replace(/\s+/g, "") === normTable) {
+      } else if (tableCust && tableCust.fullName && tableCust.phone) {
         targetCust = tableCust;
       }
 
-      const composite = `${activeTable}|${targetCust?.sessionId || ""}|${targetCust?.registeredAt || ""}`;
+      const composite = `${activeTable}|${targetCust?.sessionId || ""}|${targetCust?.registeredAt || ""}|${targetCust?.phone || ""}`;
 
       if (table === cachedTable && composite === cachedComposite) {
         return cachedCustomer;
@@ -80,9 +80,9 @@ export const customerStore = {
     const cust = this.getCustomer(table);
     if (cust?.sessionId) return cust.sessionId;
     try {
-      const targetTable = table || tableStore.getTableNumber() || "";
-      const normTable = targetTable ? targetTable.toLowerCase().replace(/\s+/g, "") : "";
-      return normTable ? (localStorage.getItem(`scandine_session_${normTable}`) || undefined) : undefined;
+      const targetTable = table || tableStore.getTableNumber() || "Table 1";
+      const normTable = targetTable ? targetTable.toLowerCase().replace(/\s+/g, "") : "table1";
+      return localStorage.getItem(`scandine_session_${normTable}`) || undefined;
     } catch {
       return undefined;
     }
@@ -103,15 +103,13 @@ export const customerStore = {
       throw new Error("Full name is required.");
     }
 
-    const targetTable = details.tableNumber || tableStore.getTableNumber() || "";
-    if (targetTable) {
-      tableStore.setTableNumber(targetTable);
-    }
+    const targetTable = details.tableNumber || tableStore.getTableNumber() || "Table 1";
+    tableStore.setTableNumber(targetTable);
 
-    const normTable = targetTable ? targetTable.toLowerCase().replace(/\s+/g, "") : "";
+    const normTable = targetTable.toLowerCase().replace(/\s+/g, "");
     
-    // Always generate a unique session ID for every new customer registration
-    const sessionId = `session_${normTable || "guest"}_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+    // Always generate a unique session ID for every new customer registration if not existing
+    const sessionId = `session_${normTable}_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
 
     const customer: CustomerDetails = {
       fullName: cleanName,
@@ -127,15 +125,11 @@ export const customerStore = {
     notificationStore.resetForNewSession(sessionId);
     liveOrderStore.resetForNewSession();
 
-    const key = targetTable ? getStorageKey(targetTable) : "scandine_customer_guest";
+    const key = getStorageKey(targetTable);
     try {
-      if (targetTable) {
-        localStorage.setItem(key, JSON.stringify(customer));
-      }
+      localStorage.setItem(key, JSON.stringify(customer));
       localStorage.setItem("scandine_current_customer", JSON.stringify(customer));
-      if (normTable) {
-        localStorage.setItem(`scandine_session_${normTable}`, sessionId);
-      }
+      localStorage.setItem(`scandine_session_${normTable}`, sessionId);
     } catch (e) {
       console.error("Failed to save customer details locally:", e);
     }
@@ -145,7 +139,6 @@ export const customerStore = {
       try {
         const tblNum = parseInt(String(targetTable).replace(/\D/g, ""), 10);
         if (tblNum && !isNaN(tblNum)) {
-          // Attempt insert into sd_customers if table exists
           await (supabase.from("sd_customers") as any).insert([
             {
               full_name: customer.fullName,

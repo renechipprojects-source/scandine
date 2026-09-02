@@ -1069,27 +1069,36 @@ export function subscribeToServiceRequests(tableNumber: string, onUpdate: (req: 
   };
 }
 
+const DEFAULT_FALLBACK_MENU_ITEMS: DbMenuItem[] = [
+  { id: "b1", name: "Avocado Sourdough Toast", description: "Smashed avocado, poached eggs, chili flakes on artisan sourdough toast", price: 349, category: "Breakfast", category_id: "cat_1", veg: true, available: true, prepTime: 12, image: "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80" },
+  { id: "b2", name: "Berry Chia Superfood Bowl", description: "Organic chia seed pudding, fresh berries, toasted coconut flakes, wild honey", price: 299, category: "Breakfast", category_id: "cat_1", veg: true, available: true, prepTime: 8, image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80" },
+  { id: "b3", name: "Fluffy Maple Pancakes", description: "Stack of buttermilk pancakes, maple syrup, whipped butter, fresh berries", price: 329, category: "Breakfast", category_id: "cat_1", veg: true, available: true, prepTime: 15, image: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&fit=crop&w=800&q=80" },
+  { id: "l1", name: "Wagyu Smash Burger", description: "Double wagyu patty, melted cheddar, caramelized onions, secret house sauce on brioche", price: 549, category: "Lunch", category_id: "cat_2", veg: false, available: true, prepTime: 18, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80" },
+  { id: "l2", name: "Truffle Mushroom Risotto", description: "Arborio rice, wild forest mushrooms, truffle cream, aged parmesan cheese", price: 499, category: "Lunch", category_id: "cat_2", veg: true, available: true, prepTime: 20, image: "https://images.unsplash.com/photo-1633964913295-ceb43826e7c9?auto=format&fit=crop&w=800&q=80" },
+  { id: "l3", name: "Artisanal Penne Arrabiata", description: "Penne pasta, San Marzano tomato sauce, garlic, red chilies, fresh basil", price: 429, category: "Lunch", category_id: "cat_2", veg: true, available: true, prepTime: 15, image: "https://images.unsplash.com/photo-1621996346565-e3d5d6281270?auto=format&fit=crop&w=800&q=80" },
+  { id: "d1", name: "Miso Glazed Salmon", description: "Pan-seared Atlantic salmon fillet, miso glaze, jasmine rice, steamed bok choy", price: 749, category: "Dinner", category_id: "cat_3", veg: false, available: true, prepTime: 22, image: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=800&q=80" },
+  { id: "d2", name: "Fire-Cooked Butter Chicken", description: "Tandoori chicken tikka, rich tomato cashew velvet gravy, butter garlic naan", price: 529, category: "Dinner", category_id: "cat_3", veg: false, available: true, prepTime: 20, image: "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=800&q=80" },
+  { id: "d3", name: "Dal Makhani & Garlic Naan", description: "Slow-cooked black lentils, cream, butter, served with hot garlic naan", price: 399, category: "Dinner", category_id: "cat_3", veg: true, available: true, prepTime: 18, image: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80" },
+  { id: "s1", name: "Crispy Pepper Calamari", description: "Tender calamari rings, sea salt, cracked black pepper, lemon garlic aioli", price: 389, category: "Starters", category_id: "cat_4", veg: false, available: true, prepTime: 12, image: "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=800&q=80" },
+  { id: "s2", name: "Peri Peri Chicken Wings", description: "Crispy jumbo chicken wings tossed in fiery homemade peri peri glaze", price: 369, category: "Starters", category_id: "cat_4", veg: false, available: true, prepTime: 14, image: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?auto=format&fit=crop&w=800&q=80" },
+  { id: "s3", name: "Tandoori Paneer Tikka", description: "Cottage cheese cubes marinated in spiced yogurt, charred in clay oven", price: 349, category: "Starters", category_id: "cat_4", veg: true, available: true, prepTime: 15, image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=800&q=80" },
+  { id: "de1", name: "Pistachio Kunafa", description: "Crispy shredded pastry, melted mozzarella, crushed pistachios, rose sugar syrup", price: 379, category: "Desserts", category_id: "cat_5", veg: true, available: true, prepTime: 15, image: "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=800&q=80" },
+  { id: "de2", name: "Dark Chocolate Fondant", description: "Warm molten chocolate cake, Madagascar vanilla bean gelato, fresh mint", price: 349, category: "Desserts", category_id: "cat_5", veg: true, available: true, prepTime: 14, image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80" },
+  { id: "de3", name: "Classic Italian Tiramisu", description: "Espresso soaked ladyfingers, whipped mascarpone cream, dark cocoa powder", price: 329, category: "Desserts", category_id: "cat_5", veg: true, available: true, prepTime: 10, image: "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=800&q=80" },
+  { id: "dr1", name: "Iced Matcha Green Tea Latte", description: "Uji matcha powder, oat milk, vanilla bean syrup over crushed ice", price: 249, category: "Drinks", category_id: "cat_6", veg: true, available: true, prepTime: 5, image: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=800&q=80" },
+  { id: "dr2", name: "Fresh Mint Passion Mojito", description: "Passion fruit pulp, fresh mint leaves, lime juice, sparkling soda water", price: 219, category: "Drinks", category_id: "cat_6", veg: true, available: true, prepTime: 5, image: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80" },
+  { id: "dr3", name: "Iced Hazelnut Espresso Latte", description: "Double espresso shot, hazelnut syrup, cold whole milk over ice", price: 239, category: "Drinks", category_id: "cat_6", veg: true, available: true, prepTime: 5, image: "https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=800&q=80" },
+];
+
 let cachedMenuItems: DbMenuItem[] | null = null;
 let lastMenuFetchTimestamp = 0;
 const MENU_CACHE_TTL_MS = 30000;
 
 export async function fetchDbMenuItems(forceRefresh = false): Promise<DbMenuItem[]> {
   const now = Date.now();
-  const isMockItem = (item: any) => {
-    if (!item) return true;
-    const mockIds = new Set(["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"]);
-    const mockNames = new Set([
-      "Truffle Mushroom Risotto", "Wagyu Smash Burger", "Avocado Sourdough Toast", "Miso Glazed Salmon",
-      "Berry Chia Bowl", "Butter Chicken", "Pistachio Kunafa", "Iced Matcha Latte", "Crispy Calamari",
-      "Margherita Napoletana", "Peri Peri Chicken Wings", "Dark Chocolate Fondant", "Truffle Mushroom Pizza",
-      "Spicy Chipotle Burger", "Caesar Salad", "Penne Arrabiata", "Molten Chocolate Cake", "Iced Hazelnut Latte",
-      "Paneer Tikka", "Grilled Salmon Bowl", "Margherita Pizza", "BBQ Wings", "Tiramisu"
-    ]);
-    return mockIds.has(String(item.id)) || mockNames.has(String(item.name || "").trim());
-  };
 
-  if (!forceRefresh && cachedMenuItems && now - lastMenuFetchTimestamp < MENU_CACHE_TTL_MS) {
-    return cachedMenuItems.filter((it) => !isMockItem(it));
+  if (!forceRefresh && cachedMenuItems && cachedMenuItems.length > 0 && now - lastMenuFetchTimestamp < MENU_CACHE_TTL_MS) {
+    return cachedMenuItems;
   }
 
   if (isSupabaseConfigured()) {
@@ -1098,9 +1107,8 @@ export async function fetchDbMenuItems(forceRefresh = false): Promise<DbMenuItem
         .from("sd_menu_items")
         .select("*");
 
-      if (!error && data) {
-        const filtered = data.filter((it: any) => !isMockItem(it));
-        cachedMenuItems = filtered.map((item: any) => {
+      if (!error && data && data.length > 0) {
+        cachedMenuItems = data.map((item: any) => {
           const rawImg = item.image || item.image_url || item.photo || item.imageUrl || item.img || "";
           return {
             ...item,
@@ -1120,9 +1128,8 @@ export async function fetchDbMenuItems(forceRefresh = false): Promise<DbMenuItem
     const raw = localStorage.getItem("mock_table_sd_menu_items");
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        const filtered = parsed.filter((it: any) => !isMockItem(it));
-        cachedMenuItems = filtered.map((item: any) => {
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        cachedMenuItems = parsed.map((item: any) => {
           const rawImg = item.image || item.image_url || item.photo || item.imageUrl || item.img || "";
           return {
             ...item,
@@ -1138,7 +1145,9 @@ export async function fetchDbMenuItems(forceRefresh = false): Promise<DbMenuItem
     console.warn("Local kitchen menu storage fetch error:", err);
   }
 
-  return cachedMenuItems || [];
+  cachedMenuItems = DEFAULT_FALLBACK_MENU_ITEMS;
+  lastMenuFetchTimestamp = now;
+  return cachedMenuItems;
 }
 
 export function subscribeToMenuItems(onUpdate: () => void) {

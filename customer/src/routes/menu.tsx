@@ -184,7 +184,10 @@ function Menu() {
     return itemList.filter((f) => {
       const itemCategoryId = f.category_id || CATEGORY_TO_ID[f.category];
 
-      const matchesCat = f.category === cat || itemCategoryId === selectedCategoryId;
+      const matchesCat =
+        f.category === cat ||
+        itemCategoryId === selectedCategoryId ||
+        (f.category && f.category.toLowerCase() === cat.toLowerCase());
       if (!matchesCat) return false;
       if (q && !f.name.toLowerCase().includes(q.toLowerCase())) return false;
       return true;
@@ -196,9 +199,9 @@ function Menu() {
       <Outlet />
       {!customer ? (
         <CustomerRegistration
-          tableNumber={tableNumber}
+          tableNumber={tableNumber || "Table 1"}
           onSuccess={() => {
-            navigate({ to: "/", replace: true });
+            navigate({ to: "/menu", replace: true });
           }}
         />
       ) : (

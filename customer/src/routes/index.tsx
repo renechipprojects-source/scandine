@@ -59,9 +59,9 @@ function Welcome() {
   if (!customer) {
     return (
       <CustomerRegistration
-        tableNumber={tableNumber}
+        tableNumber={tableNumber || "Table 1"}
         onSuccess={() => {
-          navigate({ to: "/", replace: true });
+          navigate({ to: "/menu", replace: true });
         }}
       />
     );

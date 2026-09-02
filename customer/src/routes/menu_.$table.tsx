@@ -1,7 +1,6 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { tableStore, formatTableNumber } from "@/lib/table-store";
-import { customerStore } from "@/lib/customer-store";
 import { InvalidQrScreen } from "@/components/invalid-qr";
 
 export const Route = createFileRoute("/menu_/$table")({
@@ -10,18 +9,17 @@ export const Route = createFileRoute("/menu_/$table")({
 
 function MenuTableRoute() {
   const { table } = Route.useParams();
-  const formatted = formatTableNumber(table || "");
+  const formatted = formatTableNumber(table || "") || "Table 1";
 
   useEffect(() => {
     if (formatted) {
       tableStore.setTableNumber(formatted);
-      customerStore.clearCustomer(formatted);
     }
   }, [formatted]);
 
-  if (!formatted) {
+  if (!table) {
     return <InvalidQrScreen message="The scanned table QR code is invalid. Please scan a valid table QR code." />;
   }
 
-  return <Navigate to="/" replace />;
+  return <Navigate to="/menu" replace />;
 }
