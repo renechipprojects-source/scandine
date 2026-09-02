@@ -72,87 +72,101 @@ function OrderLiveCardItem({
   const items = Array.isArray(order.item) ? order.item : [];
 
   return (
-    <Card className="p-3 transition-shadow hover:shadow-md">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-xs font-semibold text-muted-foreground">{order.order_id || order.id}</div>
-          <div className="mt-0.5 flex items-center gap-1.5 font-display font-bold">
-            <Utensils className="h-3.5 w-3.5 text-primary" /> T-{order.table_number}
-          </div>
-        </div>
-        <StatusBadge status={order.payment} />
-      </div>
-
-      <div className="mt-2 space-y-1 border-t pt-2">
-        {items.map((it, i) => (
-          <div key={i} className="flex items-center justify-between text-xs">
-            <span className="truncate">
-              <span className="mr-1 text-muted-foreground">{it.qty}×</span>
-              {it.name}
-            </span>
-            <span className="text-muted-foreground">{restaurantInfo.currency}{(it.qty * it.price).toFixed(2)}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-2 flex items-center justify-between border-t pt-2 text-[11px] text-muted-foreground">
-        <span className="flex items-center gap-1"><User className="h-3 w-3" />{order.customer}</span>
-        <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatOrderTime(order.order_time)}</span>
-      </div>
-
-      {/* Preparation Timer Display */}
-      {(order.status === "accepted" || order.status === "preparing") && (
-        <div className="mt-3 rounded-lg border border-info/30 bg-info/10 p-2 text-center">
-          <div className="flex items-center justify-center gap-1.5 font-mono text-xs font-bold text-info-foreground">
-            <Timer className="h-3.5 w-3.5 animate-pulse text-info" />
-            <span>Prep Countdown: {formattedTime}</span>
-          </div>
-          {order.prep_time_minutes && (
-            <div className="mt-0.5 text-[10px] text-muted-foreground">
-              Total prep time: {order.prep_time_minutes} min
+    <Card className="p-3.5 transition-all hover:shadow-md flex flex-col justify-between h-full border shadow-xs min-h-[220px]">
+      <div>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <div className="text-xs font-mono font-semibold text-muted-foreground">{order.order_id || order.id}</div>
+            <div className="mt-0.5 flex items-center gap-1.5 font-display font-bold text-sm">
+              <Utensils className="h-3.5 w-3.5 text-primary shrink-0" /> T-{order.table_number}
             </div>
-          )}
+          </div>
+          <StatusBadge status={order.payment} />
         </div>
-      )}
+
+        <div className="mt-2.5 space-y-1.5 border-t pt-2 max-h-[120px] overflow-y-auto">
+          {items.map((it, i) => (
+            <div key={i} className="flex items-center justify-between gap-2 text-xs">
+              <span className="truncate flex-1 font-medium">
+                <span className="mr-1.5 font-bold text-muted-foreground">{it.qty}×</span>
+                {it.name}
+              </span>
+              <span className="text-muted-foreground font-mono text-[11px] shrink-0">
+                {restaurantInfo.currency}{(it.qty * it.price).toFixed(2)}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-2.5 flex items-center justify-between border-t pt-2 text-[11px] text-muted-foreground gap-2">
+          <span className="flex items-center gap-1.5 truncate">
+            <User className="h-3 w-3 shrink-0" />
+            <span className="truncate font-medium">{order.customer}</span>
+          </span>
+          <span className="flex items-center gap-1.5 shrink-0 font-mono">
+            <Clock className="h-3 w-3 shrink-0" />
+            {formatOrderTime(order.order_time)}
+          </span>
+        </div>
+
+        {/* Preparation Timer Display */}
+        {(order.status === "accepted" || order.status === "preparing") && (
+          <div className="mt-2.5 rounded-lg border border-info/30 bg-info/10 p-2 text-center">
+            <div className="flex items-center justify-center gap-1.5 font-mono text-xs font-bold text-info-foreground">
+              <Timer className="h-3.5 w-3.5 animate-pulse text-info shrink-0" />
+              <span>Prep Countdown: {formattedTime}</span>
+            </div>
+            {order.prep_time_minutes && (
+              <div className="mt-0.5 text-[10px] text-muted-foreground">
+                Total prep time: {order.prep_time_minutes} min
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Workflow Controls */}
-      <div className="mt-3 border-t pt-2">
+      <div className="mt-3 border-t pt-2.5 w-full shrink-0">
         {order.status === "pending" && (
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 w-full">
             <Button
               size="sm"
-              className="flex-1 h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs"
+              className="w-full h-8 text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs px-2 flex items-center justify-center gap-1.5 whitespace-nowrap"
               onClick={() => onAccept(order)}
             >
-              <Check className="mr-1 h-3.5 w-3.5" /> Accept Order
+              <Check className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Accept</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="h-8 text-xs border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive font-semibold shadow-xs"
+              className="w-full h-8 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive font-semibold shadow-xs px-2 flex items-center justify-center gap-1.5 whitespace-nowrap"
               onClick={() => onCancel(order)}
             >
-              <X className="mr-1 h-3.5 w-3.5" /> Cancel
+              <X className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Cancel</span>
             </Button>
           </div>
         )}
 
         {order.status === "accepted" && (
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 w-full">
             <Button
               size="sm"
-              className="flex-1 h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs"
+              className="w-full h-8 text-[11px] bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs px-2 flex items-center justify-center gap-1.5 whitespace-nowrap"
               onClick={() => onAdvance(order)}
             >
-              <Timer className="mr-1 h-3.5 w-3.5" /> Start Preparing
+              <Timer className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Preparing</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="h-8 text-xs border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive font-semibold shadow-xs"
+              className="w-full h-8 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive font-semibold shadow-xs px-2 flex items-center justify-center gap-1.5 whitespace-nowrap"
               onClick={() => onCancel(order)}
             >
-              <X className="mr-1 h-3.5 w-3.5" /> Cancel
+              <X className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Cancel</span>
             </Button>
           </div>
         )}
@@ -161,31 +175,33 @@ function OrderLiveCardItem({
           <Button
             size="sm"
             variant="outline"
-            className="w-full h-8 text-xs border-primary/40 text-primary hover:bg-primary/10"
+            className="w-full h-8 text-[11px] border-primary/40 text-primary hover:bg-primary/10 font-semibold shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap"
             onClick={() => onAdvance(order)}
           >
-            Mark Ready <ArrowRight className="ml-1 h-3.5 w-3.5" />
+            <span>Mark Ready</span>
+            <ArrowRight className="h-3.5 w-3.5 shrink-0" />
           </Button>
         )}
 
         {order.status === "ready" && (
           <Button
             size="sm"
-            className="w-full h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+            className="w-full h-8 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap"
             onClick={() => onAdvance(order)}
           >
-            Mark Complete <CheckCircle2 className="ml-1 h-3.5 w-3.5" />
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+            <span>Mark Complete</span>
           </Button>
         )}
 
         {order.status === "completed" && (
-          <div className="text-center text-xs font-semibold text-emerald-600 py-1">
+          <div className="w-full h-8 flex items-center justify-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md shadow-xs">
             Completed ✅
           </div>
         )}
 
         {order.status === "cancelled" && (
-          <div className="text-center text-xs font-semibold text-destructive py-1">
+          <div className="w-full h-8 flex items-center justify-center text-xs font-semibold text-destructive bg-destructive/10 border border-destructive/20 rounded-md shadow-xs">
             Cancelled ❌
           </div>
         )}

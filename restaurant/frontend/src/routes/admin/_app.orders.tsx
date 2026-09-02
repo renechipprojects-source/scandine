@@ -472,47 +472,49 @@ function OrdersPage() {
 function CompletedOrderCard({ order, onViewDetails }: { order: Order; onViewDetails: () => void }) {
   const items = Array.isArray(order.item) ? order.item : [];
   return (
-    <Card className="group relative overflow-hidden border-emerald-200/80 bg-gradient-to-br from-emerald-50/40 via-white to-white p-4 shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-emerald-900/50 dark:from-emerald-950/20 dark:to-card dark:to-card">
-      <div className="flex items-start justify-between gap-2 border-b border-emerald-100/80 pb-2.5 dark:border-emerald-900/40">
-        <div>
-          <div className="font-mono text-xs font-bold text-foreground">
-            {order.order_id || order.id}
+    <Card className="group relative overflow-hidden border-emerald-200/80 bg-gradient-to-br from-emerald-50/40 via-white to-white p-4 shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-emerald-900/50 dark:from-emerald-950/20 dark:to-card flex flex-col justify-between h-full min-h-[200px]">
+      <div>
+        <div className="flex items-start justify-between gap-2 border-b border-emerald-100/80 pb-2.5 dark:border-emerald-900/40">
+          <div>
+            <div className="font-mono text-xs font-bold text-foreground">
+              {order.order_id || order.id}
+            </div>
+            <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Utensils className="h-3 w-3 text-muted-foreground shrink-0" />
+              <span className="font-semibold text-foreground">Table #{order.table_number}</span>
+            </div>
           </div>
-          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Utensils className="h-3 w-3 text-muted-foreground" />
-            <span className="font-semibold text-foreground">Table #{order.table_number}</span>
-          </div>
+          <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-[10px] uppercase tracking-wider font-semibold shrink-0">
+            <Check className="h-3 w-3 shrink-0" /> Completed
+          </Badge>
         </div>
-        <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-[10px] uppercase tracking-wider font-semibold">
-          <Check className="h-3 w-3" /> Completed
-        </Badge>
-      </div>
 
-      <div className="my-3 space-y-1.5 text-xs">
-        <div className="flex justify-between font-medium text-foreground">
-          <span>Customer:</span>
-          <span>{order.customer}</span>
-        </div>
-        <div className="flex justify-between text-muted-foreground">
-          <span>Items ({items.length || 1}):</span>
-          <span className="truncate max-w-[140px] text-right font-medium">
-            {items.length > 0 ? items.map((i) => i.name).join(", ") : "Food Order"}
-          </span>
-        </div>
-        <div className="flex justify-between items-center text-muted-foreground pt-1">
-          <span className="flex items-center gap-1 text-[11px]">
-            <Clock className="h-3 w-3" />
-            {order.order_time ? new Date(order.order_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}
-          </span>
-          <span className="font-display text-base font-bold text-emerald-700 dark:text-emerald-400">
-            {restaurantInfo.currency}{Number(order.total).toFixed(2)}
-          </span>
+        <div className="my-3 space-y-1.5 text-xs">
+          <div className="flex justify-between font-medium text-foreground">
+            <span>Customer:</span>
+            <span className="truncate max-w-[140px] text-right">{order.customer}</span>
+          </div>
+          <div className="flex justify-between text-muted-foreground">
+            <span>Items ({items.length || 1}):</span>
+            <span className="truncate max-w-[140px] text-right font-medium">
+              {items.length > 0 ? items.map((i) => i.name).join(", ") : "Food Order"}
+            </span>
+          </div>
+          <div className="flex justify-between items-center text-muted-foreground pt-1">
+            <span className="flex items-center gap-1 text-[11px]">
+              <Clock className="h-3 w-3 shrink-0" />
+              {order.order_time ? new Date(order.order_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}
+            </span>
+            <span className="font-display text-base font-bold text-emerald-700 dark:text-emerald-400">
+              {restaurantInfo.currency}{Number(order.total).toFixed(2)}
+            </span>
+          </div>
         </div>
       </div>
 
       <div className="border-t border-emerald-100/80 pt-2.5 dark:border-emerald-900/40">
-        <Button variant="outline" size="sm" onClick={onViewDetails} className="w-full gap-1.5 text-xs h-8 border-emerald-200 text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300">
-          <Eye className="h-3.5 w-3.5" /> View Order Details
+        <Button variant="outline" size="sm" onClick={onViewDetails} className="w-full gap-1.5 text-xs h-8 border-emerald-200 text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 font-semibold shadow-xs">
+          <Eye className="h-3.5 w-3.5 shrink-0" /> View Order Details
         </Button>
       </div>
     </Card>
