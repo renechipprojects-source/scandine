@@ -131,7 +131,7 @@ function OrderLiveCardItem({
           <div className="grid grid-cols-2 gap-2 w-full">
             <Button
               size="sm"
-              className="w-full h-8 text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs px-2 flex items-center justify-center gap-1.5 whitespace-nowrap"
+              className="w-full h-8 text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs px-2 flex items-center justify-center gap-1.5 whitespace-nowrap [&_svg]:size-3.5"
               onClick={() => onAccept(order)}
             >
               <Check className="h-3.5 w-3.5 shrink-0" />

@@ -391,10 +391,10 @@ export function ServiceRequestsSection() {
                   {req.status === "pending" ? (
                     <Button
                       size="sm"
-                      className="h-8 w-full text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1 whitespace-nowrap"
+                      className="h-8 w-full text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1 whitespace-nowrap [&_svg]:size-3.5"
                       onClick={() => handleAccept(req)}
                     >
-                      <Check className="h-3 w-3 shrink-0" />
+                      <Check className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">Accept</span>
                     </Button>
                   ) : (
