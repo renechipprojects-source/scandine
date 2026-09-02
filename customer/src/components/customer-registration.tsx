@@ -3,7 +3,6 @@ import { motion, type Variants } from "framer-motion";
 import { QrCode, User, Phone, Mail, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { customerStore } from "@/lib/customer-store";
 import { toast } from "sonner";
-import diningBgImage from "@/assets/customer-dining-bg.jpg";
 
 interface CustomerRegistrationProps {
   tableNumber: string;
@@ -117,15 +116,10 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
       {/* Keyframe Animations & Prefers-Reduced-Motion Rules */}
       <style>{`
         @media (prefers-reduced-motion: reduce) {
-          .anim-ken-burns, .anim-shimmer-btn, .anim-blob-float-1, .anim-blob-float-2 {
+          .anim-[#172033]-ken-burns, .anim-shimmer-btn, .anim-blob-float-1, .anim-blob-float-2 {
             animation: none !important;
             transform: none !important;
           }
-        }
-
-        @keyframes kenBurnsSlow {
-          0%, 100% { transform: scale(1) translate(0, 0); }
-          50% { transform: scale(1.06) translate(-6px, -3px); }
         }
 
         @keyframes shimmerGlow {
@@ -144,10 +138,6 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
           50% { transform: translate(-16px, 16px) scale(1.2); opacity: 0.8; }
         }
 
-        .anim-ken-burns {
-          animation: kenBurnsSlow 14s ease-in-out infinite;
-        }
-
         .anim-shimmer-btn {
           background-size: 200% 200%;
           animation: shimmerGlow 6s ease infinite;
@@ -161,29 +151,6 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
           animation: blobFloat2 10s ease-in-out infinite 1s;
         }
       `}</style>
-
-      {/* DEDICATED FULL-VIEWPORT RESTAURANT DINING BACKGROUND LAYER */}
-      <div
-        className="fixed inset-0 w-full h-full pointer-events-none overflow-hidden"
-        style={{
-          zIndex: 0,
-          backgroundImage: `url(${diningBgImage})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }}
-      >
-        <img
-          src={diningBgImage}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = "/customer-dining-bg.jpg";
-          }}
-          alt="ScanDine Restaurant Atmosphere"
-          className="w-full h-full object-cover object-center anim-ken-burns brightness-95"
-        />
-        {/* Subtle Warm Light Overlay for Readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-amber-950/15 to-black/30 pointer-events-none" />
-      </div>
 
       {/* MOBILE APP CONTAINER SHELL (Strict 320px - 480px Responsive Axis Container) */}
       <div className="w-full max-w-[440px] min-h-[100dvh] mx-auto px-4 sm:px-5 flex flex-col justify-between relative z-10 overflow-x-hidden py-4 sm:py-6 gap-4">
@@ -219,7 +186,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
           </motion.div>
         </div>
 
-        {/* TRANSLUCENT LIGHT GLASSMORPHISM REGISTRATION CARD (ALIGNED CONTAINER AXIS) */}
+        {/* TRANSLUCENT LIGHT GLASSMORPHISM REGISTRATION CARD */}
         <motion.div
           variants={glassPanelVariants}
           initial="hidden"
@@ -248,7 +215,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 </p>
               </motion.div>
 
-              {/* Full Name Field (Translucent Light Glass Layer Input) */}
+              {/* Full Name Field */}
               <motion.div variants={itemVariants} className="flex flex-col gap-1">
                 <label htmlFor="reg-name" className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#0f172a]">
                   Full Name <span style={{ color: "#f97316" }}>*</span>
@@ -283,7 +250,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 </div>
               </motion.div>
 
-              {/* Phone Field (Translucent Light Glass Layer Input) */}
+              {/* Phone Field */}
               <motion.div variants={itemVariants} className="flex flex-col gap-1">
                 <label htmlFor="reg-phone" className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#0f172a]">
                   Mobile Phone Number <span style={{ color: "#f97316" }}>*</span>
@@ -320,7 +287,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 </div>
               </motion.div>
 
-              {/* Email Field (Translucent Light Glass Layer Input) */}
+              {/* Email Field */}
               <motion.div variants={itemVariants} className="flex flex-col gap-1">
                 <label htmlFor="reg-email" className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#0f172a]">
                   Email Address <span className="font-semibold lowercase text-slate-700">(optional)</span>
@@ -354,7 +321,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                 </div>
               </motion.div>
 
-              {/* Start Ordering Button (Premium Orange Gradient Shimmer CTA) */}
+              {/* Start Ordering Button */}
               <motion.div variants={buttonVariants} className="pt-1">
                 <div className="relative group w-full">
                   <div className="absolute inset-0 rounded-2xl bg-orange-500/35 blur-md transition-all duration-300 group-hover:bg-orange-500/50" />

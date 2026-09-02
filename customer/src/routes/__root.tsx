@@ -12,6 +12,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { WifiOff } from "lucide-react";
 import { syncManager, useOnlineStatus } from "@/lib/sync-manager";
 import { tableStore } from "@/lib/table-store";
+import diningBgImage from "@/assets/customer-dining-bg.jpg";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -123,13 +124,37 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      {/* Global Customer Module Full-Screen Restaurant Background Image Layer */}
+      <div
+        className="fixed inset-0 w-full h-full pointer-events-none overflow-hidden"
+        style={{
+          zIndex: 0,
+          backgroundImage: `url(${diningBgImage})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        <img
+          src={diningBgImage}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "/customer-dining-bg.jpg";
+          }}
+          alt="ScanDine Restaurant Atmosphere"
+          className="w-full h-full object-cover object-center brightness-95"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-amber-950/15 to-black/30 pointer-events-none" />
+      </div>
+
       {!isOnline && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-amber-600 text-white text-xs font-semibold py-1.5 px-4 text-center flex items-center justify-center gap-2 shadow-md">
           <WifiOff className="h-3.5 w-3.5 animate-pulse" />
           <span>Offline Mode — Changes saved locally and will auto-sync when reconnected</span>
         </div>
       )}
-      <Outlet />
+      <div className="relative z-10 min-h-screen">
+        <Outlet />
+      </div>
       <Toaster position="top-center" richColors />
     </QueryClientProvider>
   );

@@ -7,7 +7,6 @@ import { useTable } from "@/lib/table-store";
 import { useCustomer } from "@/lib/customer-store";
 import { CustomerRegistration } from "@/components/customer-registration";
 import { getOrdersBySession, subscribeToOrdersBySession, type DbOrder } from "@/lib/supabase";
-import diningBgImage from "@/assets/customer-dining-bg.jpg";
 
 export const Route = createFileRoute("/")({
   component: Welcome,
@@ -70,28 +69,6 @@ function Welcome() {
 
   return (
     <div className="min-h-screen relative overflow-hidden text-[#172033] flex flex-col items-center">
-      {/* Full-screen Restaurant Background Layer */}
-      <div
-        className="fixed inset-0 w-full h-full pointer-events-none overflow-hidden"
-        style={{
-          zIndex: 0,
-          backgroundImage: `url(${diningBgImage})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }}
-      >
-        <img
-          src={diningBgImage}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = "/customer-dining-bg.jpg";
-          }}
-          alt="ScanDine Restaurant Atmosphere"
-          className="w-full h-full object-cover object-center brightness-95"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-amber-950/20 to-black/40 pointer-events-none" />
-      </div>
-
       <div className="relative z-10 w-full flex flex-col items-center">
         {/* Cover Section */}
         <div className="relative w-full h-[45vh] min-h-[260px] max-h-[360px] overflow-hidden flex flex-col justify-center items-center">
