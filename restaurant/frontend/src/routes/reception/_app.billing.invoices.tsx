@@ -8,10 +8,10 @@ import { Label } from "@/reception/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/reception/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/reception/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/reception/components/ui/dialog";
-import { Receipt, Search, Download, Printer, Split, CheckCircle2, Plus, Users, Calculator, Loader2 } from "lucide-react";
+import { Receipt, Search, Download, Printer, Split, CheckCircle2, Plus, Loader2 } from "lucide-react";
 import { restaurantInfo } from "@/reception/lib/mock-data";
 import { useState, useCallback, useMemo } from "react";
-import { useSupabaseTable, markPaymentAndInvoiceAsPaid, type Invoice, type PaymentTransaction, type Order } from "@/hooks/useSupabaseData";
+import { useSupabaseTable, markPaymentAndInvoiceAsPaid, type Invoice, type Order } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
 import { exportToCSV } from "@/admin/lib/exportUtils";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -35,8 +35,20 @@ const formatINR = (val: number) => {
   });
 };
 
+const formatDateSafe = (dateStr?: string) => {
+  if (!dateStr) return "Today";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return "Today";
+  }
+};
+
 function ReceptionInvoicesPage() {
-  const { data: dbOrders, fetchData: fetchOrders } = useSupabaseTable<Order>("sd_orders");
+  const { data: dbOrders, fetchData: fetchOrders, loading: ordersLoading } = useSupabaseTable<Order>("sd_orders");
+  const { data: dbInvoices, fetchData: fetchInvoices } = useSupabaseTable<Invoice>("sd_invoices");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -57,43 +69,79 @@ function ReceptionInvoicesPage() {
 
   const handleRealtimePayload = useCallback(() => {
     fetchOrders();
-  }, [fetchOrders]);
+    fetchInvoices();
+  }, [fetchOrders, fetchInvoices]);
 
   useRealtimeTable("sd_orders", handleRealtimePayload);
+  useRealtimeTable("sd_invoices", handleRealtimePayload);
 
-  // Derive invoices list directly from canonical sd_orders table
+  // Derive invoices list directly from canonical sd_orders and sd_invoices tables safely
   const invoicesList: Invoice[] = useMemo(() => {
-    return dbOrders.map((ord) => {
-      const ordKey = `INV-${ord.order_id || ord.id}`;
-      const isPaid = ord.payment === "paid" || (ord as any).payment_status === "paid";
-      return {
-        id: ord.id,
-        invoice: ordKey,
-        transition: ord.order_id || ord.id,
-        customer: (ord as any).customer_name || ord.customer || "Customer",
+    const invMap = new Map<string, Invoice>();
+
+    // 1. Derive from sd_orders
+    (dbOrders || []).forEach((ord) => {
+      if (!ord || !ord.id) return;
+      const rawInvId = ord.order_id || ord.id;
+      const invNum = String(rawInvId).startsWith("INV-") ? String(rawInvId) : `INV-${rawInvId}`;
+      const isPaid = String(ord.payment || (ord as any).payment_status || "").toLowerCase() === "paid";
+      const amt = Number(ord.total || (ord as any).subtotal || 0);
+
+      invMap.set(String(ord.id), {
+        id: String(ord.id),
+        invoice: invNum,
+        transition: String(rawInvId),
+        customer: String((ord as any).customer_name || ord.customer || "Customer"),
         method: resolvePaymentMethod(ord),
-        amount: Number(ord.total) || 0,
+        amount: isNaN(amt) ? 0 : amt,
         status: isPaid ? "Paid" : "Unpaid",
         date: ord.order_time || ord.created_at || new Date().toISOString(),
-      };
+      });
     });
-  }, [dbOrders]);
 
-  const totalBilled = invoicesList.reduce((s, i) => s + (Number(i.amount) || 0), 0);
-  const paidTotal = invoicesList.filter((i) => i.status?.toLowerCase() === "paid").reduce((s, i) => s + (Number(i.amount) || 0), 0);
-  const unpaidTotal = invoicesList.filter((i) => i.status?.toLowerCase() !== "paid").reduce((s, i) => s + (Number(i.amount) || 0), 0);
-  const avgInvoice = invoicesList.length > 0 ? totalBilled / invoicesList.length : 0;
+    // 2. Derive from sd_invoices
+    (dbInvoices || []).forEach((inv: any) => {
+      if (!inv || !inv.id) return;
+      if (!invMap.has(String(inv.id))) {
+        const invNum = inv.invoice || inv.invoice_number || `INV-${inv.id}`;
+        const amt = Number(inv.amount || inv.total || 0);
+        invMap.set(String(inv.id), {
+          id: String(inv.id),
+          invoice: String(invNum),
+          transition: String(inv.transition || inv.order_id || inv.id),
+          customer: String(inv.customer || inv.customer_name || "Customer"),
+          method: String(inv.method || "Cash"),
+          amount: isNaN(amt) ? 0 : amt,
+          status: String(inv.status || "Unpaid").toLowerCase() === "paid" ? "Paid" : "Unpaid",
+          date: inv.date || inv.created_at || new Date().toISOString(),
+        });
+      }
+    });
 
-  const filtered = invoicesList.filter((inv) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      (inv.invoice && inv.invoice.toLowerCase().includes(q)) ||
-      (inv.id && inv.id.toLowerCase().includes(q)) ||
-      (inv.customer && inv.customer.toLowerCase().includes(q)) ||
-      (inv.method && inv.method.toLowerCase().includes(q)) ||
-      (inv.status && inv.status.toLowerCase().includes(q))
-    );
-  });
+    return Array.from(invMap.values()).sort((a, b) => {
+      const timeA = new Date(a.date || 0).getTime();
+      const timeB = new Date(b.date || 0).getTime();
+      return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+    });
+  }, [dbOrders, dbInvoices]);
+
+  const totalBilled = useMemo(() => invoicesList.reduce((s, i) => s + (Number(i.amount) || 0), 0), [invoicesList]);
+  const paidTotal = useMemo(() => invoicesList.filter((i) => String(i.status || "").toLowerCase() === "paid").reduce((s, i) => s + (Number(i.amount) || 0), 0), [invoicesList]);
+  const unpaidTotal = useMemo(() => invoicesList.filter((i) => String(i.status || "").toLowerCase() !== "paid").reduce((s, i) => s + (Number(i.amount) || 0), 0), [invoicesList]);
+
+  const filtered = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return invoicesList;
+    return invoicesList.filter((inv) => {
+      return (
+        (inv.invoice && inv.invoice.toLowerCase().includes(q)) ||
+        (inv.id && inv.id.toLowerCase().includes(q)) ||
+        (inv.customer && inv.customer.toLowerCase().includes(q)) ||
+        (inv.method && inv.method.toLowerCase().includes(q)) ||
+        (inv.status && inv.status.toLowerCase().includes(q))
+      );
+    });
+  }, [invoicesList, searchQuery]);
 
   const handleMarkAsPaid = async (inv: Invoice) => {
     try {
@@ -101,6 +149,7 @@ function ReceptionInvoicesPage() {
       const targetMethod = "Cash";
       await markPaymentAndInvoiceAsPaid(inv.id, invId, inv.customer, Number(inv.amount), targetMethod);
       await fetchOrders();
+      await fetchInvoices();
       toast.success(`Invoice ${invId} marked as Paid (${targetMethod}) successfully!`);
 
       if (selectedInvoice && (selectedInvoice.id === inv.id || selectedInvoice.invoice === inv.invoice)) {
@@ -152,9 +201,20 @@ function ReceptionInvoicesPage() {
         if (error) {
           console.warn("Supabase order insert warning:", error.message);
         }
+
+        const invPayload = {
+          invoice: generatedInvId,
+          customer: newCustName.trim(),
+          method: newMethod,
+          amount: billAmt,
+          status: newStatus,
+          date: nowIso,
+        };
+        await supabase.from("sd_invoices").insert([invPayload]);
       }
 
       await fetchOrders();
+      await fetchInvoices();
 
       toast.success(`Invoice ${generatedInvId} created successfully!`);
       setNewCustName("");
@@ -177,7 +237,7 @@ function ReceptionInvoicesPage() {
     const exportRows = filtered.map((inv) => ({
       "Invoice Number": inv.invoice || inv.id,
       "Customer": inv.customer,
-      "Date": inv.date ? new Date(inv.date).toLocaleDateString() : "Today",
+      "Date": formatDateSafe(inv.date),
       "Method": inv.method || "Cash",
       "Total Amount (₹)": inv.amount,
       "Status": inv.status,
@@ -186,8 +246,12 @@ function ReceptionInvoicesPage() {
     toast.success("Invoices exported to CSV!");
   };
 
-  // Derive target invoice for Split Bill
-  const activeSplitInv = invoicesList.find((i) => (i.invoice || i.id) === splitTargetInvoice) || invoicesList[0];
+  // Derive target invoice for Split Bill safely
+  const activeSplitInv = useMemo(() => {
+    if (invoicesList.length === 0) return null;
+    return invoicesList.find((i) => (i.invoice || i.id) === splitTargetInvoice) || invoicesList[0];
+  }, [invoicesList, splitTargetInvoice]);
+
   const splitBillAmount = activeSplitInv ? Number(activeSplitInv.amount || 0) : 0;
   const perGuestAmount = splitCount > 0 ? splitBillAmount / splitCount : splitBillAmount;
 
@@ -247,69 +311,75 @@ function ReceptionInvoicesPage() {
               <TableHead className="sticky top-0 z-30 bg-muted/95 text-right font-semibold text-foreground">Actions</TableHead>
             </TableRow>
           </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    No invoices found. Click "Create Invoice" to add one.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((inv) => {
-                  const normStatus = normalizePaymentStatus(inv.status);
-                  const isUnpaid = normStatus === "Unpaid" || normStatus === "Pending";
-                  const method = resolvePaymentMethod(inv);
-                  const canMarkAsPaid = isUnpaid && method === "Cash";
-                  const isPaid = normStatus === "Paid";
+          <TableBody>
+            {ordersLoading && invoicesList.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  Loading invoices...
+                </TableCell>
+              </TableRow>
+            ) : filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  {searchQuery.trim() ? "No matching invoices found." : "No invoices found."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((inv) => {
+                const normStatus = normalizePaymentStatus(inv.status);
+                const isUnpaid = normStatus === "Unpaid" || normStatus === "Pending";
+                const method = resolvePaymentMethod(inv);
+                const canMarkAsPaid = isUnpaid && method === "Cash";
+                const isPaid = normStatus === "Paid";
 
-                  return (
-                    <TableRow key={inv.id} className="hover:bg-muted/40">
-                      <TableCell className="font-mono text-xs font-bold text-primary">
-                        {inv.invoice || inv.id}
-                      </TableCell>
-                      <TableCell className="font-semibold">{inv.customer}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {inv.date ? (isNaN(Date.parse(inv.date)) ? inv.date : new Date(inv.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })) : "Today"}
-                      </TableCell>
-                      <TableCell className="text-xs font-medium">
-                        <span className={`rounded-md px-2 py-0.5 ${method === "UPI" ? "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 font-semibold" : "bg-muted text-foreground"}`}>{method}</span>
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-foreground">
-                        {formatINR(Number(inv.amount))}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={isPaid ? "Paid" : isUnpaid ? "Unpaid" : inv.status} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {canMarkAsPaid ? (
-                            <Button
-                              size="sm"
-                              className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-                              onClick={() => handleMarkAsPaid(inv)}
-                            >
-                              <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Mark as Paid
-                            </Button>
-                          ) : isPaid ? (
-                            <Button size="sm" variant="ghost" disabled className="h-7 text-xs text-emerald-600 font-semibold opacity-90">
-                              <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Paid ({method})
-                            </Button>
-                          ) : (
-                            <span className="text-xs font-medium text-amber-600 dark:text-amber-400 px-2 py-1 bg-amber-50 dark:bg-amber-950/40 rounded-md border border-amber-200/50">
-                              {method === "UPI" ? "Awaiting UPI Payment" : normStatus}
-                            </span>
-                          )}
-                          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setSelectedInvoice(inv)}>
-                            Preview Invoice
+                return (
+                  <TableRow key={inv.id} className="hover:bg-muted/40">
+                    <TableCell className="font-mono text-xs font-bold text-primary">
+                      {inv.invoice || inv.id}
+                    </TableCell>
+                    <TableCell className="font-semibold">{inv.customer}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {formatDateSafe(inv.date)}
+                    </TableCell>
+                    <TableCell className="text-xs font-medium">
+                      <span className={`rounded-md px-2 py-0.5 ${method === "UPI" ? "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 font-semibold" : "bg-muted text-foreground"}`}>{method}</span>
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-foreground">
+                      {formatINR(Number(inv.amount))}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={isPaid ? "Paid" : isUnpaid ? "Unpaid" : inv.status} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {canMarkAsPaid ? (
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                            onClick={() => handleMarkAsPaid(inv)}
+                          >
+                            <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Mark as Paid
                           </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                        ) : isPaid ? (
+                          <Button size="sm" variant="ghost" disabled className="h-7 text-xs text-emerald-600 font-semibold opacity-90">
+                            <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Paid ({method})
+                          </Button>
+                        ) : (
+                          <span className="text-xs font-medium text-amber-600 dark:text-amber-400 px-2 py-1 bg-amber-50 dark:bg-amber-950/40 rounded-md border border-amber-200/50">
+                            {method === "UPI" ? "Awaiting UPI Payment" : normStatus}
+                          </span>
+                        )}
+                        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setSelectedInvoice(inv)}>
+                          Preview Invoice
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
       </Card>
 
       {/* Invoice Preview Modal Dialog */}
@@ -447,16 +517,25 @@ function ReceptionInvoicesPage() {
             <div className="space-y-1">
               <Label htmlFor="split-invoice-select">Select Invoice to Split</Label>
               <Select
-                value={splitTargetInvoice || (invoicesList[0]?.invoice || invoicesList[0]?.id || "")}
+                value={splitTargetInvoice || (invoicesList.length > 0 ? (invoicesList[0].invoice || invoicesList[0].id) : "none")}
                 onValueChange={setSplitTargetInvoice}
               >
                 <SelectTrigger id="split-invoice-select" aria-label="Select Invoice to Split"><SelectValue placeholder="Select Invoice" /></SelectTrigger>
                 <SelectContent>
-                  {invoicesList.map((inv) => (
-                    <SelectItem key={inv.id} value={inv.invoice || inv.id}>
-                      {inv.invoice || inv.id} — {inv.customer} ({formatINR(Number(inv.amount))})
+                  {invoicesList.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      No invoices available
                     </SelectItem>
-                  ))}
+                  ) : (
+                    invoicesList.map((inv) => {
+                      const val = String(inv.invoice || inv.id || `inv_${Math.random()}`);
+                      return (
+                        <SelectItem key={inv.id} value={val}>
+                          {val} — {inv.customer} ({formatINR(Number(inv.amount))})
+                        </SelectItem>
+                      );
+                    })
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -542,7 +621,7 @@ function InvoicePreview({ inv, onMarkPaid }: { inv: Invoice; onMarkPaid: (inv: I
         </div>
         <div className="text-right">
           <span className="text-muted-foreground">Date:</span>
-          <div className="font-semibold">{inv.date ? new Date(inv.date).toLocaleDateString() : "Today"}</div>
+          <div className="font-semibold">{formatDateSafe(inv.date)}</div>
         </div>
         <div>
           <span className="text-muted-foreground">Customer:</span>
