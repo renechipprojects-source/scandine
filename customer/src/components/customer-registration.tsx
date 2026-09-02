@@ -185,53 +185,50 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
         <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-amber-950/15 to-black/30 pointer-events-none" />
       </div>
 
-      {/* MOBILE APP CONTAINER SHELL (320px - 480px Responsive Viewport) */}
-      <div className="w-full max-w-[430px] min-h-[100dvh] mx-auto flex flex-col justify-between relative z-10 overflow-x-hidden pb-4">
+      {/* MOBILE APP CONTAINER SHELL (Strict 320px - 480px Responsive Axis Container) */}
+      <div className="w-full max-w-[440px] min-h-[100dvh] mx-auto px-4 sm:px-5 flex flex-col justify-between relative z-10 overflow-x-hidden py-4 sm:py-6 gap-4">
         
         {/* TOP RESTAURANT BRANDING HERO HEADER */}
-        <div className="relative w-full h-[35vh] min-h-[220px] max-h-[280px] flex flex-col justify-end z-10">
-          <div className="relative z-10 text-center pb-10 px-3">
-            <motion.div variants={logoVariants} initial="hidden" animate="visible" className="flex flex-col items-center">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold bg-white/85 text-[#1e293b] border border-orange-500/30 mb-2 backdrop-blur-md shadow-xs">
-                <QrCode className="h-3 w-3 text-[#f97316] animate-pulse" /> {tableNumber ? `Table Scanned · ${tableNumber}` : "ScanDine Guest"}
-              </div>
+        <div className="w-full flex flex-col items-center justify-center pt-2 pb-1 text-center shrink-0">
+          <motion.div variants={logoVariants} initial="hidden" animate="visible" className="w-full flex flex-col items-center gap-2">
+            {/* Table Badge */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-extrabold bg-white/85 text-[#1e293b] border border-orange-500/30 backdrop-blur-md shadow-xs">
+              <QrCode className="h-3.5 w-3.5 text-[#f97316] animate-pulse shrink-0" />
+              <span>{tableNumber ? `Table Scanned · ${tableNumber}` : "ScanDine Guest"}</span>
+            </div>
 
-              <motion.div
-                animate={{ y: [0, -4, 0] }}
-                transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-                className="inline-block"
-              >
-                <img
-                  src="/scandine-customer-logo.png"
-                  alt="ScanDine"
-                  className="h-11 sm:h-13 w-auto object-contain mx-auto drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)] brightness-105"
-                />
-              </motion.div>
-
-              <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow-md">
+            {/* Logo Image & Brand Title Stack */}
+            <motion.div
+              animate={{ y: [0, -3, 0] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+              className="flex flex-col items-center gap-1 mt-1"
+            >
+              <img
+                src="/scandine-customer-logo.png"
+                alt="ScanDine"
+                className="h-12 sm:h-14 w-auto object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)] brightness-105"
+              />
+              <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow-md leading-none">
                 Scan<span className="bg-gradient-to-r from-orange-400 via-amber-300 to-orange-400 bg-clip-text text-transparent">Dine</span>
               </h1>
-              <div className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-orange-200/90 drop-shadow-xs">
-                SCAN • ORDER • DINE
-              </div>
             </motion.div>
-          </div>
+
+            <div className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.2em] text-orange-200/90 drop-shadow-xs">
+              SCAN • ORDER • DINE
+            </div>
+          </motion.div>
         </div>
 
-        {/* TRANSLUCENT LIGHT GLASSMORPHISM REGISTRATION CARD (SEMI-TRANSPARENT CARD BACKGROUND) */}
+        {/* TRANSLUCENT LIGHT GLASSMORPHISM REGISTRATION CARD (ALIGNED CONTAINER AXIS) */}
         <motion.div
           variants={glassPanelVariants}
           initial="hidden"
           animate="visible"
-          className="relative -mt-8 z-20 flex-1 w-[calc(100%-24px)] mx-auto p-4 sm:p-5 flex flex-col justify-between overflow-hidden shadow-xl"
+          className="relative w-full flex-1 p-5 sm:p-6 flex flex-col justify-between overflow-hidden shadow-xl rounded-[28px]"
           style={{
             backgroundColor: "rgba(255, 255, 255, 0.38)",
             backdropFilter: "blur(14px) saturate(150%)",
             WebkitBackdropFilter: "blur(14px) saturate(150%)",
-            borderTopLeftRadius: "30px",
-            borderTopRightRadius: "30px",
-            borderBottomLeftRadius: "24px",
-            borderBottomRightRadius: "24px",
             border: "1px solid rgba(255, 255, 255, 0.65)",
             boxShadow: "0 18px 40px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 0 20px rgba(249, 115, 22, 0.10)",
           }}
@@ -241,23 +238,23 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
           <div className="absolute -bottom-8 -right-8 w-56 h-56 rounded-full bg-gradient-to-br from-orange-300/35 via-amber-200/30 to-transparent blur-3xl anim-blob-float-2 pointer-events-none z-0" />
 
           {/* Inner Top Specular Edge Highlight */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent rounded-t-[30px]" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent rounded-t-[28px]" />
 
-          <motion.div variants={containerVariants} initial="hidden" animate="visible" className="w-full flex-1 flex flex-col justify-between relative z-10">
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <motion.div variants={itemVariants} className="text-center mb-1">
-                <p className="text-xs font-extrabold leading-relaxed max-w-xs mx-auto text-[#0f172a] drop-shadow-xs">
+          <motion.div variants={containerVariants} initial="hidden" animate="visible" className="w-full flex-1 flex flex-col justify-between gap-4 relative z-10">
+            <form onSubmit={handleSubmit} className="w-full flex flex-col gap-3.5">
+              <motion.div variants={itemVariants} className="text-center">
+                <p className="text-xs sm:text-sm font-extrabold leading-snug text-[#0f172a] drop-shadow-xs max-w-xs mx-auto">
                   Please register your details to view {tableNumber ? `${tableNumber} menu` : "the menu"} and place orders.
                 </p>
               </motion.div>
 
               {/* Full Name Field (Translucent Light Glass Layer Input) */}
-              <motion.div variants={itemVariants}>
-                <label htmlFor="reg-name" className="text-[10px] font-bold uppercase tracking-wider block mb-1 text-[#0f172a]">
+              <motion.div variants={itemVariants} className="flex flex-col gap-1">
+                <label htmlFor="reg-name" className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#0f172a]">
                   Full Name <span style={{ color: "#f97316" }}>*</span>
                 </label>
                 <div
-                  className="group relative flex items-center gap-2.5 p-1.5 transition-all duration-300 shadow-xs"
+                  className="group relative flex items-center gap-3 px-3 py-2 transition-all duration-300 shadow-xs"
                   style={{
                     backgroundColor: "rgba(255, 255, 255, 0.45)",
                     border: "1px solid rgba(15, 23, 42, 0.15)",
@@ -268,7 +265,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                   }}
                 >
                   <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs shrink-0 transition-transform duration-300 group-focus-within:scale-105"
+                    className="w-8 h-8 rounded-xl flex items-center justify-center shadow-xs shrink-0 transition-transform duration-300 group-focus-within:scale-105"
                     style={{ backgroundColor: "rgba(249, 115, 22, 0.20)", color: "#ea580c" }}
                   >
                     <User className="h-4 w-4" />
@@ -280,19 +277,19 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Enter your name"
-                    className="w-full bg-transparent pr-3 py-2 text-xs sm:text-sm font-bold outline-none min-h-[42px] transition-all duration-300 focus:outline-none placeholder:text-slate-600"
+                    className="w-full bg-transparent text-xs sm:text-sm font-bold outline-none min-h-[38px] transition-all duration-300 focus:outline-none placeholder:text-slate-600"
                     style={{ color: "#0f172a" }}
                   />
                 </div>
               </motion.div>
 
               {/* Phone Field (Translucent Light Glass Layer Input) */}
-              <motion.div variants={itemVariants}>
-                <label htmlFor="reg-phone" className="text-[10px] font-bold uppercase tracking-wider block mb-1 text-[#0f172a]">
+              <motion.div variants={itemVariants} className="flex flex-col gap-1">
+                <label htmlFor="reg-phone" className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#0f172a]">
                   Mobile Phone Number <span style={{ color: "#f97316" }}>*</span>
                 </label>
                 <div
-                  className="group relative flex items-center gap-2.5 p-1.5 transition-all duration-300 shadow-xs"
+                  className="group relative flex items-center gap-3 px-3 py-2 transition-all duration-300 shadow-xs"
                   style={{
                     backgroundColor: "rgba(255, 255, 255, 0.45)",
                     border: "1px solid rgba(15, 23, 42, 0.15)",
@@ -303,7 +300,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                   }}
                 >
                   <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs shrink-0 transition-transform duration-300 group-focus-within:scale-105"
+                    className="w-8 h-8 rounded-xl flex items-center justify-center shadow-xs shrink-0 transition-transform duration-300 group-focus-within:scale-105"
                     style={{ backgroundColor: "rgba(249, 115, 22, 0.20)", color: "#ea580c" }}
                   >
                     <Phone className="h-4 w-4" />
@@ -317,19 +314,19 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                     value={phone}
                     onChange={handlePhoneChange}
                     placeholder="10-digit mobile number"
-                    className="w-full bg-transparent pr-3 py-2 text-xs sm:text-sm font-bold outline-none min-h-[42px] transition-all duration-300 focus:outline-none placeholder:text-slate-600"
+                    className="w-full bg-transparent text-xs sm:text-sm font-bold outline-none min-h-[38px] transition-all duration-300 focus:outline-none placeholder:text-slate-600"
                     style={{ color: "#0f172a" }}
                   />
                 </div>
               </motion.div>
 
               {/* Email Field (Translucent Light Glass Layer Input) */}
-              <motion.div variants={itemVariants}>
-                <label htmlFor="reg-email" className="text-[10px] font-bold uppercase tracking-wider block mb-1 text-[#0f172a]">
-                  Email Address <span className="font-semibold lowercase" style={{ color: "#334155" }}>(optional)</span>
+              <motion.div variants={itemVariants} className="flex flex-col gap-1">
+                <label htmlFor="reg-email" className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#0f172a]">
+                  Email Address <span className="font-semibold lowercase text-slate-700">(optional)</span>
                 </label>
                 <div
-                  className="group relative flex items-center gap-2.5 p-1.5 transition-all duration-300 shadow-xs"
+                  className="group relative flex items-center gap-3 px-3 py-2 transition-all duration-300 shadow-xs"
                   style={{
                     backgroundColor: "rgba(255, 255, 255, 0.45)",
                     border: "1px solid rgba(15, 23, 42, 0.15)",
@@ -340,7 +337,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                   }}
                 >
                   <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs shrink-0 transition-transform duration-300 group-focus-within:scale-105"
+                    className="w-8 h-8 rounded-xl flex items-center justify-center shadow-xs shrink-0 transition-transform duration-300 group-focus-within:scale-105"
                     style={{ backgroundColor: "rgba(249, 115, 22, 0.20)", color: "#ea580c" }}
                   >
                     <Mail className="h-4 w-4" />
@@ -351,7 +348,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@domain.com"
-                    className="w-full bg-transparent pr-3 py-2 text-xs sm:text-sm font-bold outline-none min-h-[42px] transition-all duration-300 focus:outline-none placeholder:text-slate-600"
+                    className="w-full bg-transparent text-xs sm:text-sm font-bold outline-none min-h-[38px] transition-all duration-300 focus:outline-none placeholder:text-slate-600"
                     style={{ color: "#0f172a" }}
                   />
                 </div>
@@ -359,7 +356,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
 
               {/* Start Ordering Button (Premium Orange Gradient Shimmer CTA) */}
               <motion.div variants={buttonVariants} className="pt-1">
-                <div className="relative group">
+                <div className="relative group w-full">
                   <div className="absolute inset-0 rounded-2xl bg-orange-500/35 blur-md transition-all duration-300 group-hover:bg-orange-500/50" />
 
                   <motion.button
@@ -380,8 +377,9 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
                       </>
                     ) : (
                       <>
-                        <Sparkles className="h-4 w-4 text-white" /> Start Ordering
-                        <ArrowRight className="h-4 w-4 text-white transition-transform duration-300 group-hover:translate-x-1" />
+                        <Sparkles className="h-4 w-4 text-white shrink-0" />
+                        <span>Start Ordering</span>
+                        <ArrowRight className="h-4 w-4 text-white shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
                       </>
                     )}
                   </motion.button>
@@ -393,8 +391,7 @@ export function CustomerRegistration({ tableNumber, onSuccess }: CustomerRegistr
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="mt-3 text-center text-[10px] sm:text-[11px] font-bold"
-              style={{ color: "#334155" }}
+              className="w-full text-center text-[10px] sm:text-[11px] font-bold text-slate-700 pt-1"
             >
               © 2026 Renechip Private Limited. All Rights Reserved.
             </motion.footer>
