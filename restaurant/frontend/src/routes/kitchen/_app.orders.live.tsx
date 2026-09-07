@@ -99,12 +99,12 @@ function OrderLiveCardItem({
   const items = Array.isArray(order.item) ? order.item : [];
 
   return (
-    <Card className="p-3 transition-all hover:shadow-md flex flex-col justify-between h-[300px] border shadow-xs w-full bg-card">
+    <Card className="p-2.5 transition-all hover:shadow-md flex flex-col justify-between border shadow-xs w-full bg-card min-w-0 rounded-xl">
       <div className="flex-1 flex flex-col min-w-0">
         {/* Card Header: Order ID & Payment Badge */}
-        <div className="flex items-center justify-between gap-1.5 shrink-0 pb-1.5 border-b border-border/50">
-          <div className="min-w-0 flex items-center gap-1.5">
-            <span className="font-mono font-bold text-xs text-foreground truncate">
+        <div className="flex items-center justify-between gap-1 shrink-0 pb-1.5 border-b border-border/40">
+          <div className="min-w-0 flex items-center gap-1">
+            <span className="font-mono font-bold text-xs text-foreground truncate" title={order.order_id || order.id}>
               {order.order_id || order.id}
             </span>
           </div>
@@ -114,35 +114,35 @@ function OrderLiveCardItem({
         </div>
 
         {/* Table Number, Customer & Placed Time Info */}
-        <div className="flex items-center justify-between py-1.5 text-[11px] text-muted-foreground gap-2 shrink-0">
-          <div className="flex items-center gap-1 font-display font-bold text-xs text-foreground truncate">
+        <div className="flex flex-wrap items-center justify-between py-1 text-[11px] text-muted-foreground gap-x-2 gap-y-0.5 shrink-0">
+          <div className="flex items-center gap-1 font-display font-bold text-xs text-foreground truncate min-w-0">
             <Utensils className="h-3.5 w-3.5 text-primary shrink-0" />
             <span className="truncate">Table {order.table_number}</span>
           </div>
-          <div className="flex items-center gap-2 shrink-0 text-[10px]">
-            <span className="flex items-center gap-1 truncate max-w-[90px]" title={order.customer}>
+          <div className="flex items-center gap-1.5 shrink-0 text-[10px] min-w-0">
+            <span className="flex items-center gap-0.5 truncate max-w-[75px]" title={order.customer}>
               <User className="h-3 w-3 shrink-0 text-muted-foreground/80" />
               <span className="truncate font-medium">{order.customer || "Guest"}</span>
             </span>
-            <span className="flex items-center gap-1 font-mono">
+            <span className="flex items-center gap-0.5 font-mono shrink-0">
               <Clock className="h-3 w-3 shrink-0 text-muted-foreground/80" />
               {formatOrderTime(order.order_time)}
             </span>
           </div>
         </div>
 
-        {/* Items List Box (Scrollable) */}
-        <div className="bg-muted/40 rounded-lg p-2 flex-1 overflow-y-auto min-h-[70px] max-h-[90px] space-y-1 border border-border/40 shrink-0 scrollbar-thin">
+        {/* Items List Box (Scrollable max height) */}
+        <div className="bg-muted/30 rounded-lg p-1.5 my-1 overflow-y-auto max-h-[120px] space-y-1 border border-border/30 shrink-0 scrollbar-thin">
           {items.length === 0 ? (
-            <div className="text-[11px] text-muted-foreground italic text-center py-2">No item details</div>
+            <div className="text-[10px] text-muted-foreground italic text-center py-1">No item details</div>
           ) : (
             items.map((it, i) => (
-              <div key={i} className="flex items-center justify-between gap-1.5 text-xs">
-                <span className="truncate flex-1 font-medium text-foreground">
-                  <span className="mr-1 font-bold text-primary">{it.qty}×</span>
+              <div key={i} className="flex items-start justify-between gap-1 text-[11px] leading-tight">
+                <span className="break-words min-w-0 flex-1 font-medium text-foreground">
+                  <span className="mr-1 font-bold text-primary shrink-0">{it.qty}×</span>
                   {it.name}
                 </span>
-                <span className="text-muted-foreground font-mono text-[10px] shrink-0">
+                <span className="text-muted-foreground font-mono text-[10px] shrink-0 ml-1">
                   {restaurantInfo.currency}{(it.qty * (it.price || 0)).toFixed(2)}
                 </span>
               </div>
@@ -151,14 +151,14 @@ function OrderLiveCardItem({
         </div>
 
         {/* Order Total & Prep Countdown Banner */}
-        <div className="mt-1.5 flex items-center justify-between text-xs font-semibold shrink-0">
-          <span className="text-muted-foreground text-[11px]">Total:</span>
-          <span className="font-mono text-foreground font-bold">{restaurantInfo.currency}{Number(order.total || 0).toFixed(2)}</span>
+        <div className="mt-1 flex items-center justify-between text-xs font-semibold shrink-0">
+          <span className="text-muted-foreground text-[10px] uppercase tracking-wider font-bold">Total</span>
+          <span className="font-mono text-foreground font-bold text-xs">{restaurantInfo.currency}{Number(order.total || 0).toFixed(2)}</span>
         </div>
 
         {(order.status === "accepted" || order.status === "preparing") && (
-          <div className="mt-1 rounded-md border border-info/30 bg-info/10 p-1 text-center shrink-0">
-            <div className="flex items-center justify-center gap-1 font-mono text-[11px] font-bold text-info-foreground">
+          <div className="mt-1 rounded-md border border-info/30 bg-info/10 py-0.5 px-1 text-center shrink-0">
+            <div className="flex items-center justify-center gap-1 font-mono text-[10px] font-bold text-info-foreground">
               <Timer className="h-3 w-3 animate-pulse text-info shrink-0" />
               <span>Prep: {formattedTime}</span>
             </div>
@@ -167,12 +167,12 @@ function OrderLiveCardItem({
       </div>
 
       {/* Workflow Controls Footer */}
-      <div className="mt-2 pt-2 border-t border-border/60 w-full shrink-0">
+      <div className="mt-2 pt-1.5 border-t border-border/50 w-full shrink-0">
         {order.status === "pending" && (
-          <div className="grid grid-cols-2 gap-1.5 items-center w-full">
+          <div className="grid grid-cols-2 gap-1 items-center w-full">
             <Button
               size="sm"
-              className="w-full h-8 text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1"
+              className="w-full h-7 text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-xs px-1 flex items-center justify-center gap-1"
               onClick={() => onAccept(order)}
             >
               <Check className="h-3.5 w-3.5 shrink-0" />
@@ -181,7 +181,7 @@ function OrderLiveCardItem({
             <Button
               size="sm"
               variant="outline"
-              className="w-full h-8 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1"
+              className="w-full h-7 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 font-bold shadow-xs px-1 flex items-center justify-center gap-1"
               onClick={() => onCancel(order)}
             >
               <X className="h-3.5 w-3.5 shrink-0" />
@@ -191,10 +191,10 @@ function OrderLiveCardItem({
         )}
 
         {order.status === "accepted" && (
-          <div className="grid grid-cols-2 gap-1.5 w-full">
+          <div className="grid grid-cols-2 gap-1 w-full">
             <Button
               size="sm"
-              className="w-full h-8 text-[11px] bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1"
+              className="w-full h-7 text-[11px] bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs px-1 flex items-center justify-center gap-1"
               onClick={() => onAdvance(order)}
             >
               <Timer className="h-3.5 w-3.5 shrink-0" />
@@ -203,7 +203,7 @@ function OrderLiveCardItem({
             <Button
               size="sm"
               variant="outline"
-              className="w-full h-8 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1"
+              className="w-full h-7 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 font-bold shadow-xs px-1 flex items-center justify-center gap-1"
               onClick={() => onCancel(order)}
             >
               <X className="h-3.5 w-3.5 shrink-0" />
@@ -215,7 +215,7 @@ function OrderLiveCardItem({
         {order.status === "preparing" && (
           <Button
             size="sm"
-            className="w-full h-8 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-xs flex items-center justify-center gap-1"
+            className="w-full h-7 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs flex items-center justify-center gap-1 px-1"
             onClick={() => onAdvance(order)}
           >
             <span>Mark Ready</span>
@@ -226,7 +226,7 @@ function OrderLiveCardItem({
         {order.status === "ready" && (
           <Button
             size="sm"
-            className="w-full h-8 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs flex items-center justify-center gap-1"
+            className="w-full h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs flex items-center justify-center gap-1 px-1"
             onClick={() => onAdvance(order)}
           >
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
@@ -235,13 +235,13 @@ function OrderLiveCardItem({
         )}
 
         {order.status === "completed" && (
-          <div className="w-full h-8 flex items-center justify-center text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md shadow-xs">
+          <div className="w-full h-7 flex items-center justify-center text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
             Completed ✅
           </div>
         )}
 
         {order.status === "cancelled" && (
-          <div className="w-full h-8 flex items-center justify-center text-[11px] font-semibold text-destructive bg-destructive/10 border border-destructive/20 rounded-md shadow-xs">
+          <div className="w-full h-7 flex items-center justify-center text-[11px] font-bold text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
             Cancelled ❌
           </div>
         )}
@@ -498,30 +498,30 @@ function LiveOrdersPage() {
         </Tabs>
       </div>
 
-      {/* Modern Compact 6-Column Structure KDS Queue */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 w-full items-start">
+      {/* Responsive 6-Column KDS Queue */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 w-full items-start">
         {lanes.map((lane) => {
           const laneOrders = displayOrders.filter((o) => o.status === lane.key);
 
           return (
-            <div key={lane.key} className={`min-w-0 rounded-2xl border-t-4 bg-card p-2.5 shadow-xs border ${lane.tone} flex flex-col transition-all min-h-[500px]`}>
+            <div key={lane.key} className={`min-w-0 rounded-xl border-t-4 bg-card/80 p-2 shadow-xs border ${lane.tone} flex flex-col transition-all max-h-[calc(100vh-230px)]`}>
               {/* Column Header */}
-              <div className="mb-2.5 flex items-center justify-between px-1 shrink-0 pb-2 border-b border-border/40">
+              <div className="mb-2 flex items-center justify-between px-0.5 shrink-0 pb-1.5 border-b border-border/40 min-w-0">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span className={`h-2 w-2 rounded-full shrink-0 ${lane.dotColor}`} />
                   <span className="font-display text-xs font-bold text-foreground truncate">{lane.label}</span>
                 </div>
-                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border shrink-0 ${lane.badgeBg}`}>
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${lane.badgeBg}`}>
                   {laneOrders.length}
                 </span>
               </div>
 
               {/* Column Cards Container with Independent Vertical Scroll */}
-              <div className="space-y-2.5 max-h-[calc(100vh-230px)] min-h-[420px] overflow-y-auto pr-1 scrollbar-thin flex-1">
+              <div className="space-y-2 overflow-y-auto pr-0.5 scrollbar-thin flex-1 min-h-[140px] max-h-[calc(100vh-270px)]">
                 {laneOrders.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border/80 py-12 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-1.5 bg-muted/20 my-auto">
-                    <Utensils className="h-5 w-5 opacity-30" />
-                    <span className="font-medium text-[11px]">No orders in {lane.label}</span>
+                  <div className="rounded-lg border border-dashed border-border/60 py-8 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-1 bg-muted/10 my-auto">
+                    <Utensils className="h-4 w-4 opacity-30" />
+                    <span className="font-medium text-[10px]">No orders in {lane.label}</span>
                   </div>
                 ) : (
                   laneOrders.map((o) => (
