@@ -288,6 +288,8 @@ function normalizeFetchedRows<T>(tableName: string, rows: T[]): T[] {
   return rows;
 }
 
+const inFlightUpdates = new Map<string, string>();
+
 const STATUS_RANK: Record<string, number> = {
   pending: 0,
   accepted: 1,
@@ -343,6 +345,19 @@ function mergeOrdersList(prev: any[], fetched: any[]): any[] {
 
     const existingIndex = result.findIndex((r) => isSameLogicalOrder(r, itemToProcess));
     if (existingIndex === -1) {
+      const rawId = String(itemToProcess.id || "").toLowerCase();
+      const rawOrd = String(itemToProcess.order_id || "").toLowerCase();
+      const rawDigits = (rawOrd || rawId).replace(/\D/g, "");
+
+      const inFlightStatus =
+        inFlightUpdates.get(rawId) ||
+        inFlightUpdates.get(rawOrd) ||
+        inFlightUpdates.get(rawDigits) ||
+        inFlightUpdates.get(`ord-${rawDigits}`);
+
+      if (inFlightStatus) {
+        itemToProcess.status = inFlightStatus;
+      }
       result.push(itemToProcess);
     } else {
       const existing = result[existingIndex];
@@ -350,19 +365,26 @@ function mergeOrdersList(prev: any[], fetched: any[]): any[] {
       const newStatus = itemToProcess.status;
 
       let finalStatus = newStatus;
-      if (existingStatus === "cancelled" || newStatus === "cancelled") {
-        finalStatus = "cancelled";
-      } else {
-        const existingRank = STATUS_RANK[existingStatus] ?? 0;
-        const newRank = STATUS_RANK[newStatus] ?? 0;
 
-        if (isFromFetch && existingRank > newRank) {
-          finalStatus = existingStatus;
-        } else if (!isFromFetch && existingRank >= newRank) {
-          finalStatus = existingStatus;
-        } else {
-          finalStatus = newStatus;
-        }
+      const rawId = String(existing.id || "").toLowerCase();
+      const rawOrd = String(existing.order_id || "").toLowerCase();
+      const rawDigits = (rawOrd || rawId).replace(/\D/g, "");
+
+      const inFlightStatus =
+        inFlightUpdates.get(rawId) ||
+        inFlightUpdates.get(rawOrd) ||
+        inFlightUpdates.get(rawDigits) ||
+        inFlightUpdates.get(`ord-${rawDigits}`);
+
+      if (inFlightStatus) {
+        finalStatus = inFlightStatus;
+      } else if (existingStatus === "cancelled" || newStatus === "cancelled") {
+        finalStatus = "cancelled";
+      } else if (isFromFetch) {
+        // When fetching from Supabase DB, Supabase DB is authoritative unless local rank is higher for an in-flight transition
+        finalStatus = newStatus;
+      } else {
+        finalStatus = newStatus;
       }
 
       result[existingIndex] = {
@@ -378,8 +400,12 @@ function mergeOrdersList(prev: any[], fetched: any[]): any[] {
     }
   };
 
-  prev.forEach((item) => addOrMerge(item, false));
-  fetched.forEach((item) => addOrMerge(item, true));
+  if (fetched.length > 0) {
+    fetched.forEach((item) => addOrMerge(item, true));
+    prev.forEach((item) => addOrMerge(item, false));
+  } else {
+    prev.forEach((item) => addOrMerge(item, false));
+  }
 
   return result;
 }
@@ -566,7 +592,16 @@ export function useSupabaseTable<T extends { id: string }>(
       normUpdates.status = normalizeOrderStatus(String(normUpdates.status)) as any;
     }
 
+    let previousOrdersState: T[] = [];
+    const targetDigits = targetIdStr.replace(/\D/g, "");
+    const keysToTrack = [targetIdStr, targetDigits, `ORD-${targetDigits}`].filter(Boolean);
+    if (normUpdates.status) {
+      keysToTrack.forEach((k) => inFlightUpdates.set(k.toLowerCase(), normUpdates.status));
+    }
+
     updateLocalData((prev) => {
+      previousOrdersState = prev;
+
       if (tableName === "sd_orders") {
         let foundMatch = false;
         const updatedList = prev.map((item: any) => {
@@ -626,7 +661,7 @@ export function useSupabaseTable<T extends { id: string }>(
           const withoutOrdPrefix = targetIdStr.replace(/^ORD-/i, "");
 
           let updatedRows: any[] | null = null;
-          let err1: any = null;
+          let updateErr: any = null;
 
           // Attempt 1: match id = targetIdStr
           const res1 = await supabase
@@ -635,10 +670,10 @@ export function useSupabaseTable<T extends { id: string }>(
             .eq("id", targetIdStr)
             .select();
           updatedRows = res1.data;
-          err1 = res1.error;
+          updateErr = res1.error;
 
           // Attempt 2: match order_id = targetIdStr
-          if ((!updatedRows || updatedRows.length === 0) && !err1) {
+          if ((!updatedRows || updatedRows.length === 0) && !updateErr) {
             const res2 = await supabase
               .from(tableName)
               .update(dbOrderPayload)
@@ -647,6 +682,7 @@ export function useSupabaseTable<T extends { id: string }>(
             if (res2.data && res2.data.length > 0) {
               updatedRows = res2.data;
             }
+            if (res2.error) updateErr = res2.error;
           }
 
           // Attempt 3: match order_id = withOrdPrefix
@@ -692,19 +728,29 @@ export function useSupabaseTable<T extends { id: string }>(
           }
 
           if (updatedRows && updatedRows.length > 0) {
+            keysToTrack.forEach((k) => inFlightUpdates.delete(k.toLowerCase()));
             const normalizedDBRows = normalizeFetchedRows(tableName, updatedRows);
             updateLocalData((prev) => mergeOrdersList(prev, normalizedDBRows) as T[], "db_update");
           } else {
-            console.warn(`[Supabase Order Update Notice]: No rows updated in DB for identifier ${targetIdStr}`);
+            keysToTrack.forEach((k) => inFlightUpdates.delete(k.toLowerCase()));
+            updateLocalData(previousOrdersState, "rollback");
+            throw new Error(`Order status update for ${targetIdStr} failed in Supabase database (0 rows affected).`);
           }
         } else {
           let res = await supabase.from(tableName).update(payload).eq("id", id).select();
           if (res.error || !res.data || res.data.length === 0) {
-            await supabase.from(tableName).update(payload).eq("id", id);
+            const res2 = await supabase.from(tableName).update(payload).eq("id", id).select();
+            if (res2.error || !res2.data || res2.data.length === 0) {
+              updateLocalData(previousOrdersState, "rollback");
+              throw new Error(`Update for ${id} failed in database.`);
+            }
           }
         }
       } catch (err) {
-        console.warn(`Supabase update notice for ${tableName}:`, err);
+        keysToTrack.forEach((k) => inFlightUpdates.delete(k.toLowerCase()));
+        updateLocalData(previousOrdersState, "rollback");
+        console.error(`Supabase update error for ${tableName}:`, err);
+        throw err;
       }
     }
   };
