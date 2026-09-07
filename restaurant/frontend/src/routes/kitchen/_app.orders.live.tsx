@@ -99,38 +99,40 @@ function OrderLiveCardItem({
   const items = Array.isArray(order.item) ? order.item : [];
 
   return (
-    <Card className="p-3 transition-all hover:shadow-md flex flex-col justify-between min-h-[280px] border shadow-xs w-full bg-card">
+    <Card className="p-3 transition-all hover:shadow-md flex flex-col justify-between h-[300px] border shadow-xs w-full bg-card">
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Card Header: Table Number, Order ID & Payment Badge */}
-        <div className="flex items-start justify-between gap-1.5 shrink-0 pb-2 border-b border-border/50">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1 font-display font-bold text-sm text-foreground truncate">
-              <Utensils className="h-3.5 w-3.5 text-primary shrink-0" />
-              <span className="truncate">Table {order.table_number}</span>
-            </div>
-            <div className="text-[11px] font-mono font-semibold text-muted-foreground truncate">
+        {/* Card Header: Order ID & Payment Badge */}
+        <div className="flex items-center justify-between gap-1.5 shrink-0 pb-1.5 border-b border-border/50">
+          <div className="min-w-0 flex items-center gap-1.5">
+            <span className="font-mono font-bold text-xs text-foreground truncate">
               {order.order_id || order.id}
-            </div>
+            </span>
           </div>
           <div className="shrink-0">
             <StatusBadge status={order.payment} />
           </div>
         </div>
 
-        {/* Customer & Placed Time Info */}
+        {/* Table Number, Customer & Placed Time Info */}
         <div className="flex items-center justify-between py-1.5 text-[11px] text-muted-foreground gap-2 shrink-0">
-          <span className="flex items-center gap-1 truncate max-w-[110px]" title={order.customer}>
-            <User className="h-3 w-3 shrink-0 text-muted-foreground/80" />
-            <span className="truncate font-medium">{order.customer || "Guest"}</span>
-          </span>
-          <span className="flex items-center gap-1 shrink-0 font-mono text-[10px]">
-            <Clock className="h-3 w-3 shrink-0 text-muted-foreground/80" />
-            {formatOrderTime(order.order_time)}
-          </span>
+          <div className="flex items-center gap-1 font-display font-bold text-xs text-foreground truncate">
+            <Utensils className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="truncate">Table {order.table_number}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 text-[10px]">
+            <span className="flex items-center gap-1 truncate max-w-[90px]" title={order.customer}>
+              <User className="h-3 w-3 shrink-0 text-muted-foreground/80" />
+              <span className="truncate font-medium">{order.customer || "Guest"}</span>
+            </span>
+            <span className="flex items-center gap-1 font-mono">
+              <Clock className="h-3 w-3 shrink-0 text-muted-foreground/80" />
+              {formatOrderTime(order.order_time)}
+            </span>
+          </div>
         </div>
 
-        {/* Items List Box */}
-        <div className="bg-muted/40 rounded-lg p-2 h-[80px] overflow-y-auto space-y-1 border border-border/40 shrink-0 scrollbar-thin">
+        {/* Items List Box (Scrollable) */}
+        <div className="bg-muted/40 rounded-lg p-2 flex-1 overflow-y-auto min-h-[70px] max-h-[90px] space-y-1 border border-border/40 shrink-0 scrollbar-thin">
           {items.length === 0 ? (
             <div className="text-[11px] text-muted-foreground italic text-center py-2">No item details</div>
           ) : (
@@ -149,13 +151,13 @@ function OrderLiveCardItem({
         </div>
 
         {/* Order Total & Prep Countdown Banner */}
-        <div className="mt-2 flex items-center justify-between text-xs font-semibold shrink-0">
+        <div className="mt-1.5 flex items-center justify-between text-xs font-semibold shrink-0">
           <span className="text-muted-foreground text-[11px]">Total:</span>
           <span className="font-mono text-foreground font-bold">{restaurantInfo.currency}{Number(order.total || 0).toFixed(2)}</span>
         </div>
 
         {(order.status === "accepted" || order.status === "preparing") && (
-          <div className="mt-1.5 rounded-md border border-info/30 bg-info/10 p-1 text-center shrink-0">
+          <div className="mt-1 rounded-md border border-info/30 bg-info/10 p-1 text-center shrink-0">
             <div className="flex items-center justify-center gap-1 font-mono text-[11px] font-bold text-info-foreground">
               <Timer className="h-3 w-3 animate-pulse text-info shrink-0" />
               <span>Prep: {formattedTime}</span>
@@ -165,7 +167,7 @@ function OrderLiveCardItem({
       </div>
 
       {/* Workflow Controls Footer */}
-      <div className="mt-2.5 pt-2 border-t border-border/60 w-full shrink-0">
+      <div className="mt-2 pt-2 border-t border-border/60 w-full shrink-0">
         {order.status === "pending" && (
           <div className="grid grid-cols-2 gap-1.5 items-center w-full">
             <Button
@@ -496,37 +498,33 @@ function LiveOrdersPage() {
         </Tabs>
       </div>
 
-      {/* Modern Clean 6-Column Structure KDS Queue */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 w-full items-start">
+      {/* Modern Compact 6-Column Structure KDS Queue */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 w-full items-start">
         {lanes.map((lane) => {
           const laneOrders = displayOrders.filter((o) => o.status === lane.key);
-          const isExpanded = Boolean(expandedColumns[lane.key]);
-          const DEFAULT_VISIBLE_COUNT = 4;
-          const visibleOrders = isExpanded ? laneOrders : laneOrders.slice(0, DEFAULT_VISIBLE_COUNT);
-          const hasMore = laneOrders.length > DEFAULT_VISIBLE_COUNT;
 
           return (
-            <div key={lane.key} className={`min-w-0 rounded-2xl border-t-4 bg-card p-3 shadow-xs border ${lane.tone} flex flex-col transition-all`}>
+            <div key={lane.key} className={`min-w-0 rounded-2xl border-t-4 bg-card p-2.5 shadow-xs border ${lane.tone} flex flex-col transition-all min-h-[500px]`}>
               {/* Column Header */}
-              <div className="mb-3 flex items-center justify-between px-1 shrink-0 pb-2 border-b border-border/40">
-                <div className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${lane.dotColor}`} />
-                  <span className="font-display text-sm font-bold text-foreground truncate">{lane.label}</span>
+              <div className="mb-2.5 flex items-center justify-between px-1 shrink-0 pb-2 border-b border-border/40">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={`h-2 w-2 rounded-full shrink-0 ${lane.dotColor}`} />
+                  <span className="font-display text-xs font-bold text-foreground truncate">{lane.label}</span>
                 </div>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${lane.badgeBg}`}>
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border shrink-0 ${lane.badgeBg}`}>
                   {laneOrders.length}
                 </span>
               </div>
 
-              {/* Column Cards Container */}
-              <div className="space-y-3 max-h-[640px] overflow-y-auto pr-1 scrollbar-thin flex-1">
+              {/* Column Cards Container with Independent Vertical Scroll */}
+              <div className="space-y-2.5 max-h-[calc(100vh-230px)] min-h-[420px] overflow-y-auto pr-1 scrollbar-thin flex-1">
                 {laneOrders.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border/80 py-10 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-1 bg-muted/20">
+                  <div className="rounded-xl border border-dashed border-border/80 py-12 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-1.5 bg-muted/20 my-auto">
                     <Utensils className="h-5 w-5 opacity-30" />
-                    <span>No orders in {lane.label}</span>
+                    <span className="font-medium text-[11px]">No orders in {lane.label}</span>
                   </div>
                 ) : (
-                  visibleOrders.map((o) => (
+                  laneOrders.map((o) => (
                     <OrderLiveCardItem
                       key={o.id}
                       order={o}
@@ -538,71 +536,10 @@ function LiveOrdersPage() {
                   ))
                 )}
               </div>
-
-              {/* Column Footer: "View all" toggle if more than 4 orders */}
-              {hasMore && (
-                <div className="mt-3 pt-2 border-t border-border/60 text-center shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-xs font-semibold text-primary hover:bg-primary/10 h-7 flex items-center justify-center gap-1"
-                    onClick={() => toggleColumnExpanded(lane.key)}
-                  >
-                    {isExpanded ? (
-                      <>
-                        <ChevronUp className="h-3.5 w-3.5" />
-                        Show less
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="h-3.5 w-3.5" />
-                        View all ({laneOrders.length})
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
             </div>
           );
         })}
       </div>
-
-      {/* Order Timeline Section */}
-      <Card className="mt-6 border shadow-xs">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">Order timeline</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {displayOrders.slice(0, 4).map((o, i) => (
-              <div key={o.id} className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="grid h-8 w-8 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                    {i + 1}
-                  </div>
-                  {i < 3 && <div className="mt-1 h-full w-px flex-1 bg-border" />}
-                </div>
-                <div className="flex-1 pb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold">{o.order_id || o.id}</span>
-                    <StatusBadge status={o.status} />
-                    <span className="text-xs text-muted-foreground">· {formatOrderTime(o.order_time)}</span>
-                  </div>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    {o.customer} · Table {o.table_number} · {Array.isArray(o.item) ? o.item.length : 0} items · {restaurantInfo.currency}{Number(o.total || 0).toFixed(2)}
-                  </div>
-                  {i === 0 && (
-                    <div className="mt-2 flex items-start gap-2 rounded-lg bg-warning/10 p-2 text-xs text-warning-foreground">
-                      <StickyNote className="h-3.5 w-3.5 shrink-0 text-warning" />
-                      <span>Extra napkins requested; birthday candle for dessert.</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
