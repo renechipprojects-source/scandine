@@ -53,12 +53,14 @@ export interface PurchaseOrder {
 
 function normalizeOrderStatus(s?: string): string {
   const norm = (s || "").toLowerCase().trim();
-  if (norm.includes("prep") || norm === "cooking") return "preparing";
+  if (norm.includes("accept") || norm === "confirmed") return "accepted";
+  if (norm.includes("prep") || norm === "cooking" || norm === "in_kitchen") return "preparing";
   if (norm.includes("read") || norm === "kitchen ready") return "ready";
   if (norm.includes("serv") || norm === "delivered") return "served";
-  if (norm.includes("comp") || norm === "done") return "completed";
-  if (norm.includes("canc") || norm === "void") return "cancelled";
-  return "pending";
+  if (norm.includes("comp") || norm === "done" || norm === "finished") return "completed";
+  if (norm.includes("canc") || norm === "void" || norm.includes("reject")) return "cancelled";
+  if (norm.includes("pend") || norm === "new" || norm === "placed" || norm === "received") return "pending";
+  return norm || "pending";
 }
 
 function normalizePaymentStatus(p?: string): string {
@@ -235,6 +237,13 @@ function cleanPayloadForSupabase(tableName: string, payload: Record<string, unkn
 
 // Helper to normalize rows fetched from Supabase
 function normalizeFetchedRows<T>(tableName: string, rows: T[]): T[] {
+  if (tableName === "sd_orders") {
+    return rows.map((r: any) => ({
+      ...r,
+      status: normalizeOrderStatus(r.status),
+      payment: normalizePaymentStatus(r.payment || r.payment_status),
+    })) as unknown as T[];
+  }
   if (tableName === "sd_menu_items") {
     const ID_TO_CATEGORY: Record<string, string> = {
       cat_1: "Breakfast",
