@@ -288,6 +288,15 @@ function normalizeFetchedRows<T>(tableName: string, rows: T[]): T[] {
   return rows;
 }
 
+const STATUS_RANK: Record<string, number> = {
+  pending: 0,
+  accepted: 1,
+  preparing: 2,
+  ready: 3,
+  completed: 4,
+  cancelled: 5,
+};
+
 function isSameLogicalOrder(a: any, b: any): boolean {
   if (!a || !b) return false;
   const aId = String(a.id || "").trim().toLowerCase();
@@ -298,36 +307,62 @@ function isSameLogicalOrder(a: any, b: any): boolean {
 
   if (aId && (aId === bId || aId === bOrderId)) return true;
   if (aOrderId && (aOrderId === bId || aOrderId === bOrderId)) return true;
+
+  const aNum = aOrderId.replace(/\D/g, "") || aId.replace(/\D/g, "");
+  const bNum = bOrderId.replace(/\D/g, "") || bId.replace(/\D/g, "");
+  if (aNum && bNum && aNum === bNum) return true;
+
   return false;
 }
 
 function isMatchingOrderId(order: any, targetIdStr: string): boolean {
   if (!order || !targetIdStr) return false;
   const target = targetIdStr.trim().toLowerCase();
+  const targetNum = target.replace(/\D/g, "");
+
   const oId = String(order.id || "").trim().toLowerCase();
   const oOrderId = String(order.order_id || order.order_number || "").trim().toLowerCase();
-  return oId === target || oOrderId === target;
+  const oNum = oOrderId.replace(/\D/g, "") || oId.replace(/\D/g, "");
+
+  if (oId === target || oOrderId === target) return true;
+  if (targetNum && oNum && targetNum === oNum) return true;
+  return false;
 }
 
 function mergeOrdersList(prev: any[], fetched: any[]): any[] {
   const result: any[] = [];
 
-  const addOrMerge = (newItem: any) => {
+  const addOrMerge = (newItem: any, isFromFetch = false) => {
     if (!newItem) return;
     const normStatus = normalizeOrderStatus(newItem.status);
-    const itemToProcess = { ...newItem, status: normStatus };
+    const itemToProcess = {
+      ...newItem,
+      status: normStatus,
+      payment: normalizePaymentStatus(newItem.payment || newItem.payment_status),
+    };
 
     const existingIndex = result.findIndex((r) => isSameLogicalOrder(r, itemToProcess));
     if (existingIndex === -1) {
       result.push(itemToProcess);
     } else {
       const existing = result[existingIndex];
-      const normExistingStatus = normalizeOrderStatus(existing.status);
-      const normNewStatus = itemToProcess.status;
+      const existingStatus = normalizeOrderStatus(existing.status);
+      const newStatus = itemToProcess.status;
 
-      let finalStatus = normNewStatus;
-      if (normExistingStatus !== "pending" && normNewStatus === "pending") {
-        finalStatus = normExistingStatus;
+      let finalStatus = newStatus;
+      if (existingStatus === "cancelled" || newStatus === "cancelled") {
+        finalStatus = "cancelled";
+      } else {
+        const existingRank = STATUS_RANK[existingStatus] ?? 0;
+        const newRank = STATUS_RANK[newStatus] ?? 0;
+
+        if (isFromFetch && existingRank > newRank) {
+          finalStatus = existingStatus;
+        } else if (!isFromFetch && existingRank >= newRank) {
+          finalStatus = existingStatus;
+        } else {
+          finalStatus = newStatus;
+        }
       }
 
       result[existingIndex] = {
@@ -336,12 +371,15 @@ function mergeOrdersList(prev: any[], fetched: any[]): any[] {
         id: itemToProcess.id || existing.id,
         order_id: itemToProcess.order_id || existing.order_id || itemToProcess.id || existing.id,
         status: finalStatus,
+        accepted_at: itemToProcess.accepted_at || existing.accepted_at,
+        prep_time_minutes: itemToProcess.prep_time_minutes || existing.prep_time_minutes,
+        estimated_ready_at: itemToProcess.estimated_ready_at || existing.estimated_ready_at,
       };
     }
   };
 
-  prev.forEach((item) => addOrMerge(item));
-  fetched.forEach((item) => addOrMerge(item));
+  prev.forEach((item) => addOrMerge(item, false));
+  fetched.forEach((item) => addOrMerge(item, true));
 
   return result;
 }
@@ -522,17 +560,14 @@ export function useSupabaseTable<T extends { id: string }>(
 
   // UPDATE
   const updateItem = async (id: string, updates: Partial<T>) => {
-    let previousState: T[] = [];
+    const targetIdStr = String(id).trim();
+    const normUpdates: Record<string, any> = { ...updates };
+    if (normUpdates.status) {
+      normUpdates.status = normalizeOrderStatus(String(normUpdates.status)) as any;
+    }
+
     updateLocalData((prev) => {
-      previousState = prev;
-
       if (tableName === "sd_orders") {
-        const targetIdStr = String(id).trim();
-        const normUpdates: Record<string, any> = { ...updates };
-        if (normUpdates.status) {
-          normUpdates.status = normalizeOrderStatus(String(normUpdates.status)) as any;
-        }
-
         let foundMatch = false;
         const updatedList = prev.map((item: any) => {
           if (isMatchingOrderId(item, targetIdStr)) {
@@ -562,16 +597,13 @@ export function useSupabaseTable<T extends { id: string }>(
       return prev.map((item: any) =>
         item.id === id || item.order_id === id ? { ...item, ...updates } : item
       );
-    });
+    }, "optimistic");
 
     if (isSupabaseConfigured) {
       try {
         const payload = cleanPayloadForSupabase(tableName, updates as unknown as Record<string, unknown>);
 
-        let updateErr: any = null;
-
         if (tableName === "sd_orders") {
-          // Strictly valid PostgreSQL DB columns for sd_orders table
           const dbOrderPayload: Record<string, any> = {};
           if (payload.status !== undefined) dbOrderPayload.status = normalizeOrderStatus(String(payload.status));
           if (payload.payment !== undefined || payload.payment_status !== undefined) {
@@ -585,41 +617,91 @@ export function useSupabaseTable<T extends { id: string }>(
             dbOrderPayload.customer = String(payload.customer || payload.customer_name);
           }
           if (payload.table_number !== undefined) dbOrderPayload.table_number = Number(payload.table_number);
+          if (payload.accepted_at !== undefined) dbOrderPayload.accepted_at = payload.accepted_at;
+          if (payload.prep_time_minutes !== undefined) dbOrderPayload.prep_time_minutes = payload.prep_time_minutes;
+          if (payload.estimated_ready_at !== undefined) dbOrderPayload.estimated_ready_at = payload.estimated_ready_at;
 
-          const targetId = String(id).trim();
-          const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(targetId);
+          const targetDigits = targetIdStr.replace(/\D/g, "");
+          const withOrdPrefix = targetIdStr.startsWith("ORD-") ? targetIdStr : `ORD-${targetIdStr}`;
+          const withoutOrdPrefix = targetIdStr.replace(/^ORD-/i, "");
 
-          let updateRes = isUuid
-            ? await supabase.from(tableName).update(dbOrderPayload).eq("id", targetId)
-            : await supabase.from(tableName).update(dbOrderPayload).eq("order_id", targetId);
+          let updatedRows: any[] | null = null;
+          let err1: any = null;
 
-          if (updateRes.error) {
-            let fallbackRes = await supabase.from(tableName).update(dbOrderPayload).eq("order_id", targetId);
-            updateErr = fallbackRes.error;
-          } else {
-            updateErr = null;
-          }
-        } else if (tableName === "sd_menu_items") {
-          let res = await supabase.from(tableName).update(payload).eq("id", id);
-          if (res.error) {
-            const fullItem = (data.find((it: any) => it.id === id) || initialData.find((it: any) => it.id === id)) as any;
-            if (fullItem) {
-              const fullPayload = cleanPayloadForSupabase(tableName, { ...fullItem, ...updates });
-              let res2 = await supabase.from(tableName).upsert([fullPayload]);
-              updateErr = res2.error;
-            } else {
-              updateErr = res.error;
+          // Attempt 1: match id = targetIdStr
+          const res1 = await supabase
+            .from(tableName)
+            .update(dbOrderPayload)
+            .eq("id", targetIdStr)
+            .select();
+          updatedRows = res1.data;
+          err1 = res1.error;
+
+          // Attempt 2: match order_id = targetIdStr
+          if ((!updatedRows || updatedRows.length === 0) && !err1) {
+            const res2 = await supabase
+              .from(tableName)
+              .update(dbOrderPayload)
+              .eq("order_id", targetIdStr)
+              .select();
+            if (res2.data && res2.data.length > 0) {
+              updatedRows = res2.data;
             }
+          }
+
+          // Attempt 3: match order_id = withOrdPrefix
+          if (!updatedRows || updatedRows.length === 0) {
+            const res3 = await supabase
+              .from(tableName)
+              .update(dbOrderPayload)
+              .eq("order_id", withOrdPrefix)
+              .select();
+            if (res3.data && res3.data.length > 0) {
+              updatedRows = res3.data;
+            }
+          }
+
+          // Attempt 4: match order_id = withoutOrdPrefix or targetDigits
+          if (!updatedRows || updatedRows.length === 0) {
+            const matchVal = withoutOrdPrefix || targetDigits;
+            if (matchVal) {
+              const res4 = await supabase
+                .from(tableName)
+                .update(dbOrderPayload)
+                .eq("order_id", matchVal)
+                .select();
+              if (res4.data && res4.data.length > 0) {
+                updatedRows = res4.data;
+              }
+            }
+          }
+
+          // Attempt 5: match id = matchVal
+          if (!updatedRows || updatedRows.length === 0) {
+            const matchVal = targetDigits || withoutOrdPrefix;
+            if (matchVal) {
+              const res5 = await supabase
+                .from(tableName)
+                .update(dbOrderPayload)
+                .eq("id", matchVal)
+                .select();
+              if (res5.data && res5.data.length > 0) {
+                updatedRows = res5.data;
+              }
+            }
+          }
+
+          if (updatedRows && updatedRows.length > 0) {
+            const normalizedDBRows = normalizeFetchedRows(tableName, updatedRows);
+            updateLocalData((prev) => mergeOrdersList(prev, normalizedDBRows) as T[], "db_update");
           } else {
-            updateErr = res.error;
+            console.warn(`[Supabase Order Update Notice]: No rows updated in DB for identifier ${targetIdStr}`);
           }
         } else {
-          let res = await supabase.from(tableName).update(payload).eq("id", id);
-          updateErr = res.error;
-        }
-
-        if (updateErr) {
-          console.warn(`[Supabase Update Notice on ${tableName}]:`, updateErr.message);
+          let res = await supabase.from(tableName).update(payload).eq("id", id).select();
+          if (res.error || !res.data || res.data.length === 0) {
+            await supabase.from(tableName).update(payload).eq("id", id);
+          }
         }
       } catch (err) {
         console.warn(`Supabase update notice for ${tableName}:`, err);
