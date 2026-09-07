@@ -528,7 +528,7 @@ export function useSupabaseTable<T extends { id: string }>(
 
       if (tableName === "sd_orders") {
         const targetIdStr = String(id).trim();
-        const normUpdates = { ...updates };
+        const normUpdates: Record<string, any> = { ...updates };
         if (normUpdates.status) {
           normUpdates.status = normalizeOrderStatus(String(normUpdates.status)) as any;
         }
