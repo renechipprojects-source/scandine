@@ -391,15 +391,15 @@ export function ServiceRequestsSection() {
                   {req.status === "pending" ? (
                     <Button
                       size="sm"
-                      className="h-8 w-full text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1 whitespace-nowrap [&_svg]:size-3.5"
+                      className="h-8 w-full border border-transparent text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1 whitespace-nowrap [&_svg]:size-3.5 box-border"
                       onClick={() => handleAccept(req)}
                     >
                       <Check className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">Accept</span>
                     </Button>
                   ) : (
-                    <div className="h-8 w-full text-[11px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 rounded-md px-1.5 flex items-center justify-center gap-1 whitespace-nowrap shadow-xs">
-                      <Check className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <div className="h-8 w-full border border-amber-500/30 text-[11px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/15 rounded-md px-1.5 flex items-center justify-center gap-1 whitespace-nowrap shadow-xs box-border">
+                      <Check className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
                       <span className="truncate">Accepted</span>
                     </div>
                   )}
@@ -407,10 +407,10 @@ export function ServiceRequestsSection() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 w-full text-[11px] border-rose-500/30 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/40 font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1 whitespace-nowrap"
+                    className="h-8 w-full border border-rose-500/30 text-[11px] text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/40 font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1 whitespace-nowrap [&_svg]:size-3.5 box-border"
                     onClick={() => handleReject(req)}
                   >
-                    <XCircle className="h-3 w-3 shrink-0 text-rose-500" />
+                    <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
                     <span className="truncate">Reject</span>
                   </Button>
 

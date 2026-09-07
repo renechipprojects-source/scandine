@@ -73,54 +73,109 @@ function CashCollectionPage() {
   }, [paidCashOrders]);
 
   const filtered = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
+    const q = searchQuery.trim().toLowerCase();
     if (!q) return unpaidOrders;
 
     const qDigits = q.replace(/\D/g, "");
+    const qNum = qDigits ? parseInt(qDigits, 10) : NaN;
+
+    const isExplicitTableQuery =
+      q.startsWith("table") ||
+      q.startsWith("tbl") ||
+      q.startsWith("t-") ||
+      (q.startsWith("t") && /^\d+$/.test(q.slice(1)));
 
     return unpaidOrders.filter((ord) => {
-      const orderIdStr = String(ord.order_id || ord.id || "").toLowerCase();
-      const custStr = String((ord as any).customer_name || ord.customer || (ord as any).customerName || "").toLowerCase();
-      
-      const rawTable = ord.table_number ?? (ord as any).table ?? (ord as any).table_no ?? (ord as any).tableNumber ?? (ord as any).table_id ?? "";
-      const rawTableStr = String(rawTable).trim().toLowerCase();
-      const tableDigits = rawTableStr.replace(/\D/g, "");
+      const numericTables = new Set<number>();
+      const stringVariants = new Set<string>();
 
-      const tableVariants = new Set<string>();
-      if (rawTableStr) {
-        tableVariants.add(rawTableStr);
-        tableVariants.add(`table ${rawTableStr}`);
-        tableVariants.add(`table${rawTableStr}`);
-        tableVariants.add(`t${rawTableStr}`);
-        tableVariants.add(`t-${rawTableStr}`);
+      const addTableCandidate = (val: any) => {
+        if (val === undefined || val === null || val === "") return;
+        const rawStr = String(val).trim().toLowerCase();
+        if (!rawStr) return;
+
+        stringVariants.add(rawStr);
+        stringVariants.add(`table ${rawStr}`);
+        stringVariants.add(`table${rawStr}`);
+        stringVariants.add(`t${rawStr}`);
+        stringVariants.add(`t-${rawStr}`);
+
+        const digitsOnly = rawStr.replace(/\D/g, "");
+        if (digitsOnly) {
+          const num = parseInt(digitsOnly, 10);
+          if (!isNaN(num)) {
+            numericTables.add(num);
+            stringVariants.add(String(num));
+            stringVariants.add(`table ${num}`);
+            stringVariants.add(`table${num}`);
+            stringVariants.add(`t${num}`);
+            stringVariants.add(`t-${num}`);
+          }
+        }
+      };
+
+      addTableCandidate(ord.table_number);
+      addTableCandidate((ord as any).table);
+      addTableCandidate((ord as any).table_no);
+      addTableCandidate((ord as any).tableNumber);
+      addTableCandidate((ord as any).table_id);
+      addTableCandidate((ord as any).tbl);
+      addTableCandidate((ord as any).tbl_no);
+
+      const custStr = String((ord as any).customer_name || ord.customer || (ord as any).customerName || "").toLowerCase();
+      const custTableMatch = custStr.match(/table\s*[-_]?\s*(\d+)/i) || custStr.match(/\bT[-_]?(\d+)\b/i);
+      if (custTableMatch && custTableMatch[1]) {
+        addTableCandidate(custTableMatch[1]);
       }
-      if (tableDigits) {
-        tableVariants.add(tableDigits);
-        tableVariants.add(`table ${tableDigits}`);
-        tableVariants.add(`table${tableDigits}`);
-        tableVariants.add(`t${tableDigits}`);
-        tableVariants.add(`t-${tableDigits}`);
+
+      let itemsArr: any[] = [];
+      if (Array.isArray(ord.item)) itemsArr = ord.item;
+      else if (Array.isArray((ord as any).items)) itemsArr = (ord as any).items;
+      else if (typeof ord.item === "string") {
+        try {
+          const parsed = JSON.parse(ord.item);
+          if (Array.isArray(parsed)) itemsArr = parsed;
+          else if (parsed && typeof parsed === "object") itemsArr = [parsed];
+        } catch {}
       }
+
+      for (const it of itemsArr) {
+        if (!it) continue;
+        addTableCandidate(it.table_number);
+        addTableCandidate(it.table);
+        addTableCandidate(it.table_no);
+        addTableCandidate(it.tableNumber);
+        addTableCandidate(it.table_id);
+      }
+
+      let tableMatch = false;
+      if (isExplicitTableQuery && !isNaN(qNum)) {
+        tableMatch = numericTables.has(qNum);
+      } else if (isExplicitTableQuery && isNaN(qNum)) {
+        tableMatch = numericTables.size > 0 || stringVariants.size > 0;
+      } else {
+        const exactNumMatch = !isNaN(qNum) && numericTables.has(qNum);
+        const repMatch = Array.from(stringVariants).some(
+          (rep) => rep === q || rep.startsWith(q)
+        );
+        tableMatch = exactNumMatch || repMatch;
+      }
+
+      const orderIdStr = String(ord.order_id || ord.id || "").toLowerCase();
+      const cleanOrdId = orderIdStr.replace(/^#/, "");
+      const orderIdMatch = orderIdStr.includes(q) || cleanOrdId.includes(q);
+
+      const custMatch = custStr.includes(q);
 
       let itemsStr = "";
-      if (Array.isArray(ord.item)) {
-        itemsStr = ord.item.map((i: any) => String(i.name || "").toLowerCase()).join(" ");
+      if (itemsArr.length > 0) {
+        itemsStr = itemsArr.map((i: any) => String(i.name || "").toLowerCase()).join(" ");
       } else if (ord.item) {
         itemsStr = String(ord.item).toLowerCase();
       }
+      const itemsMatch = itemsStr.includes(q);
 
-      const tableMatchesVariant = Array.from(tableVariants).some((v) => v.includes(q) || q.includes(v));
-      const isTableQuery = q.startsWith("table") || q.startsWith("t") || (qDigits.length > 0 && q.length <= 4);
-      const tableMatchesDigits = isTableQuery && qDigits.length > 0 && tableDigits === qDigits;
-
-      const tableMatch = tableMatchesVariant || tableMatchesDigits;
-
-      return (
-        tableMatch ||
-        orderIdStr.includes(q) ||
-        custStr.includes(q) ||
-        itemsStr.includes(q)
-      );
+      return tableMatch || orderIdMatch || custMatch || itemsMatch;
     });
   }, [unpaidOrders, searchQuery]);
 

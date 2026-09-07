@@ -6,9 +6,23 @@ import { Button } from "@/kitchen/components/ui/button";
 import { Input } from "@/kitchen/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/kitchen/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/kitchen/components/ui/select";
-import { Radio, Search, Filter, Bell, Clock, Utensils, User, StickyNote, ArrowRight, CheckCircle2, Timer, Check, X } from "lucide-react";
+import {
+  Radio,
+  Search,
+  Clock,
+  Utensils,
+  User,
+  StickyNote,
+  ArrowRight,
+  CheckCircle2,
+  Timer,
+  Check,
+  X,
+  Eye,
+  ChevronUp,
+} from "lucide-react";
 import { orders as mockOrdersRaw, restaurantInfo } from "@/kitchen/lib/mock-data";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState } from "react";
 import { useSupabaseTable, type Order, type MenuItem } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
 import { calculateOrderPrepTime, useOrderCountdown } from "@/hooks/useOrderTimer";
@@ -16,19 +30,32 @@ import { ServiceRequestsSection } from "@/kitchen/components/ServiceRequestsSect
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/kitchen/_app/orders/live")({
-  head: () => ({ meta: [{ title: "Live Orders — ScanDine" }, { name: "description", content: "Real-time order queue across all tables and channels." }] }),
+  head: () => ({
+    meta: [
+      { title: "Live Orders — ScanDine Kitchen" },
+      { name: "description", content: "Real-time 6-column order management KDS queue across all tables." },
+    ],
+  }),
   component: LiveOrdersPage,
 });
 
 type LaneStatus = Order["status"];
 
-const lanes: { key: LaneStatus; label: string; tone: string }[] = [
-  { key: "pending",   label: "New Orders",  tone: "border-t-warning" },
-  { key: "accepted",  label: "Accepted", tone: "border-t-amber-500" },
-  { key: "preparing", label: "Preparing", tone: "border-t-info" },
-  { key: "ready",     label: "Ready", tone: "border-t-primary" },
-  { key: "completed", label: "Completed", tone: "border-t-success" },
-  { key: "cancelled", label: "Cancelled", tone: "border-t-destructive" },
+interface LaneConfig {
+  key: LaneStatus;
+  label: string;
+  tone: string;
+  badgeBg: string;
+  dotColor: string;
+}
+
+const lanes: LaneConfig[] = [
+  { key: "pending", label: "New Orders", tone: "border-t-amber-500", badgeBg: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20", dotColor: "bg-amber-500" },
+  { key: "accepted", label: "Accepted", tone: "border-t-blue-500", badgeBg: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20", dotColor: "bg-blue-500" },
+  { key: "preparing", label: "Preparing", tone: "border-t-indigo-500", badgeBg: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20", dotColor: "bg-indigo-500" },
+  { key: "ready", label: "Ready", tone: "border-t-emerald-500", badgeBg: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20", dotColor: "bg-emerald-500" },
+  { key: "completed", label: "Completed", tone: "border-t-slate-400", badgeBg: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20", dotColor: "bg-slate-400" },
+  { key: "cancelled", label: "Cancelled", tone: "border-t-rose-500", badgeBg: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20", dotColor: "bg-rose-500" },
 ];
 
 function formatOrderTime(timeStr?: string): string {
@@ -63,7 +90,7 @@ function OrderLiveCardItem({
     onAutoReady(order);
   }, [order, onAutoReady]);
 
-  const { formattedTime, remainingSeconds } = useOrderCountdown(
+  const { formattedTime } = useOrderCountdown(
     order.estimated_ready_at,
     order.status,
     handleComplete
@@ -72,101 +99,113 @@ function OrderLiveCardItem({
   const items = Array.isArray(order.item) ? order.item : [];
 
   return (
-    <Card className="p-3.5 transition-all hover:shadow-md flex flex-col justify-between min-h-[230px] border shadow-xs w-full">
-      <div className="flex-1 flex flex-col">
-        <div className="flex items-start justify-between gap-2 shrink-0">
-          <div>
-            <div className="text-xs font-mono font-semibold text-muted-foreground">{order.order_id || order.id}</div>
-            <div className="mt-0.5 flex items-center gap-1.5 font-display font-bold text-sm">
-              <Utensils className="h-3.5 w-3.5 text-primary shrink-0" /> T-{order.table_number}
+    <Card className="p-3 transition-all hover:shadow-md flex flex-col justify-between min-h-[280px] border shadow-xs w-full bg-card">
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Card Header: Table Number, Order ID & Payment Badge */}
+        <div className="flex items-start justify-between gap-1.5 shrink-0 pb-2 border-b border-border/50">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1 font-display font-bold text-sm text-foreground truncate">
+              <Utensils className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="truncate">Table {order.table_number}</span>
+            </div>
+            <div className="text-[11px] font-mono font-semibold text-muted-foreground truncate">
+              {order.order_id || order.id}
             </div>
           </div>
-          <StatusBadge status={order.payment} />
+          <div className="shrink-0">
+            <StatusBadge status={order.payment} />
+          </div>
         </div>
 
-        <div className="mt-2 space-y-1.5 border-t pt-2 h-[84px] overflow-y-auto pr-1 shrink-0">
-          {items.map((it, i) => (
-            <div key={i} className="flex items-center justify-between gap-2 text-xs">
-              <span className="truncate flex-1 font-medium">
-                <span className="mr-1.5 font-bold text-muted-foreground">{it.qty}×</span>
-                {it.name}
-              </span>
-              <span className="text-muted-foreground font-mono text-[11px] shrink-0">
-                {restaurantInfo.currency}{(it.qty * it.price).toFixed(2)}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-auto flex items-center justify-between border-t pt-2 text-[11px] text-muted-foreground gap-2 shrink-0">
-          <span className="flex items-center gap-1.5 truncate">
-            <User className="h-3 w-3 shrink-0" />
-            <span className="truncate font-medium">{order.customer}</span>
+        {/* Customer & Placed Time Info */}
+        <div className="flex items-center justify-between py-1.5 text-[11px] text-muted-foreground gap-2 shrink-0">
+          <span className="flex items-center gap-1 truncate max-w-[110px]" title={order.customer}>
+            <User className="h-3 w-3 shrink-0 text-muted-foreground/80" />
+            <span className="truncate font-medium">{order.customer || "Guest"}</span>
           </span>
-          <span className="flex items-center gap-1.5 shrink-0 font-mono">
-            <Clock className="h-3 w-3 shrink-0" />
+          <span className="flex items-center gap-1 shrink-0 font-mono text-[10px]">
+            <Clock className="h-3 w-3 shrink-0 text-muted-foreground/80" />
             {formatOrderTime(order.order_time)}
           </span>
         </div>
 
-        {/* Preparation Timer Display */}
-        {(order.status === "accepted" || order.status === "preparing") && (
-          <div className="mt-2 rounded-lg border border-info/30 bg-info/10 p-1.5 text-center shrink-0">
-            <div className="flex items-center justify-center gap-1.5 font-mono text-xs font-bold text-info-foreground">
-              <Timer className="h-3.5 w-3.5 animate-pulse text-info shrink-0" />
-              <span>Prep Countdown: {formattedTime}</span>
-            </div>
-            {order.prep_time_minutes && (
-              <div className="mt-0.5 text-[10px] text-muted-foreground">
-                Total prep time: {order.prep_time_minutes} min
+        {/* Items List Box */}
+        <div className="bg-muted/40 rounded-lg p-2 h-[80px] overflow-y-auto space-y-1 border border-border/40 shrink-0 scrollbar-thin">
+          {items.length === 0 ? (
+            <div className="text-[11px] text-muted-foreground italic text-center py-2">No item details</div>
+          ) : (
+            items.map((it, i) => (
+              <div key={i} className="flex items-center justify-between gap-1.5 text-xs">
+                <span className="truncate flex-1 font-medium text-foreground">
+                  <span className="mr-1 font-bold text-primary">{it.qty}×</span>
+                  {it.name}
+                </span>
+                <span className="text-muted-foreground font-mono text-[10px] shrink-0">
+                  {restaurantInfo.currency}{(it.qty * (it.price || 0)).toFixed(2)}
+                </span>
               </div>
-            )}
+            ))
+          )}
+        </div>
+
+        {/* Order Total & Prep Countdown Banner */}
+        <div className="mt-2 flex items-center justify-between text-xs font-semibold shrink-0">
+          <span className="text-muted-foreground text-[11px]">Total:</span>
+          <span className="font-mono text-foreground font-bold">{restaurantInfo.currency}{Number(order.total || 0).toFixed(2)}</span>
+        </div>
+
+        {(order.status === "accepted" || order.status === "preparing") && (
+          <div className="mt-1.5 rounded-md border border-info/30 bg-info/10 p-1 text-center shrink-0">
+            <div className="flex items-center justify-center gap-1 font-mono text-[11px] font-bold text-info-foreground">
+              <Timer className="h-3 w-3 animate-pulse text-info shrink-0" />
+              <span>Prep: {formattedTime}</span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Workflow Controls */}
-      <div className="mt-auto border-t pt-2.5 w-full shrink-0">
+      {/* Workflow Controls Footer */}
+      <div className="mt-2.5 pt-2 border-t border-border/60 w-full shrink-0">
         {order.status === "pending" && (
-          <div className="grid grid-cols-2 gap-2 w-full">
+          <div className="grid grid-cols-2 gap-1.5 items-center w-full">
             <Button
               size="sm"
-              className="w-full h-8 text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs px-2 flex items-center justify-center gap-1.5 whitespace-nowrap [&_svg]:size-3.5"
+              className="w-full h-8 text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1"
               onClick={() => onAccept(order)}
             >
               <Check className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">Accept</span>
+              <span>Accept</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="w-full h-8 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive font-semibold shadow-xs px-2 flex items-center justify-center gap-1.5 whitespace-nowrap"
+              className="w-full h-8 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1"
               onClick={() => onCancel(order)}
             >
               <X className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">Cancel</span>
+              <span>Reject</span>
             </Button>
           </div>
         )}
 
         {order.status === "accepted" && (
-          <div className="grid grid-cols-2 gap-2 w-full">
+          <div className="grid grid-cols-2 gap-1.5 w-full">
             <Button
               size="sm"
-              className="w-full h-8 text-[11px] bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs px-2 flex items-center justify-center gap-1.5 whitespace-nowrap"
+              className="w-full h-8 text-[11px] bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1"
               onClick={() => onAdvance(order)}
             >
               <Timer className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">Preparing</span>
+              <span>Preparing</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="w-full h-8 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive font-semibold shadow-xs px-2 flex items-center justify-center gap-1.5 whitespace-nowrap"
+              className="w-full h-8 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 font-semibold shadow-xs px-1.5 flex items-center justify-center gap-1"
               onClick={() => onCancel(order)}
             >
               <X className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">Cancel</span>
+              <span>Reject</span>
             </Button>
           </div>
         )}
@@ -174,8 +213,7 @@ function OrderLiveCardItem({
         {order.status === "preparing" && (
           <Button
             size="sm"
-            variant="outline"
-            className="w-full h-8 text-[11px] border-primary/40 text-primary hover:bg-primary/10 font-semibold shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap"
+            className="w-full h-8 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-xs flex items-center justify-center gap-1"
             onClick={() => onAdvance(order)}
           >
             <span>Mark Ready</span>
@@ -186,7 +224,7 @@ function OrderLiveCardItem({
         {order.status === "ready" && (
           <Button
             size="sm"
-            className="w-full h-8 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap"
+            className="w-full h-8 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs flex items-center justify-center gap-1"
             onClick={() => onAdvance(order)}
           >
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
@@ -195,13 +233,13 @@ function OrderLiveCardItem({
         )}
 
         {order.status === "completed" && (
-          <div className="w-full h-8 flex items-center justify-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md shadow-xs">
+          <div className="w-full h-8 flex items-center justify-center text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md shadow-xs">
             Completed ✅
           </div>
         )}
 
         {order.status === "cancelled" && (
-          <div className="w-full h-8 flex items-center justify-center text-xs font-semibold text-destructive bg-destructive/10 border border-destructive/20 rounded-md shadow-xs">
+          <div className="w-full h-8 flex items-center justify-center text-[11px] font-semibold text-destructive bg-destructive/10 border border-destructive/20 rounded-md shadow-xs">
             Cancelled ❌
           </div>
         )}
@@ -229,29 +267,32 @@ function LiveOrdersPage() {
   const [channelFilter, setChannelFilter] = useState("all");
   const [timeTab, setTimeTab] = useState("today");
 
+  const [expandedColumns, setExpandedColumns] = useState<Record<string, boolean>>({});
+
+  const toggleColumnExpanded = (laneKey: string) => {
+    setExpandedColumns((prev) => ({ ...prev, [laneKey]: !prev[laneKey] }));
+  };
+
   const handleRealtimePayload = useCallback(() => {
     fetchData();
   }, [fetchData]);
 
   useRealtimeTable("sd_orders", handleRealtimePayload);
 
-  // Mapped display orders from unified data source
   const allOrders: Order[] = dbOrders;
 
-  // Filter orders by search, channel, time
   const displayOrders = allOrders.filter((o) => {
     const q = searchQuery.toLowerCase().trim();
-    const matchesSearch = !q || (
+    const matchesSearch =
+      !q ||
       (o.id && o.id.toLowerCase().includes(q)) ||
       (o.order_id && o.order_id.toLowerCase().includes(q)) ||
       (o.customer && o.customer.toLowerCase().includes(q)) ||
       (o.table_number && o.table_number.toString().includes(q)) ||
-      (Array.isArray(o.item) && o.item.some((it) => it.name.toLowerCase().includes(q)))
-    );
+      (Array.isArray(o.item) && o.item.some((it) => it.name.toLowerCase().includes(q)));
 
-    const matchesChannel = channelFilter === "all" || (
-      channelFilter === "qr" ? o.table_number > 0 : true
-    );
+    const matchesChannel =
+      channelFilter === "all" || (channelFilter === "qr" ? o.table_number > 0 : true);
 
     let matchesTime = true;
     if (o.order_time) {
@@ -390,32 +431,18 @@ function LiveOrdersPage() {
     }
   };
 
-  const nowMs = Date.now();
   const activeOrders = allOrders.filter((o) => ["pending", "accepted", "preparing", "ready"].includes(o.status));
   const activePreps = allOrders.filter((o) => o.status === "preparing" || o.status === "accepted");
-  const avgPrepMinutes = activePreps.length > 0
-    ? Math.round(
-        activePreps.reduce((acc, o) => acc + (o.prep_time_minutes || 15), 0) / activePreps.length
-      )
-    : 0;
-
-  const longestWaitMinutes = allOrders.length > 0
-    ? Math.max(
-        ...allOrders.map((o) => {
-          const createdMs = new Date(o.order_time || (o as any).created_at || nowMs).getTime();
-          return isNaN(createdMs) ? 0 : Math.max(0, Math.floor((nowMs - createdMs) / (1000 * 60)));
-        })
-      )
-    : 0;
-
-  const priorityCount = allOrders.filter((o) => o.status === "pending").length;
+  const avgPrepMinutes =
+    activePreps.length > 0
+      ? Math.round(
+          activePreps.reduce((acc, o) => acc + (o.prep_time_minutes || 15), 0) / activePreps.length
+        )
+      : 0;
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Live orders"
-        icon={<Radio className="h-5 w-5" />}
-      />
+    <div className="space-y-5 w-full">
+      <PageHeader title="Live orders" icon={<Radio className="h-5 w-5 text-primary" />} />
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 gap-3 max-w-lg">
@@ -423,7 +450,7 @@ function LiveOrdersPage() {
           { label: "Active orders", value: activeOrders.length, icon: <Utensils className="h-4 w-4" />, tone: "text-primary" },
           { label: "Avg prep time", value: `${avgPrepMinutes} min`, icon: <Timer className="h-4 w-4" />, tone: "text-info" },
         ].map((s) => (
-          <Card key={s.label} className="p-4">
+          <Card key={s.label} className="p-4 border shadow-xs">
             <div className="flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
               {s.label}
               <span className={s.tone}>{s.icon}</span>
@@ -435,6 +462,7 @@ function LiveOrdersPage() {
 
       <ServiceRequestsSection />
 
+      {/* Search & Filters Controls */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[220px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -449,7 +477,9 @@ function LiveOrdersPage() {
           />
         </div>
         <Select value={channelFilter} onValueChange={setChannelFilter}>
-          <SelectTrigger id="kitchen-live-orders-channel-filter" name="channelFilter" aria-label="Filter by order channel" className="w-[150px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger id="kitchen-live-orders-channel-filter" name="channelFilter" aria-label="Filter by order channel" className="w-[150px]">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All channels</SelectItem>
             <SelectItem value="qr">QR Order</SelectItem>
@@ -466,39 +496,79 @@ function LiveOrdersPage() {
         </Tabs>
       </div>
 
-      {/* Live Order Kanban Lanes with Independent Column Scrollbars */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
+      {/* Modern Clean 6-Column Structure KDS Queue */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 w-full items-start">
         {lanes.map((lane) => {
           const laneOrders = displayOrders.filter((o) => o.status === lane.key);
+          const isExpanded = Boolean(expandedColumns[lane.key]);
+          const DEFAULT_VISIBLE_COUNT = 4;
+          const visibleOrders = isExpanded ? laneOrders : laneOrders.slice(0, DEFAULT_VISIBLE_COUNT);
+          const hasMore = laneOrders.length > DEFAULT_VISIBLE_COUNT;
+
           return (
-            <div key={lane.key} className={`min-w-0 rounded-2xl border-t-4 bg-card p-3 shadow-sm ${lane.tone} flex flex-col`}>
-              <div className="mb-3 flex items-center justify-between px-1 shrink-0">
+            <div key={lane.key} className={`min-w-0 rounded-2xl border-t-4 bg-card p-3 shadow-xs border ${lane.tone} flex flex-col transition-all`}>
+              {/* Column Header */}
+              <div className="mb-3 flex items-center justify-between px-1 shrink-0 pb-2 border-b border-border/40">
                 <div className="flex items-center gap-2">
-                  <span className="font-display text-sm font-bold">{lane.label}</span>
-                  <span className="grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1.5 text-[10px] font-semibold">{laneOrders.length}</span>
+                  <span className={`h-2 w-2 rounded-full ${lane.dotColor}`} />
+                  <span className="font-display text-sm font-bold text-foreground truncate">{lane.label}</span>
                 </div>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${lane.badgeBg}`}>
+                  {laneOrders.length}
+                </span>
               </div>
-              <div className="space-y-3 max-h-[580px] overflow-y-auto pr-1">
-                {laneOrders.length === 0 && (
-                  <div className="rounded-xl border border-dashed py-8 text-center text-xs text-muted-foreground">No orders</div>
+
+              {/* Column Cards Container */}
+              <div className="space-y-3 max-h-[640px] overflow-y-auto pr-1 scrollbar-thin flex-1">
+                {laneOrders.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border/80 py-10 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-1 bg-muted/20">
+                    <Utensils className="h-5 w-5 opacity-30" />
+                    <span>No orders in {lane.label}</span>
+                  </div>
+                ) : (
+                  visibleOrders.map((o) => (
+                    <OrderLiveCardItem
+                      key={o.id}
+                      order={o}
+                      onAccept={handleAcceptOrder}
+                      onAdvance={handleStageAdvance}
+                      onAutoReady={handleAutoReady}
+                      onCancel={handleCancelOrder}
+                    />
+                  ))
                 )}
-                {laneOrders.map((o) => (
-                  <OrderLiveCardItem
-                    key={o.id}
-                    order={o}
-                    onAccept={handleAcceptOrder}
-                    onAdvance={handleStageAdvance}
-                    onAutoReady={handleAutoReady}
-                    onCancel={handleCancelOrder}
-                  />
-                ))}
               </div>
+
+              {/* Column Footer: "View all" toggle if more than 4 orders */}
+              {hasMore && (
+                <div className="mt-3 pt-2 border-t border-border/60 text-center shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs font-semibold text-primary hover:bg-primary/10 h-7 flex items-center justify-center gap-1"
+                    onClick={() => toggleColumnExpanded(lane.key)}
+                  >
+                    {isExpanded ? (
+                      <>
+                        <ChevronUp className="h-3.5 w-3.5" />
+                        Show less
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-3.5 w-3.5" />
+                        View all ({laneOrders.length})
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
-      <Card className="mt-6">
+      {/* Order Timeline Section */}
+      <Card className="mt-6 border shadow-xs">
         <CardHeader>
           <CardTitle className="text-base font-semibold">Order timeline</CardTitle>
         </CardHeader>
@@ -519,7 +589,7 @@ function LiveOrdersPage() {
                     <span className="text-xs text-muted-foreground">· {formatOrderTime(o.order_time)}</span>
                   </div>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    {o.customer} · T-{o.table_number} · {Array.isArray(o.item) ? o.item.length : 0} items · {restaurantInfo.currency}{Number(o.total).toFixed(2)}
+                    {o.customer} · Table {o.table_number} · {Array.isArray(o.item) ? o.item.length : 0} items · {restaurantInfo.currency}{Number(o.total || 0).toFixed(2)}
                   </div>
                   {i === 0 && (
                     <div className="mt-2 flex items-start gap-2 rounded-lg bg-warning/10 p-2 text-xs text-warning-foreground">

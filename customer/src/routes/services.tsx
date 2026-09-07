@@ -210,21 +210,21 @@ function Services() {
                 return (
                   <div
                     key={r.id}
-                    className="glass rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-xs border border-white/10 hover:border-white/20 transition-all"
+                    className="glass rounded-2xl p-3 px-4 flex items-center justify-between gap-3 h-[60px] min-h-[60px] shadow-xs border border-white/10 hover:border-white/20 transition-all w-full"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-8 px-2.5 rounded-xl gradient-primary text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs whitespace-nowrap">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="h-8 min-w-[68px] px-2.5 rounded-xl gradient-primary text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs whitespace-nowrap text-center">
                         {formattedTable}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-sm text-white truncate">{r.label || r.service_type}</div>
-                        <div className="text-[11px] text-white/70 font-mono mt-0.5">
+                      <div className="min-w-0 flex-1 flex flex-col justify-center">
+                        <div className="font-semibold text-sm text-white truncate leading-tight">{r.label || r.service_type}</div>
+                        <div className="text-[11px] text-white/70 font-mono mt-0.5 leading-none">
                           {new Date(r.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </div>
                       </div>
                     </div>
                     <span
-                      className={`text-xs font-semibold px-3 py-1 rounded-full shrink-0 flex items-center justify-center whitespace-nowrap shadow-xs ${
+                      className={`h-7 text-xs font-semibold px-3 rounded-full shrink-0 flex items-center justify-center whitespace-nowrap shadow-xs ${
                         r.status === "completed"
                           ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
                           : r.status === "accepted" || r.status === "dispatched"

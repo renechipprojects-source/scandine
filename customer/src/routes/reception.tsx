@@ -88,9 +88,69 @@ function ReceptionDashboard() {
     if (filter === "upi" && p.payment_category !== "upi") return false;
 
     if (searchTerm.trim()) {
-      const q = searchTerm.toLowerCase();
+      const q = searchTerm.trim().toLowerCase();
+      const qDigits = q.replace(/\D/g, "");
+      const qNum = qDigits ? parseInt(qDigits, 10) : NaN;
+
+      const isExplicitTableQuery =
+        q.startsWith("table") ||
+        q.startsWith("tbl") ||
+        q.startsWith("t-") ||
+        (q.startsWith("t") && /^\d+$/.test(q.slice(1)));
+
+      const numericTables = new Set<number>();
+      const stringVariants = new Set<string>();
+
+      const addTableCandidate = (val: any) => {
+        if (val === undefined || val === null || val === "") return;
+        const rawStr = String(val).trim().toLowerCase();
+        if (!rawStr) return;
+
+        stringVariants.add(rawStr);
+        stringVariants.add(`table ${rawStr}`);
+        stringVariants.add(`table${rawStr}`);
+        stringVariants.add(`t${rawStr}`);
+        stringVariants.add(`t-${rawStr}`);
+
+        const digitsOnly = rawStr.replace(/\D/g, "");
+        if (digitsOnly) {
+          const num = parseInt(digitsOnly, 10);
+          if (!isNaN(num)) {
+            numericTables.add(num);
+            stringVariants.add(String(num));
+            stringVariants.add(`table ${num}`);
+            stringVariants.add(`table${num}`);
+            stringVariants.add(`t${num}`);
+            stringVariants.add(`t-${num}`);
+          }
+        }
+      };
+
+      addTableCandidate(p.table_number);
+      addTableCandidate((p as any).table);
+      addTableCandidate((p as any).table_no);
+
+      const custStr = String(p.customer_name || "").toLowerCase();
+      const custTableMatch = custStr.match(/table\s*[-_]?\s*(\d+)/i) || custStr.match(/\bT[-_]?(\d+)\b/i);
+      if (custTableMatch && custTableMatch[1]) {
+        addTableCandidate(custTableMatch[1]);
+      }
+
+      let tableMatch = false;
+      if (isExplicitTableQuery && !isNaN(qNum)) {
+        tableMatch = numericTables.has(qNum);
+      } else if (isExplicitTableQuery && isNaN(qNum)) {
+        tableMatch = numericTables.size > 0 || stringVariants.size > 0;
+      } else {
+        const exactNumMatch = !isNaN(qNum) && numericTables.has(qNum);
+        const repMatch = Array.from(stringVariants).some(
+          (rep) => rep === q || rep.startsWith(q)
+        );
+        tableMatch = exactNumMatch || repMatch;
+      }
+
       return (
-        p.table_number.toLowerCase().includes(q) ||
+        tableMatch ||
         p.customer_name.toLowerCase().includes(q) ||
         p.order_number.toLowerCase().includes(q) ||
         p.invoice_id.toLowerCase().includes(q) ||
