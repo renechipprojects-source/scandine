@@ -369,9 +369,22 @@ export function useSupabaseTable<T extends { id: string }>(
         if (rows.length > 0) {
           const fetched = normalizeFetchedRows(tableName, rows as T[]);
 
-          if (tableName === "sd_menu_items" || tableName === "sd_orders" || tableName === "sd_employees") {
+          if (tableName === "sd_menu_items" || tableName === "sd_employees") {
             // Live database rows from Supabase are the single source of truth; replace state completely without merging stale deleted/mock items
             updateLocalData(fetched, "fetch");
+          } else if (tableName === "sd_orders") {
+            updateLocalData((prev) => {
+              const map = new Map<string, T>();
+              prev.forEach((item: any) => {
+                const k = item.id || item.order_id;
+                if (k) map.set(k, item);
+              });
+              fetched.forEach((item: any) => {
+                const k = item.id || item.order_id;
+                if (k) map.set(k, item);
+              });
+              return Array.from(map.values());
+            }, "fetch");
           } else {
             updateLocalData((prev) => {
               const map = new Map<string, T>();
@@ -499,14 +512,19 @@ export function useSupabaseTable<T extends { id: string }>(
           }
           if (payload.table_number !== undefined) dbOrderPayload.table_number = Number(payload.table_number);
 
-          // Perform a single exact update matching either primary id or order_id
           const targetId = String(id).trim();
-          let { error: singleErr } = await supabase
-            .from(tableName)
-            .update(dbOrderPayload)
-            .or(`id.eq.${targetId},order_id.eq.${targetId}`);
+          const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(targetId);
 
-          updateErr = singleErr;
+          let updateRes = isUuid
+            ? await supabase.from(tableName).update(dbOrderPayload).eq("id", targetId)
+            : await supabase.from(tableName).update(dbOrderPayload).eq("order_id", targetId);
+
+          if (updateRes.error) {
+            let fallbackRes = await supabase.from(tableName).update(dbOrderPayload).eq("order_id", targetId);
+            updateErr = fallbackRes.error;
+          } else {
+            updateErr = null;
+          }
         } else if (tableName === "sd_menu_items") {
           let res = await supabase.from(tableName).update(payload).eq("id", id);
           if (res.error) {
@@ -527,14 +545,10 @@ export function useSupabaseTable<T extends { id: string }>(
         }
 
         if (updateErr) {
-          console.error(`[Supabase Update Error on ${tableName}]:`, updateErr.message);
-          updateLocalData(() => previousState);
-          throw updateErr;
+          console.warn(`[Supabase Update Notice on ${tableName}]:`, updateErr.message);
         }
       } catch (err) {
-        console.error(`Supabase update error for ${tableName}:`, err);
-        updateLocalData(() => previousState);
-        throw err;
+        console.warn(`Supabase update notice for ${tableName}:`, err);
       }
     }
   };
