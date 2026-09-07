@@ -288,6 +288,64 @@ function normalizeFetchedRows<T>(tableName: string, rows: T[]): T[] {
   return rows;
 }
 
+function isSameLogicalOrder(a: any, b: any): boolean {
+  if (!a || !b) return false;
+  const aId = String(a.id || "").trim().toLowerCase();
+  const aOrderId = String(a.order_id || a.order_number || "").trim().toLowerCase();
+
+  const bId = String(b.id || "").trim().toLowerCase();
+  const bOrderId = String(b.order_id || b.order_number || "").trim().toLowerCase();
+
+  if (aId && (aId === bId || aId === bOrderId)) return true;
+  if (aOrderId && (aOrderId === bId || aOrderId === bOrderId)) return true;
+  return false;
+}
+
+function isMatchingOrderId(order: any, targetIdStr: string): boolean {
+  if (!order || !targetIdStr) return false;
+  const target = targetIdStr.trim().toLowerCase();
+  const oId = String(order.id || "").trim().toLowerCase();
+  const oOrderId = String(order.order_id || order.order_number || "").trim().toLowerCase();
+  return oId === target || oOrderId === target;
+}
+
+function mergeOrdersList(prev: any[], fetched: any[]): any[] {
+  const result: any[] = [];
+
+  const addOrMerge = (newItem: any) => {
+    if (!newItem) return;
+    const normStatus = normalizeOrderStatus(newItem.status);
+    const itemToProcess = { ...newItem, status: normStatus };
+
+    const existingIndex = result.findIndex((r) => isSameLogicalOrder(r, itemToProcess));
+    if (existingIndex === -1) {
+      result.push(itemToProcess);
+    } else {
+      const existing = result[existingIndex];
+      const normExistingStatus = normalizeOrderStatus(existing.status);
+      const normNewStatus = itemToProcess.status;
+
+      let finalStatus = normNewStatus;
+      if (normExistingStatus !== "pending" && normNewStatus === "pending") {
+        finalStatus = normExistingStatus;
+      }
+
+      result[existingIndex] = {
+        ...existing,
+        ...itemToProcess,
+        id: itemToProcess.id || existing.id,
+        order_id: itemToProcess.order_id || existing.order_id || itemToProcess.id || existing.id,
+        status: finalStatus,
+      };
+    }
+  };
+
+  prev.forEach((item) => addOrMerge(item));
+  fetched.forEach((item) => addOrMerge(item));
+
+  return result;
+}
+
 // Generic Hook for managing Supabase Table CRUD with state
 export function useSupabaseTable<T extends { id: string }>(
   tableName: string,
@@ -373,18 +431,7 @@ export function useSupabaseTable<T extends { id: string }>(
             // Live database rows from Supabase are the single source of truth; replace state completely without merging stale deleted/mock items
             updateLocalData(fetched, "fetch");
           } else if (tableName === "sd_orders") {
-            updateLocalData((prev) => {
-              const map = new Map<string, T>();
-              prev.forEach((item: any) => {
-                const k = item.id || item.order_id;
-                if (k) map.set(k, item);
-              });
-              fetched.forEach((item: any) => {
-                const k = item.id || item.order_id;
-                if (k) map.set(k, item);
-              });
-              return Array.from(map.values());
-            }, "fetch");
+            updateLocalData((prev) => mergeOrdersList(prev, fetched) as T[], "fetch");
           } else {
             updateLocalData((prev) => {
               const map = new Map<string, T>();
@@ -478,6 +525,33 @@ export function useSupabaseTable<T extends { id: string }>(
     let previousState: T[] = [];
     updateLocalData((prev) => {
       previousState = prev;
+
+      if (tableName === "sd_orders") {
+        const targetIdStr = String(id).trim();
+        const normUpdates = { ...updates };
+        if (normUpdates.status) {
+          normUpdates.status = normalizeOrderStatus(String(normUpdates.status)) as any;
+        }
+
+        let foundMatch = false;
+        const updatedList = prev.map((item: any) => {
+          if (isMatchingOrderId(item, targetIdStr)) {
+            foundMatch = true;
+            return { ...item, ...normUpdates };
+          }
+          return item;
+        });
+
+        if (!foundMatch && initialData.length > 0) {
+          const fromInitial = initialData.find((item: any) => isMatchingOrderId(item, targetIdStr));
+          if (fromInitial) {
+            updatedList.unshift({ ...fromInitial, ...normUpdates });
+          }
+        }
+
+        return mergeOrdersList(updatedList, []) as T[];
+      }
+
       const exists = prev.some((item: any) => item.id === id || item.order_id === id);
       if (!exists && initialData.length > 0) {
         const fromInitial = initialData.find((item: any) => item.id === id || item.order_id === id);
