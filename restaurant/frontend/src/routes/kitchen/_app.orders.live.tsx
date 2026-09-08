@@ -28,6 +28,7 @@ import { useRealtimeTable } from "@/hooks/useRealtime";
 import { calculateOrderPrepTime, useOrderCountdown } from "@/hooks/useOrderTimer";
 import { ServiceRequestsSection } from "@/kitchen/components/ServiceRequestsSection";
 import { toast } from "sonner";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const Route = createFileRoute("/kitchen/_app/orders/live")({
   head: () => ({
@@ -262,8 +263,13 @@ const initialOrdersList: Order[] = mockOrdersRaw.map((m) => ({
   order_time: m.placedAt,
 }));
 
+const emptyOrdersFallback: Order[] = [];
+
 function LiveOrdersPage() {
-  const { data: dbOrders, updateItem, fetchData } = useSupabaseTable<Order>("sd_orders", initialOrdersList);
+  const { data: dbOrders, updateItem, fetchData } = useSupabaseTable<Order>(
+    "sd_orders",
+    isSupabaseConfigured ? emptyOrdersFallback : initialOrdersList
+  );
   const { data: dbMenuItems } = useSupabaseTable<MenuItem>("sd_menu_items");
   const [searchQuery, setSearchQuery] = useState("");
   const [channelFilter, setChannelFilter] = useState("all");

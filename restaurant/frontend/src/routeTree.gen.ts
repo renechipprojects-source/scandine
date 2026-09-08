@@ -33,6 +33,7 @@ import { Route as AdminAppInventoryIngredientsRouteImport } from './routes/admin
 import { Route as AdminAppInventoryPurchaseOrdersRouteImport } from './routes/admin/_app.inventory.purchase-orders'
 import { Route as AdminAppInventorySuppliersRouteImport } from './routes/admin/_app.inventory.suppliers'
 import { Route as AdminAppMenuItemsRouteImport } from './routes/admin/_app.menu.items'
+import { Route as KitchenAppBillingCashCollectionRouteImport } from './routes/kitchen/_app.billing.cash-collection'
 import { Route as KitchenAppMenuAddRouteImport } from './routes/kitchen/_app.menu.add'
 import { Route as KitchenAppMenuItemsRouteImport } from './routes/kitchen/_app.menu.items'
 import { Route as KitchenAppOrdersHistoryRouteImport } from './routes/kitchen/_app.orders.history'
@@ -166,6 +167,12 @@ const AdminAppMenuItemsRoute = AdminAppMenuItemsRouteImport.update({
   path: '/menu/items',
   getParentRoute: () => AdminAppRoute,
 } as any)
+const KitchenAppBillingCashCollectionRoute =
+  KitchenAppBillingCashCollectionRouteImport.update({
+    id: '/billing/cash-collection',
+    path: '/billing/cash-collection',
+    getParentRoute: () => KitchenAppRoute,
+  } as any)
 const KitchenAppMenuAddRoute = KitchenAppMenuAddRouteImport.update({
   id: '/menu/add',
   path: '/menu/add',
@@ -242,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/admin/inventory/purchase-orders': typeof AdminAppInventoryPurchaseOrdersRoute
   '/admin/inventory/suppliers': typeof AdminAppInventorySuppliersRoute
   '/admin/menu/items': typeof AdminAppMenuItemsRoute
+  '/kitchen/billing/cash-collection': typeof KitchenAppBillingCashCollectionRoute
   '/kitchen/menu/add': typeof KitchenAppMenuAddRoute
   '/kitchen/menu/items': typeof KitchenAppMenuItemsRoute
   '/kitchen/orders/history': typeof KitchenAppOrdersHistoryRoute
@@ -274,6 +282,7 @@ export interface FileRoutesByTo {
   '/admin/inventory/purchase-orders': typeof AdminAppInventoryPurchaseOrdersRoute
   '/admin/inventory/suppliers': typeof AdminAppInventorySuppliersRoute
   '/admin/menu/items': typeof AdminAppMenuItemsRoute
+  '/kitchen/billing/cash-collection': typeof KitchenAppBillingCashCollectionRoute
   '/kitchen/menu/add': typeof KitchenAppMenuAddRoute
   '/kitchen/menu/items': typeof KitchenAppMenuItemsRoute
   '/kitchen/orders/history': typeof KitchenAppOrdersHistoryRoute
@@ -310,6 +319,7 @@ export interface FileRoutesById {
   '/admin/_app/inventory/purchase-orders': typeof AdminAppInventoryPurchaseOrdersRoute
   '/admin/_app/inventory/suppliers': typeof AdminAppInventorySuppliersRoute
   '/admin/_app/menu/items': typeof AdminAppMenuItemsRoute
+  '/kitchen/_app/billing/cash-collection': typeof KitchenAppBillingCashCollectionRoute
   '/kitchen/_app/menu/add': typeof KitchenAppMenuAddRoute
   '/kitchen/_app/menu/items': typeof KitchenAppMenuItemsRoute
   '/kitchen/_app/orders/history': typeof KitchenAppOrdersHistoryRoute
@@ -347,6 +357,7 @@ export interface FileRouteTypes {
     | '/admin/inventory/purchase-orders'
     | '/admin/inventory/suppliers'
     | '/admin/menu/items'
+    | '/kitchen/billing/cash-collection'
     | '/kitchen/menu/add'
     | '/kitchen/menu/items'
     | '/kitchen/orders/history'
@@ -379,6 +390,7 @@ export interface FileRouteTypes {
     | '/admin/inventory/purchase-orders'
     | '/admin/inventory/suppliers'
     | '/admin/menu/items'
+    | '/kitchen/billing/cash-collection'
     | '/kitchen/menu/add'
     | '/kitchen/menu/items'
     | '/kitchen/orders/history'
@@ -414,6 +426,7 @@ export interface FileRouteTypes {
     | '/admin/_app/inventory/purchase-orders'
     | '/admin/_app/inventory/suppliers'
     | '/admin/_app/menu/items'
+    | '/kitchen/_app/billing/cash-collection'
     | '/kitchen/_app/menu/add'
     | '/kitchen/_app/menu/items'
     | '/kitchen/_app/orders/history'
@@ -607,6 +620,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAppMenuItemsRouteImport
       parentRoute: typeof AdminAppRoute
     }
+    '/kitchen/_app/billing/cash-collection': {
+      id: '/kitchen/_app/billing/cash-collection'
+      path: '/billing/cash-collection'
+      fullPath: '/kitchen/billing/cash-collection'
+      preLoaderRoute: typeof KitchenAppBillingCashCollectionRouteImport
+      parentRoute: typeof KitchenAppRoute
+    }
     '/kitchen/_app/menu/add': {
       id: '/kitchen/_app/menu/add'
       path: '/menu/add'
@@ -708,6 +728,7 @@ const AdminAppRouteWithChildren = AdminAppRoute._addFileChildren(
 interface KitchenAppRouteChildren {
   KitchenAppKdsRoute: typeof KitchenAppKdsRoute
   KitchenAppNotificationsRoute: typeof KitchenAppNotificationsRoute
+  KitchenAppBillingCashCollectionRoute: typeof KitchenAppBillingCashCollectionRoute
   KitchenAppMenuAddRoute: typeof KitchenAppMenuAddRoute
   KitchenAppMenuItemsRoute: typeof KitchenAppMenuItemsRoute
   KitchenAppOrdersHistoryRoute: typeof KitchenAppOrdersHistoryRoute
@@ -717,6 +738,7 @@ interface KitchenAppRouteChildren {
 const KitchenAppRouteChildren: KitchenAppRouteChildren = {
   KitchenAppKdsRoute: KitchenAppKdsRoute,
   KitchenAppNotificationsRoute: KitchenAppNotificationsRoute,
+  KitchenAppBillingCashCollectionRoute: KitchenAppBillingCashCollectionRoute,
   KitchenAppMenuAddRoute: KitchenAppMenuAddRoute,
   KitchenAppMenuItemsRoute: KitchenAppMenuItemsRoute,
   KitchenAppOrdersHistoryRoute: KitchenAppOrdersHistoryRoute,

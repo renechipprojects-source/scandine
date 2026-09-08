@@ -253,7 +253,7 @@ function POPage() {
 
       // Optionally persist to database suppliers table
       try {
-        await supabase.from("suppliers").insert([{
+        await supabase.from("sd_suppliers").insert([{
           id: newSup.id,
           name: trimmedName,
           phone: trimmedPhone,
@@ -405,11 +405,17 @@ function POPage() {
       return updated;
     });
 
-    // 3. Attempt DB deletion if table exists in Supabase
+    // 3. Attempt DB deletion from sd_suppliers table in Supabase
     try {
-      await supabase.from("suppliers").delete().eq("id", id);
-      await supabase.from("suppliers").delete().ilike("name", name.trim());
-    } catch (err) {
+      const { error: err1 } = await supabase.from("sd_suppliers").delete().eq("id", id);
+      if (err1 && err1.code !== "PGRST116" && err1.code !== "42P01") {
+        console.warn("[sd_suppliers delete notice eq]:", err1.message);
+      }
+      const { error: err2 } = await supabase.from("sd_suppliers").delete().ilike("name", name.trim());
+      if (err2 && err2.code !== "PGRST116" && err2.code !== "42P01") {
+        console.warn("[sd_suppliers delete notice ilike]:", err2.message);
+      }
+    } catch (err: any) {
       console.warn("Supabase supplier delete notice:", err);
     }
 

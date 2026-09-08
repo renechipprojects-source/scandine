@@ -442,7 +442,7 @@ function TopLevelCustomerMenu() {
           <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <ConciergeBell className="h-3.5 w-3.5 text-primary" /> Table Service Requests
           </div>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { label: "Water", icon: Droplet, service: "water" },
               { label: "Bill", icon: Receipt, service: "bill" },
@@ -455,10 +455,10 @@ function TopLevelCustomerMenu() {
                 size="sm"
                 disabled={sendingRequest}
                 onClick={() => handleSendServiceRequest(`Request ${srv.label}`, srv.service)}
-                className="flex flex-col items-center justify-center h-14 p-1 text-xs gap-1 border-primary/20 hover:bg-primary/10 hover:border-primary"
+                className="flex flex-col items-center justify-center min-h-[56px] h-auto p-1.5 text-xs gap-1 border-primary/20 hover:bg-primary/10 hover:border-primary text-center"
               >
-                <srv.icon className="h-4 w-4 text-primary" />
-                <span className="text-[10px] font-semibold">{srv.label}</span>
+                <srv.icon className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-[10px] font-semibold leading-tight">{srv.label}</span>
               </Button>
             ))}
           </div>

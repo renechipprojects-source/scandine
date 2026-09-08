@@ -11,7 +11,7 @@ import { useSupabaseTable, type Order } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { normalizePaymentStatus, resolvePaymentMethod } from "@/lib/payment-utils";
+import { normalizePaymentStatus, resolvePaymentMethod, resolvePaymentStatus } from "@/lib/payment-utils";
 
 export const Route = createFileRoute("/reception/_app/billing/cash-collection")({
   head: () => ({
@@ -30,7 +30,7 @@ const formatINR = (val: number) => {
   });
 };
 
-function CashCollectionPage() {
+export function CashCollectionPage() {
   const { data: dbOrders, fetchData: fetchOrders, updateItem, loading } = useSupabaseTable<Order>("sd_orders");
   const [searchQuery, setSearchQuery] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -44,8 +44,7 @@ function CashCollectionPage() {
   // Filter strictly unpaid / pending orders from sd_orders
   const unpaidOrders = useMemo(() => {
     return dbOrders.filter((ord) => {
-      const rawStatus = ord.payment || (ord as any).payment_status;
-      const normStatus = normalizePaymentStatus(rawStatus);
+      const normStatus = resolvePaymentStatus(ord);
       return normStatus === "Unpaid" || normStatus === "Pending";
     }).sort((a, b) => {
       const timeA = new Date(a.order_time || a.created_at || 0).getTime();

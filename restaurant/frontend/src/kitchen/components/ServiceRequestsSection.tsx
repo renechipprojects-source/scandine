@@ -387,7 +387,7 @@ export function ServiceRequestsSection() {
                 </div>
 
                 {/* Actions */}
-                <div className="mt-3 grid grid-cols-3 gap-1.5 border-t pt-2.5 items-center w-full">
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-1.5 border-t pt-2.5 items-center w-full min-w-0">
                   {req.status === "pending" ? (
                     <Button
                       size="sm"

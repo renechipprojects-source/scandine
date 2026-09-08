@@ -435,6 +435,12 @@ export function useSupabaseTable<T extends { id: string }>(
           localStorage.setItem(storageKey, JSON.stringify(filtered));
           return filtered as T[];
         }
+        if (Array.isArray(parsed) && tableName === "sd_orders" && isSupabaseConfigured) {
+          const mockIds = new Set(["#ORD-10247", "#ORD-10248", "#ORD-10249", "#ORD-10250", "ORD-10247", "ORD-10248", "ORD-10249", "ORD-10250"]);
+          const filtered = parsed.filter((item: any) => !mockIds.has(String(item.id)) && !mockIds.has(String(item.order_id)));
+          localStorage.setItem(storageKey, JSON.stringify(filtered));
+          return filtered as T[];
+        }
         return parsed;
       }
       if (initialData.length > 0) {
@@ -491,7 +497,7 @@ export function useSupabaseTable<T extends { id: string }>(
         if (rows.length > 0) {
           const fetched = normalizeFetchedRows(tableName, rows as T[]);
 
-          if (tableName === "sd_menu_items" || tableName === "sd_employees") {
+          if (tableName === "sd_menu_items" || tableName === "sd_employees" || (tableName === "sd_orders" && isSupabaseConfigured)) {
             // Live database rows from Supabase are the single source of truth; replace state completely without merging stale deleted/mock items
             updateLocalData(fetched, "fetch");
           } else if (tableName === "sd_orders") {
