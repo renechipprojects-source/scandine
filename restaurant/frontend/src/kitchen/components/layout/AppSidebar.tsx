@@ -1,6 +1,6 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
-  ShoppingBag, ChevronDown, Sparkles, ChefHat, UtensilsCrossed, LogOut, Receipt
+  ShoppingBag, ChevronDown, Sparkles, ChefHat, UtensilsCrossed, LogOut
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -31,11 +31,6 @@ const nav: { label: string; items: NavItem[] }[] = [
       {
         title: "Menu", icon: UtensilsCrossed, children: [
           { title: "Food Items", url: "/kitchen/menu/items" },
-        ],
-      },
-      {
-        title: "Billing", icon: Receipt, children: [
-          { title: "Cash Collection", url: "/kitchen/billing/cash-collection" },
         ],
       },
     ],
