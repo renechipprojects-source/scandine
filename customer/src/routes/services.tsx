@@ -35,10 +35,16 @@ function Services() {
     let unsubscribe = () => {};
 
     async function loadRequests() {
-      const data = await getServiceRequestsByTable(tableNumber);
+      const data = await getServiceRequestsByTable(tableNumber, customerName);
       setRequests(data);
 
       unsubscribe = subscribeToServiceRequests(tableNumber, (updatedReq) => {
+        if (customerName && customerName !== "Guest" && updatedReq.customer_name) {
+          if (updatedReq.customer_name.trim().toLowerCase() !== customerName.trim().toLowerCase()) {
+            return;
+          }
+        }
+
         setRequests((prev) => {
           const exists = prev.some((r) => r.id === updatedReq.id);
           if (exists) {
@@ -72,7 +78,7 @@ function Services() {
             category: "services",
           });
         }
-      });
+      }, customerName);
     }
 
     loadRequests();
@@ -85,6 +91,11 @@ function Services() {
         localBc.onmessage = (event) => {
           if (event.data?.type === "SERVICE_REQUEST_STATUS_UPDATED" && event.data.service) {
             const srv = event.data.service as ServiceRequest;
+            if (customerName && customerName !== "Guest" && srv.customer_name) {
+              if (srv.customer_name.trim().toLowerCase() !== customerName.trim().toLowerCase()) {
+                return;
+              }
+            }
             setRequests((prev) => {
               const exists = prev.some((r) => r.id === srv.id);
               if (exists) return prev.map((r) => (r.id === srv.id ? { ...r, status: srv.status } : r));
@@ -106,7 +117,7 @@ function Services() {
       unsubscribe();
       if (localBc) localBc.close();
     };
-  }, [tableNumber]);
+  }, [tableNumber, customerName]);
 
   const handleRequest = async (id: string, label: string) => {
     setLoading(true);
@@ -133,8 +144,15 @@ function Services() {
   const combinedRequests = requests.filter((r) => {
     const sDigits = r.table_number.replace(/\D/g, "");
     const tDigits = tableNumber.replace(/\D/g, "");
-    if (sDigits && tDigits) return sDigits === tDigits;
-    return r.table_number.toLowerCase().replace(/\s+/g, "") === tableNumber.toLowerCase().replace(/\s+/g, "");
+    const tableMatch = (sDigits && tDigits)
+      ? sDigits === tDigits
+      : r.table_number.toLowerCase().replace(/\s+/g, "") === tableNumber.toLowerCase().replace(/\s+/g, "");
+    if (!tableMatch) return false;
+
+    if (customerName && customerName !== "Guest") {
+      return (r.customer_name || "").trim().toLowerCase() === customerName.trim().toLowerCase();
+    }
+    return true;
   });
 
   return (

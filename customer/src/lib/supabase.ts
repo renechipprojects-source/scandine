@@ -881,10 +881,20 @@ export function mapNotificationToServiceRequest(row: any): ServiceRequest {
   const rawStatus = row.status || "Pending";
   const normStatus = rawStatus.toLowerCase() as "pending" | "accepted" | "rejected" | "completed" | "dispatched";
 
+  let custName = row.customer_name || row.customerName || "";
+  if (!custName && row.message && typeof row.message === "string") {
+    const byMatch = row.message.match(/\bby\s+([^()|]+)$/i) || row.message.match(/Customer:\s*([^()|]+)/i);
+    if (byMatch) custName = byMatch[1].trim();
+  }
+  if (!custName && row.title && typeof row.title === "string") {
+    const titleMatch = row.title.match(/\(([^()]+)\)$/);
+    if (titleMatch) custName = titleMatch[1].trim();
+  }
+
   return {
     id: String(row.id),
     table_number: String(row.table_number || ""),
-    customer_name: row.customer_name || "Guest",
+    customer_name: custName || "Guest",
     service_type: row.service_type || serviceType,
     label: requestType,
     status: normStatus,
@@ -902,8 +912,8 @@ export async function sendServiceRequest(tableNumber: string, serviceType: strin
     request_type: requestType,
     status: "Pending",
     created_at: createdAt,
-    title: `${requestType} - ${finalTable}`,
-    message: `Service request: ${requestType} for ${finalTable}`,
+    title: `${requestType} - ${finalTable} (${customerName})`,
+    message: `Service request: ${requestType} for ${finalTable} by ${customerName}`,
     type: "service_request",
     read: false,
   };
@@ -926,6 +936,9 @@ export async function sendServiceRequest(tableNumber: string, serviceType: strin
 
       if (!error && data && data.length > 0) {
         savedReq = mapNotificationToServiceRequest(data[0]);
+        if (!savedReq.customer_name || savedReq.customer_name === "Guest") {
+          savedReq.customer_name = customerName;
+        }
       } else {
         if (error) console.error("Supabase notifications insert error:", error);
         safeEnqueueAction({
@@ -998,7 +1011,8 @@ export async function getAllServiceRequests(): Promise<ServiceRequest[]> {
   return getLocalServices();
 }
 
-export async function getServiceRequestsByTable(tableNumber: string): Promise<ServiceRequest[]> {
+export async function getServiceRequestsByTable(tableNumber: string, customerName?: string): Promise<ServiceRequest[]> {
+  let list: ServiceRequest[] = [];
   if (isSupabaseConfigured()) {
     try {
       const { data, error } = await (supabase.from("sd_notifications") as any)
@@ -1008,18 +1022,32 @@ export async function getServiceRequestsByTable(tableNumber: string): Promise<Se
         .order("created_at", { ascending: false });
 
       if (!error && data) {
-        return data.map(mapNotificationToServiceRequest);
+        list = data.map(mapNotificationToServiceRequest);
       }
     } catch (err) {
       console.warn("Supabase fetch service requests by table error from notifications table:", err);
     }
   }
 
-  const local = getLocalServices();
-  return local.filter((s) => s.table_number.toLowerCase() === tableNumber.toLowerCase());
+  if (list.length === 0) {
+    const local = getLocalServices();
+    list = local.filter((s) => {
+      const sDigits = s.table_number.replace(/\D/g, "");
+      const tDigits = tableNumber.replace(/\D/g, "");
+      if (sDigits && tDigits) return sDigits === tDigits;
+      return s.table_number.toLowerCase().replace(/\s+/g, "") === tableNumber.toLowerCase().replace(/\s+/g, "");
+    });
+  }
+
+  if (customerName && customerName.trim() && customerName !== "Guest") {
+    const targetName = customerName.trim().toLowerCase();
+    list = list.filter((s) => (s.customer_name || "").trim().toLowerCase() === targetName);
+  }
+
+  return list;
 }
 
-export function subscribeToServiceRequests(tableNumber: string, onUpdate: (req: ServiceRequest) => void) {
+export function subscribeToServiceRequests(tableNumber: string, onUpdate: (req: ServiceRequest) => void, customerName?: string) {
   if (!isSupabaseConfigured()) {
     return () => { };
   }
@@ -1035,6 +1063,12 @@ export function subscribeToServiceRequests(tableNumber: string, onUpdate: (req: 
     return normStr === str;
   };
 
+  const matchesCustomer = (reqCust?: string) => {
+    if (!customerName || customerName === "Guest") return true;
+    if (!reqCust || reqCust === "Guest") return false;
+    return reqCust.trim().toLowerCase() === customerName.trim().toLowerCase();
+  };
+
   const cleanChannelName = `services-sub-${normStr}`;
   const channel = supabase
     .channel(cleanChannelName)
@@ -1048,7 +1082,7 @@ export function subscribeToServiceRequests(tableNumber: string, onUpdate: (req: 
       (payload) => {
         if (payload.new && (payload.new as any).request_type) {
           const req = mapNotificationToServiceRequest(payload.new);
-          if (matchesTable(req.table_number)) {
+          if (matchesTable(req.table_number) && matchesCustomer(req.customer_name)) {
             onUpdate(req);
           }
         }
@@ -1057,7 +1091,7 @@ export function subscribeToServiceRequests(tableNumber: string, onUpdate: (req: 
     .on("broadcast", { event: "service_request_status" }, (eventPayload) => {
       if (eventPayload.payload?.service) {
         const req = eventPayload.payload.service as ServiceRequest;
-        if (matchesTable(req.table_number)) {
+        if (matchesTable(req.table_number) && matchesCustomer(req.customer_name)) {
           onUpdate(req);
         }
       }

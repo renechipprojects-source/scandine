@@ -92,6 +92,10 @@ export interface Order {
   payment: "paid" | "unpaid" | "refunded" | "pending";
   order_time: string;
   accepted_at?: string;
+  preparing_at?: string;
+  ready_at?: string;
+  completed_at?: string;
+  cancelled_at?: string;
   prep_time_minutes?: number;
   estimated_ready_at?: string;
   created_at?: string;
@@ -220,15 +224,15 @@ function cleanPayloadForSupabase(tableName: string, payload: Record<string, unkn
     if (cleaned.payment || cleaned.payment_status) {
       const pVal = String(cleaned.payment_status || cleaned.payment).toLowerCase();
       cleaned.payment = pVal;
-      cleaned.payment_status = pVal;
+      delete cleaned.payment_status;
     }
     if (cleaned.items || cleaned.item) {
-      cleaned.items = cleaned.items || cleaned.item;
-      delete cleaned.item;
+      cleaned.item = cleaned.item || cleaned.items;
+      delete cleaned.items;
     }
     if (cleaned.customer_name || cleaned.customer) {
-      cleaned.customer_name = String(cleaned.customer_name || cleaned.customer);
-      delete cleaned.customer;
+      cleaned.customer = String(cleaned.customer || cleaned.customer_name);
+      delete cleaned.customer_name;
     }
   }
 
@@ -341,6 +345,7 @@ function mergeOrdersList(prev: any[], fetched: any[]): any[] {
       ...newItem,
       status: normStatus,
       payment: normalizePaymentStatus(newItem.payment || newItem.payment_status),
+      _isFromFetch: isFromFetch,
     };
 
     const existingIndex = result.findIndex((r) => isSameLogicalOrder(r, itemToProcess));
@@ -384,16 +389,36 @@ function mergeOrdersList(prev: any[], fetched: any[]): any[] {
         // When fetching from Supabase DB, Supabase DB is authoritative unless local rank is higher for an in-flight transition
         finalStatus = newStatus;
       } else {
-        finalStatus = newStatus;
+        finalStatus = existing.status || newStatus;
+      }
+
+      // Authoritative DB Precedence Rule:
+      // If 'existing' came from Supabase DB (_isFromFetch === true) and 'itemToProcess' is from local/stale storage (isFromFetch === false),
+      // DB properties in 'existing' take precedence over stale local 'itemToProcess'.
+      let baseMerged: any;
+      let finalPayment: string;
+      if (existing._isFromFetch && !isFromFetch) {
+        baseMerged = { ...itemToProcess, ...existing };
+        finalPayment = existing.payment || itemToProcess.payment;
+      } else if (isFromFetch && !existing._isFromFetch) {
+        baseMerged = { ...existing, ...itemToProcess };
+        finalPayment = itemToProcess.payment || existing.payment;
+      } else {
+        baseMerged = { ...existing, ...itemToProcess };
+        finalPayment = itemToProcess.payment || existing.payment;
       }
 
       result[existingIndex] = {
-        ...existing,
-        ...itemToProcess,
+        ...baseMerged,
         id: itemToProcess.id || existing.id,
         order_id: itemToProcess.order_id || existing.order_id || itemToProcess.id || existing.id,
         status: finalStatus,
+        payment: finalPayment,
         accepted_at: itemToProcess.accepted_at || existing.accepted_at,
+        preparing_at: itemToProcess.preparing_at || existing.preparing_at,
+        ready_at: itemToProcess.ready_at || existing.ready_at,
+        completed_at: itemToProcess.completed_at || existing.completed_at,
+        cancelled_at: itemToProcess.cancelled_at || existing.cancelled_at,
         prep_time_minutes: itemToProcess.prep_time_minutes || existing.prep_time_minutes,
         estimated_ready_at: itemToProcess.estimated_ready_at || existing.estimated_ready_at,
       };
@@ -407,7 +432,7 @@ function mergeOrdersList(prev: any[], fetched: any[]): any[] {
     prev.forEach((item) => addOrMerge(item, false));
   }
 
-  return result;
+  return result.map(({ _isFromFetch, ...rest }) => rest);
 }
 
 // Generic Hook for managing Supabase Table CRUD with state
@@ -490,14 +515,19 @@ export function useSupabaseTable<T extends { id: string }>(
             .from(tableName)
             .select("*");
           if (!fetchErr2 && rows2) {
-            updateLocalData(normalizeFetchedRows(tableName, rows2 as T[]), "fetch");
+            const fetched = normalizeFetchedRows(tableName, rows2 as T[]);
+            if (tableName === "sd_orders") {
+              updateLocalData((prev) => mergeOrdersList(prev, fetched) as T[], "fetch");
+            } else {
+              updateLocalData(fetched, "fetch");
+            }
           }
         }
       } else if (rows) {
         if (rows.length > 0) {
           const fetched = normalizeFetchedRows(tableName, rows as T[]);
 
-          if (tableName === "sd_menu_items" || tableName === "sd_employees" || (tableName === "sd_orders" && isSupabaseConfigured)) {
+          if (tableName === "sd_menu_items" || tableName === "sd_employees") {
             // Live database rows from Supabase are the single source of truth; replace state completely without merging stale deleted/mock items
             updateLocalData(fetched, "fetch");
           } else if (tableName === "sd_orders") {
@@ -530,7 +560,13 @@ export function useSupabaseTable<T extends { id: string }>(
 
     const handleLocalUpdate = (e: Event) => {
       const customEv = e as CustomEvent;
-      if (!customEv.detail || (customEv.detail.tableName === tableName && customEv.detail.source !== "fetch")) {
+      if (
+        !customEv.detail ||
+        (customEv.detail.tableName === tableName &&
+          customEv.detail.source !== "fetch" &&
+          customEv.detail.source !== "optimistic" &&
+          customEv.detail.source !== "db_update")
+      ) {
         fetchData();
       }
     };
@@ -646,7 +682,12 @@ export function useSupabaseTable<T extends { id: string }>(
 
         if (tableName === "sd_orders") {
           const dbOrderPayload: Record<string, any> = {};
-          if (payload.status !== undefined) dbOrderPayload.status = normalizeOrderStatus(String(payload.status));
+          if (payload.status !== undefined) {
+            const normS = normalizeOrderStatus(String(payload.status));
+            // sd_orders_status_check constraint allows: pending, preparing, ready, completed, cancelled.
+            // Map 'accepted' status to 'preparing' to satisfy PostgreSQL check constraint.
+            dbOrderPayload.status = normS === "accepted" ? "preparing" : normS;
+          }
           if (payload.payment !== undefined || payload.payment_status !== undefined) {
             dbOrderPayload.payment = normalizePaymentStatus(String(payload.payment || payload.payment_status));
           }
@@ -659,8 +700,10 @@ export function useSupabaseTable<T extends { id: string }>(
           }
           if (payload.table_number !== undefined) dbOrderPayload.table_number = Number(payload.table_number);
           if (payload.accepted_at !== undefined) dbOrderPayload.accepted_at = payload.accepted_at;
-          if (payload.prep_time_minutes !== undefined) dbOrderPayload.prep_time_minutes = payload.prep_time_minutes;
-          if (payload.estimated_ready_at !== undefined) dbOrderPayload.estimated_ready_at = payload.estimated_ready_at;
+          if (payload.preparing_at !== undefined) dbOrderPayload.preparing_at = payload.preparing_at;
+          if (payload.ready_at !== undefined) dbOrderPayload.ready_at = payload.ready_at;
+          if (payload.completed_at !== undefined) dbOrderPayload.completed_at = payload.completed_at;
+          if (payload.cancelled_at !== undefined) dbOrderPayload.cancelled_at = payload.cancelled_at;
 
           const targetDigits = targetIdStr.replace(/\D/g, "");
           const withOrdPrefix = targetIdStr.startsWith("ORD-") ? targetIdStr : `ORD-${targetIdStr}`;

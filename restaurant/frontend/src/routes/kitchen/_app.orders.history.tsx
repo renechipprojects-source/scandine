@@ -29,6 +29,7 @@ function OrderHistoryPage() {
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState("");
+  const [tableFilter, setTableFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [timeFilter, setTimeFilter] = useState("all");
@@ -58,9 +59,15 @@ function OrderHistoryPage() {
     const matchesQuery = !q || (
       (o.id && o.id.toLowerCase().includes(q)) ||
       (o.order_id && o.order_id.toLowerCase().includes(q)) ||
-      (o.customer && o.customer.toLowerCase().includes(q)) ||
-      (o.table_number && o.table_number.toString().includes(q))
+      (o.customer && o.customer.toLowerCase().includes(q))
     );
+
+    const matchesTable = (() => {
+      if (tableFilter === "all") return true;
+      if (tableFilter === "10+") return o.table_number >= 10;
+      const num = parseInt(tableFilter, 10);
+      return !isNaN(num) && o.table_number === num;
+    })();
 
     const matchesStatus = statusFilter === "all" || o.status === statusFilter;
     const matchesPayment = paymentFilter === "all" || o.payment === paymentFilter;
@@ -76,7 +83,7 @@ function OrderHistoryPage() {
       }
     }
 
-    return matchesQuery && matchesStatus && matchesPayment && matchesTime;
+    return matchesQuery && matchesTable && matchesStatus && matchesPayment && matchesTime;
   });
 
   // Dynamic Pagination calculations
@@ -123,7 +130,8 @@ function OrderHistoryPage() {
           <div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by order ID, customer or table…"
+              placeholder="Search by order ID or customer..."
+              aria-label="Search by order ID or customer..."
               className="pl-9"
               value={searchQuery}
               onChange={(e) => {
@@ -132,6 +140,31 @@ function OrderHistoryPage() {
               }}
             />
           </div>
+
+          <Select
+            value={tableFilter}
+            onValueChange={(val) => {
+              setTableFilter(val);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger id="kitchen-history-table-filter" className="w-[140px]">
+              <SelectValue placeholder="All Tables" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tables</SelectItem>
+              <SelectItem value="1">Table 1</SelectItem>
+              <SelectItem value="2">Table 2</SelectItem>
+              <SelectItem value="3">Table 3</SelectItem>
+              <SelectItem value="4">Table 4</SelectItem>
+              <SelectItem value="5">Table 5</SelectItem>
+              <SelectItem value="6">Table 6</SelectItem>
+              <SelectItem value="7">Table 7</SelectItem>
+              <SelectItem value="8">Table 8</SelectItem>
+              <SelectItem value="9">Table 9</SelectItem>
+              <SelectItem value="10+">Table 10+</SelectItem>
+            </SelectContent>
+          </Select>
 
           <Select
             value={statusFilter}

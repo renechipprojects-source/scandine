@@ -12,6 +12,7 @@ import { useRealtimeTable } from "@/hooks/useRealtime";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { normalizePaymentStatus, resolvePaymentMethod, resolvePaymentStatus } from "@/lib/payment-utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/reception/components/ui/select";
 
 export const Route = createFileRoute("/reception/_app/billing/cash-collection")({
   head: () => ({
@@ -30,9 +31,17 @@ const formatINR = (val: number) => {
   });
 };
 
+function getOrderTableNumber(ord: any): number {
+  const raw = ord.table_number ?? ord.table ?? ord.table_no ?? ord.tableNumber ?? ord.table_id ?? 0;
+  if (typeof raw === "number") return raw;
+  const digits = String(raw).replace(/\D/g, "");
+  return digits ? parseInt(digits, 10) : 0;
+}
+
 export function CashCollectionPage() {
   const { data: dbOrders, fetchData: fetchOrders, updateItem, loading } = useSupabaseTable<Order>("sd_orders");
   const [searchQuery, setSearchQuery] = useState("");
+  const [tableFilter, setTableFilter] = useState("all");
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const handleRealtimePayload = useCallback(() => {
@@ -73,110 +82,26 @@ export function CashCollectionPage() {
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return unpaidOrders;
-
-    const qDigits = q.replace(/\D/g, "");
-    const qNum = qDigits ? parseInt(qDigits, 10) : NaN;
-
-    const isExplicitTableQuery =
-      q.startsWith("table") ||
-      q.startsWith("tbl") ||
-      q.startsWith("t-") ||
-      (q.startsWith("t") && /^\d+$/.test(q.slice(1)));
 
     return unpaidOrders.filter((ord) => {
-      const numericTables = new Set<number>();
-      const stringVariants = new Set<string>();
+      const matchesTable = (() => {
+        if (tableFilter === "all") return true;
+        const tblNum = getOrderTableNumber(ord);
+        if (tableFilter === "10+") return tblNum >= 10;
+        const num = parseInt(tableFilter, 10);
+        return !isNaN(num) && tblNum === num;
+      })();
 
-      const addTableCandidate = (val: any) => {
-        if (val === undefined || val === null || val === "") return;
-        const rawStr = String(val).trim().toLowerCase();
-        if (!rawStr) return;
+      const matchesQuery = (() => {
+        if (!q) return true;
+        const ordIdStr = String(ord.order_id || ord.id || "").toLowerCase().replace(/^#/, "");
+        const custStr = String((ord as any).customer_name || ord.customer || (ord as any).customerName || "").toLowerCase();
+        return ordIdStr.includes(q) || custStr.includes(q);
+      })();
 
-        stringVariants.add(rawStr);
-        stringVariants.add(`table ${rawStr}`);
-        stringVariants.add(`table${rawStr}`);
-        stringVariants.add(`t${rawStr}`);
-        stringVariants.add(`t-${rawStr}`);
-
-        const digitsOnly = rawStr.replace(/\D/g, "");
-        if (digitsOnly) {
-          const num = parseInt(digitsOnly, 10);
-          if (!isNaN(num)) {
-            numericTables.add(num);
-            stringVariants.add(String(num));
-            stringVariants.add(`table ${num}`);
-            stringVariants.add(`table${num}`);
-            stringVariants.add(`t${num}`);
-            stringVariants.add(`t-${num}`);
-          }
-        }
-      };
-
-      addTableCandidate(ord.table_number);
-      addTableCandidate((ord as any).table);
-      addTableCandidate((ord as any).table_no);
-      addTableCandidate((ord as any).tableNumber);
-      addTableCandidate((ord as any).table_id);
-      addTableCandidate((ord as any).tbl);
-      addTableCandidate((ord as any).tbl_no);
-
-      const custStr = String((ord as any).customer_name || ord.customer || (ord as any).customerName || "").toLowerCase();
-      const custTableMatch = custStr.match(/table\s*[-_]?\s*(\d+)/i) || custStr.match(/\bT[-_]?(\d+)\b/i);
-      if (custTableMatch && custTableMatch[1]) {
-        addTableCandidate(custTableMatch[1]);
-      }
-
-      let itemsArr: any[] = [];
-      if (Array.isArray(ord.item)) itemsArr = ord.item;
-      else if (Array.isArray((ord as any).items)) itemsArr = (ord as any).items;
-      else if (typeof ord.item === "string") {
-        try {
-          const parsed = JSON.parse(ord.item);
-          if (Array.isArray(parsed)) itemsArr = parsed;
-          else if (parsed && typeof parsed === "object") itemsArr = [parsed];
-        } catch {}
-      }
-
-      for (const it of itemsArr) {
-        if (!it) continue;
-        addTableCandidate(it.table_number);
-        addTableCandidate(it.table);
-        addTableCandidate(it.table_no);
-        addTableCandidate(it.tableNumber);
-        addTableCandidate(it.table_id);
-      }
-
-      let tableMatch = false;
-      if (isExplicitTableQuery && !isNaN(qNum)) {
-        tableMatch = numericTables.has(qNum);
-      } else if (isExplicitTableQuery && isNaN(qNum)) {
-        tableMatch = numericTables.size > 0 || stringVariants.size > 0;
-      } else {
-        const exactNumMatch = !isNaN(qNum) && numericTables.has(qNum);
-        const repMatch = Array.from(stringVariants).some(
-          (rep) => rep === q || rep.startsWith(q)
-        );
-        tableMatch = exactNumMatch || repMatch;
-      }
-
-      const orderIdStr = String(ord.order_id || ord.id || "").toLowerCase();
-      const cleanOrdId = orderIdStr.replace(/^#/, "");
-      const orderIdMatch = orderIdStr.includes(q) || cleanOrdId.includes(q);
-
-      const custMatch = custStr.includes(q);
-
-      let itemsStr = "";
-      if (itemsArr.length > 0) {
-        itemsStr = itemsArr.map((i: any) => String(i.name || "").toLowerCase()).join(" ");
-      } else if (ord.item) {
-        itemsStr = String(ord.item).toLowerCase();
-      }
-      const itemsMatch = itemsStr.includes(q);
-
-      return tableMatch || orderIdMatch || custMatch || itemsMatch;
+      return matchesTable && matchesQuery;
     });
-  }, [unpaidOrders, searchQuery]);
+  }, [unpaidOrders, searchQuery, tableFilter]);
 
   // Handle cash collection for ONE specific sd_orders row with verification
   const handleCollectCash = async (targetOrder: Order) => {
@@ -235,6 +160,12 @@ export function CashCollectionPage() {
 
       if (!err1 && res1 && res1.length > 0) {
         updateConfirmed = true;
+        try {
+          await updateItem(targetId, {
+            payment: "paid",
+            item: updatedItems,
+          } as any);
+        } catch {}
       } else {
         // Strategy B: Order identifier match (order_id)
         const altId = targetOrder.order_id || targetId;
@@ -249,6 +180,12 @@ export function CashCollectionPage() {
 
         if (!err2 && res2 && res2.length > 0) {
           updateConfirmed = true;
+          try {
+            await updateItem(targetId, {
+              payment: "paid",
+              item: updatedItems,
+            } as any);
+          } catch {}
         } else {
           // Strategy C: Fallback using updateItem hook
           try {
@@ -342,17 +279,37 @@ export function CashCollectionPage() {
               {filtered.length} pending
             </span>
           </div>
-          <div className="relative min-w-[240px] max-w-sm flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              id="reception-cash-search"
-              name="cashSearch"
-              placeholder="Search by order ID, customer name or table…"
-              aria-label="Search by order ID, customer name or table"
-              className="pl-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="flex flex-wrap items-center gap-2 flex-1 max-w-lg justify-end">
+            <div className="relative min-w-[220px] flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="reception-cash-search"
+                name="cashSearch"
+                placeholder="Search by order ID or customer..."
+                aria-label="Search by order ID or customer..."
+                className="pl-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Select value={tableFilter} onValueChange={setTableFilter}>
+              <SelectTrigger id="reception-cash-table-filter" name="tableFilter" aria-label="Filter by table number" className="w-[140px]">
+                <SelectValue placeholder="All Tables" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Tables</SelectItem>
+                <SelectItem value="1">Table 1</SelectItem>
+                <SelectItem value="2">Table 2</SelectItem>
+                <SelectItem value="3">Table 3</SelectItem>
+                <SelectItem value="4">Table 4</SelectItem>
+                <SelectItem value="5">Table 5</SelectItem>
+                <SelectItem value="6">Table 6</SelectItem>
+                <SelectItem value="7">Table 7</SelectItem>
+                <SelectItem value="8">Table 8</SelectItem>
+                <SelectItem value="9">Table 9</SelectItem>
+                <SelectItem value="10+">Table 10+</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

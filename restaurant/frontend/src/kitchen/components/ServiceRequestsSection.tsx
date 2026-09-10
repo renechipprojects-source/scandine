@@ -33,10 +33,20 @@ export function mapRowToServiceRequestItem(row: any): ServiceRequestItem {
   const rawStatus = row.status || "Pending";
   const lowerStatus = rawStatus.toLowerCase() as "pending" | "accepted" | "dispatched" | "rejected" | "completed";
 
+  let custName = row.customer_name || row.customerName || "";
+  if (!custName && row.message && typeof row.message === "string") {
+    const byMatch = row.message.match(/\bby\s+([^()|]+)$/i) || row.message.match(/Customer:\s*([^()|]+)/i);
+    if (byMatch) custName = byMatch[1].trim();
+  }
+  if (!custName && row.title && typeof row.title === "string") {
+    const titleMatch = row.title.match(/\(([^()]+)\)$/);
+    if (titleMatch) custName = titleMatch[1].trim();
+  }
+
   return {
     id: String(row.id),
     table_number: row.table_number || "",
-    customer_name: row.customer_name || "Guest",
+    customer_name: custName || "Guest",
     service_type: sType,
     label: reqType,
     request_type: reqType,
@@ -86,7 +96,16 @@ export function ServiceRequestsSection() {
       if (!error && data) {
         const mapped = data
           .map(mapRowToServiceRequestItem)
-          .filter((r) => r.status !== "completed" && r.status !== "rejected");
+          .filter(
+            (r) =>
+              r.table_number !== null &&
+              r.table_number !== undefined &&
+              String(r.table_number).trim() !== "" &&
+              String(r.table_number).trim().toLowerCase() !== "null" &&
+              String(r.table_number).trim().toLowerCase() !== "undefined" &&
+              r.status !== "completed" &&
+              r.status !== "rejected"
+          );
         setRequests(mapped);
       }
     } catch (err) {
@@ -110,8 +129,15 @@ export function ServiceRequestsSection() {
         (payload) => {
           if (payload.new && (payload.new as any).request_type) {
             const item = mapRowToServiceRequestItem(payload.new);
+            const hasValidTable =
+              item.table_number !== null &&
+              item.table_number !== undefined &&
+              String(item.table_number).trim() !== "" &&
+              String(item.table_number).trim().toLowerCase() !== "null" &&
+              String(item.table_number).trim().toLowerCase() !== "undefined";
+
             if (payload.eventType === "INSERT") {
-              if (item.status !== "completed" && item.status !== "rejected") {
+              if (hasValidTable && item.status !== "completed" && item.status !== "rejected") {
                 setRequests((prev) => [item, ...prev.filter((r) => r.id !== item.id)]);
                 playServiceRequestAlertSound(item.id);
                 toast.info(`🛎️ New Service Request from Table ${item.table_number}: ${item.label}`, {
@@ -121,7 +147,7 @@ export function ServiceRequestsSection() {
             } else if (payload.eventType === "UPDATE") {
               if (item.status === "completed" || item.status === "rejected") {
                 setRequests((prev) => prev.filter((r) => r.id !== item.id));
-              } else {
+              } else if (hasValidTable) {
                 setRequests((prev) => prev.map((r) => (r.id === item.id ? item : r)));
               }
             } else {

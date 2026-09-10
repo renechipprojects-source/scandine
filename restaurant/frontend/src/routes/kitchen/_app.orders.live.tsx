@@ -22,7 +22,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { orders as mockOrdersRaw, restaurantInfo } from "@/kitchen/lib/mock-data";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useSupabaseTable, type Order, type MenuItem } from "@/hooks/useSupabaseData";
 import { useRealtimeTable } from "@/hooks/useRealtime";
 import { calculateOrderPrepTime, useOrderCountdown } from "@/hooks/useOrderTimer";
@@ -59,6 +59,22 @@ const lanes: LaneConfig[] = [
   { key: "cancelled", label: "Cancelled", tone: "border-t-rose-500", badgeBg: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20", dotColor: "bg-rose-500" },
 ];
 
+function getEffectiveUiStatus(order: Order): LaneStatus {
+  const normStatus = (order.status || "").toLowerCase().trim();
+  if (normStatus === "pending") return "pending";
+  if (normStatus === "ready") return "ready";
+  if (normStatus === "completed") return "completed";
+  if (normStatus === "cancelled") return "cancelled";
+  if (normStatus === "accepted") return "accepted";
+  if (normStatus === "preparing") {
+    // Valid DB status is 'preparing'.
+    // If preparing_at timestamp is set, order has advanced to Preparing stage.
+    // If preparing_at is null/undefined, order is in the Accepted stage.
+    return order.preparing_at ? "preparing" : "accepted";
+  }
+  return (normStatus as LaneStatus) || "pending";
+}
+
 function formatOrderTime(timeStr?: string): string {
   if (!timeStr) return "Just now";
   try {
@@ -74,6 +90,42 @@ function formatOrderTime(timeStr?: string): string {
   }
 }
 
+function isSameLocalCalendarDay(dateStr?: string, now = new Date()): boolean {
+  if (!dateStr) return true;
+  const trimmed = String(dateStr).trim();
+  if (!trimmed) return true;
+
+  const lower = trimmed.toLowerCase();
+  if (lower.includes("ago") || lower.includes("now") || lower.includes("min") || lower.includes("hr") || lower.includes("sec")) {
+    return true;
+  }
+
+  try {
+    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+    if (dateOnlyMatch) {
+      const year = parseInt(dateOnlyMatch[1], 10);
+      const month = parseInt(dateOnlyMatch[2], 10) - 1;
+      const day = parseInt(dateOnlyMatch[3], 10);
+      return (
+        year === now.getFullYear() &&
+        month === now.getMonth() &&
+        day === now.getDate()
+      );
+    }
+
+    const d = new Date(trimmed);
+    if (isNaN(d.getTime())) return true;
+
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+    );
+  } catch {
+    return true;
+  }
+}
+
 function OrderLiveCardItem({
   order,
   onAccept,
@@ -82,18 +134,32 @@ function OrderLiveCardItem({
   onCancel,
 }: {
   order: Order;
-  onAccept: (order: Order) => void;
-  onAdvance: (order: Order) => void;
-  onAutoReady: (order: Order) => void;
-  onCancel: (order: Order) => void;
+  onAccept: (order: Order) => Promise<void> | void;
+  onAdvance: (order: Order) => Promise<void> | void;
+  onAutoReady: (order: Order) => Promise<void> | void;
+  onCancel: (order: Order) => Promise<void> | void;
 }) {
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleAction = async (fn: (order: Order) => Promise<void> | void) => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      await fn(order);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleComplete = useCallback(() => {
     onAutoReady(order);
   }, [order, onAutoReady]);
 
+  const status = getEffectiveUiStatus(order);
+
   const { formattedTime } = useOrderCountdown(
     order.estimated_ready_at,
-    order.status,
+    status,
     handleComplete
   );
 
@@ -157,7 +223,7 @@ function OrderLiveCardItem({
           <span className="font-mono text-foreground font-bold text-xs">{restaurantInfo.currency}{Number(order.total || 0).toFixed(2)}</span>
         </div>
 
-        {(order.status === "accepted" || order.status === "preparing") && (
+        {(status === "accepted" || status === "preparing") && (
           <div className="mt-1 rounded-md border border-info/30 bg-info/10 py-0.5 px-1 text-center shrink-0">
             <div className="flex items-center justify-center gap-1 font-mono text-[10px] font-bold text-info-foreground">
               <Timer className="h-3 w-3 animate-pulse text-info shrink-0" />
@@ -169,12 +235,13 @@ function OrderLiveCardItem({
 
       {/* Workflow Controls Footer */}
       <div className="mt-2 pt-1.5 border-t border-border/50 w-full shrink-0">
-        {order.status === "pending" && (
+        {status === "pending" && (
           <div className="grid grid-cols-2 gap-1 items-center w-full">
             <Button
               size="sm"
-              className="w-full h-7 text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-xs px-1 flex items-center justify-center gap-1"
-              onClick={() => onAccept(order)}
+              disabled={isProcessing}
+              className="w-full h-7 text-[11px] bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-xs px-1 flex items-center justify-center gap-1 disabled:opacity-50"
+              onClick={() => handleAction(onAccept)}
             >
               <Check className="h-3.5 w-3.5 shrink-0" />
               <span>Accept</span>
@@ -182,8 +249,9 @@ function OrderLiveCardItem({
             <Button
               size="sm"
               variant="outline"
-              className="w-full h-7 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 font-bold shadow-xs px-1 flex items-center justify-center gap-1"
-              onClick={() => onCancel(order)}
+              disabled={isProcessing}
+              className="w-full h-7 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 font-bold shadow-xs px-1 flex items-center justify-center gap-1 disabled:opacity-50"
+              onClick={() => handleAction(onCancel)}
             >
               <X className="h-3.5 w-3.5 shrink-0" />
               <span>Reject</span>
@@ -191,12 +259,13 @@ function OrderLiveCardItem({
           </div>
         )}
 
-        {order.status === "accepted" && (
+        {status === "accepted" && (
           <div className="grid grid-cols-2 gap-1 w-full">
             <Button
               size="sm"
-              className="w-full h-7 text-[11px] bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs px-1 flex items-center justify-center gap-1"
-              onClick={() => onAdvance(order)}
+              disabled={isProcessing}
+              className="w-full h-7 text-[11px] bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs px-1 flex items-center justify-center gap-1 disabled:opacity-50"
+              onClick={() => handleAction(onAdvance)}
             >
               <Timer className="h-3.5 w-3.5 shrink-0" />
               <span>Preparing</span>
@@ -204,8 +273,9 @@ function OrderLiveCardItem({
             <Button
               size="sm"
               variant="outline"
-              className="w-full h-7 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 font-bold shadow-xs px-1 flex items-center justify-center gap-1"
-              onClick={() => onCancel(order)}
+              disabled={isProcessing}
+              className="w-full h-7 text-[11px] border-destructive/40 text-destructive hover:bg-destructive/10 font-bold shadow-xs px-1 flex items-center justify-center gap-1 disabled:opacity-50"
+              onClick={() => handleAction(onCancel)}
             >
               <X className="h-3.5 w-3.5 shrink-0" />
               <span>Reject</span>
@@ -213,35 +283,37 @@ function OrderLiveCardItem({
           </div>
         )}
 
-        {order.status === "preparing" && (
+        {status === "preparing" && (
           <Button
             size="sm"
-            className="w-full h-7 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs flex items-center justify-center gap-1 px-1"
-            onClick={() => onAdvance(order)}
+            disabled={isProcessing}
+            className="w-full h-7 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs flex items-center justify-center gap-1 px-1 disabled:opacity-50"
+            onClick={() => handleAction(onAdvance)}
           >
             <span>Mark Ready</span>
             <ArrowRight className="h-3.5 w-3.5 shrink-0" />
           </Button>
         )}
 
-        {order.status === "ready" && (
+        {status === "ready" && (
           <Button
             size="sm"
-            className="w-full h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs flex items-center justify-center gap-1 px-1"
-            onClick={() => onAdvance(order)}
+            disabled={isProcessing}
+            className="w-full h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs flex items-center justify-center gap-1 px-1 disabled:opacity-50"
+            onClick={() => handleAction(onAdvance)}
           >
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
             <span>Mark Complete</span>
           </Button>
         )}
 
-        {order.status === "completed" && (
+        {status === "completed" && (
           <div className="w-full h-7 flex items-center justify-center text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
             Completed ✅
           </div>
         )}
 
-        {order.status === "cancelled" && (
+        {status === "cancelled" && (
           <div className="w-full h-7 flex items-center justify-center text-[11px] font-bold text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
             Cancelled ❌
           </div>
@@ -272,8 +344,29 @@ function LiveOrdersPage() {
   );
   const { data: dbMenuItems } = useSupabaseTable<MenuItem>("sd_menu_items");
   const [searchQuery, setSearchQuery] = useState("");
+  const [tableFilter, setTableFilter] = useState("all");
   const [channelFilter, setChannelFilter] = useState("all");
   const [timeTab, setTimeTab] = useState("today");
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+
+  // Periodically re-evaluate current local calendar date so at midnight the page automatically transitions to the new day
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      setCurrentDate((prev) => {
+        if (
+          prev.getDate() !== now.getDate() ||
+          prev.getMonth() !== now.getMonth() ||
+          prev.getFullYear() !== now.getFullYear()
+        ) {
+          return now;
+        }
+        return prev;
+      });
+    }, 10000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const [expandedColumns, setExpandedColumns] = useState<Record<string, boolean>>({});
 
@@ -291,29 +384,51 @@ function LiveOrdersPage() {
 
   const displayOrders = allOrders.filter((o) => {
     const q = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      (o.id && o.id.toLowerCase().includes(q)) ||
-      (o.order_id && o.order_id.toLowerCase().includes(q)) ||
-      (o.customer && o.customer.toLowerCase().includes(q)) ||
-      (o.table_number && o.table_number.toString().includes(q)) ||
-      (Array.isArray(o.item) && o.item.some((it) => it.name.toLowerCase().includes(q)));
+
+    const matchesTableFilter = (() => {
+      if (tableFilter === "all") return true;
+      if (tableFilter === "10+") return o.table_number >= 10;
+      const num = parseInt(tableFilter, 10);
+      return !isNaN(num) && o.table_number === num;
+    })();
+
+    const matchesSearch = (() => {
+      if (!q) return true;
+      const qClean = q.replace(/\+/g, "").trim();
+      return (
+        (o.id && o.id.toLowerCase().includes(qClean)) ||
+        (o.order_id && o.order_id.toLowerCase().includes(qClean)) ||
+        (o.customer && o.customer.toLowerCase().includes(qClean))
+      );
+    })();
 
     const matchesChannel =
       channelFilter === "all" || (channelFilter === "qr" ? o.table_number > 0 : true);
 
+    const orderTimestamp = o.order_time || o.created_at;
+
     let matchesTime = true;
-    if (o.order_time) {
-      const orderDate = new Date(o.order_time);
-      if (!isNaN(orderDate.getTime())) {
-        const now = new Date();
-        const diffMin = (now.getTime() - orderDate.getTime()) / (1000 * 60);
-        if (timeTab === "15") matchesTime = diffMin <= 15;
-        else if (timeTab === "hour") matchesTime = diffMin <= 60;
+    if (timeTab === "today") {
+      matchesTime = isSameLocalCalendarDay(orderTimestamp, currentDate);
+    } else if (timeTab === "hour") {
+      if (orderTimestamp) {
+        const orderDate = new Date(orderTimestamp);
+        if (!isNaN(orderDate.getTime())) {
+          const diffMin = (currentDate.getTime() - orderDate.getTime()) / (1000 * 60);
+          matchesTime = diffMin >= 0 && diffMin <= 60 && isSameLocalCalendarDay(orderTimestamp, currentDate);
+        }
+      }
+    } else if (timeTab === "15") {
+      if (orderTimestamp) {
+        const orderDate = new Date(orderTimestamp);
+        if (!isNaN(orderDate.getTime())) {
+          const diffMin = (currentDate.getTime() - orderDate.getTime()) / (1000 * 60);
+          matchesTime = diffMin >= 0 && diffMin <= 15 && isSameLocalCalendarDay(orderTimestamp, currentDate);
+        }
       }
     }
 
-    return matchesSearch && matchesChannel && matchesTime;
+    return matchesTableFilter && matchesSearch && matchesChannel && matchesTime;
   });
 
   const handleAcceptOrder = async (order: Order) => {
@@ -328,10 +443,8 @@ function LiveOrdersPage() {
 
     try {
       await updateItem(targetId, {
-        status: "accepted",
+        status: "preparing",
         accepted_at: acceptedAtISO,
-        prep_time_minutes: maxPrepMinutes,
-        estimated_ready_at: estimatedReadyISO,
       });
 
       toast.success(`Order ${order.order_id || order.id} accepted! 👨‍🍳`);
@@ -354,10 +467,11 @@ function LiveOrdersPage() {
   };
 
   const handleAutoReady = async (order: Order) => {
-    if (order.status !== "preparing" && order.status !== "accepted") return;
+    const currentUiStatus = getEffectiveUiStatus(order);
+    if (currentUiStatus !== "preparing" && currentUiStatus !== "accepted") return;
     try {
       const targetId = order.id || order.order_id;
-      await updateItem(targetId, { status: "ready" });
+      await updateItem(targetId, { status: "ready", ready_at: new Date().toISOString() });
 
       toast.success(`🚀 Order ${order.order_id || order.id} preparation timer completed! Marked as Ready.`);
 
@@ -376,27 +490,32 @@ function LiveOrdersPage() {
   };
 
   const handleStageAdvance = async (order: Order) => {
-    let nextStatus: LaneStatus = order.status;
+    const currentUiStatus = getEffectiveUiStatus(order);
+    let nextStatus: LaneStatus = currentUiStatus;
+    let updatesPayload: Partial<Order> = {};
     let toastMessage = "";
 
-    if (order.status === "pending") {
+    if (currentUiStatus === "pending") {
       await handleAcceptOrder(order);
       return;
-    } else if (order.status === "accepted") {
+    } else if (currentUiStatus === "accepted") {
       nextStatus = "preparing";
+      updatesPayload = { status: "preparing", preparing_at: new Date().toISOString() };
       toastMessage = `Order ${order.order_id || order.id} is now preparing! 🍳`;
-    } else if (order.status === "preparing") {
+    } else if (currentUiStatus === "preparing") {
       nextStatus = "ready";
+      updatesPayload = { status: "ready", ready_at: new Date().toISOString() };
       toastMessage = `Order ${order.order_id || order.id} marked Ready! 🚀`;
-    } else if (order.status === "ready") {
+    } else if (currentUiStatus === "ready") {
       nextStatus = "completed";
+      updatesPayload = { status: "completed", completed_at: new Date().toISOString() };
       toastMessage = `Order ${order.order_id || order.id} marked Completed ✅`;
     }
 
-    if (nextStatus !== order.status) {
+    if (nextStatus !== currentUiStatus) {
       try {
         const targetId = order.id || order.order_id;
-        await updateItem(targetId, { status: nextStatus });
+        await updateItem(targetId, updatesPayload);
 
         toast.success(toastMessage);
 
@@ -420,7 +539,7 @@ function LiveOrdersPage() {
     const targetId = order.id || order.order_id;
 
     try {
-      await updateItem(targetId, { status: "cancelled" });
+      await updateItem(targetId, { status: "cancelled", cancelled_at: new Date().toISOString() });
 
       toast.error(`Order ${order.order_id || order.id} cancelled ❌`);
 
@@ -439,8 +558,9 @@ function LiveOrdersPage() {
     }
   };
 
-  const activeOrders = allOrders.filter((o) => ["pending", "accepted", "preparing", "ready"].includes(o.status));
-  const activePreps = allOrders.filter((o) => o.status === "preparing" || o.status === "accepted");
+  const todayOrders = allOrders.filter((o) => isSameLocalCalendarDay(o.order_time || o.created_at, currentDate));
+  const activeOrders = todayOrders.filter((o) => ["pending", "accepted", "preparing", "ready"].includes(getEffectiveUiStatus(o)));
+  const activePreps = todayOrders.filter((o) => ["preparing", "accepted"].includes(getEffectiveUiStatus(o)));
   const avgPrepMinutes =
     activePreps.length > 0
       ? Math.round(
@@ -477,13 +597,31 @@ function LiveOrdersPage() {
           <Input
             id="kitchen-live-orders-search"
             name="searchQuery"
-            aria-label="Search order, table or customer"
-            placeholder="Search order, table or customer…"
+            aria-label="Search by order ID or customer..."
+            placeholder="Search by order ID or customer..."
             className="pl-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        <Select value={tableFilter} onValueChange={setTableFilter}>
+          <SelectTrigger id="kitchen-live-orders-table-filter" name="tableFilter" aria-label="Filter by table number" className="w-[140px]">
+            <SelectValue placeholder="All Tables" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Tables</SelectItem>
+            <SelectItem value="1">Table 1</SelectItem>
+            <SelectItem value="2">Table 2</SelectItem>
+            <SelectItem value="3">Table 3</SelectItem>
+            <SelectItem value="4">Table 4</SelectItem>
+            <SelectItem value="5">Table 5</SelectItem>
+            <SelectItem value="6">Table 6</SelectItem>
+            <SelectItem value="7">Table 7</SelectItem>
+            <SelectItem value="8">Table 8</SelectItem>
+            <SelectItem value="9">Table 9</SelectItem>
+            <SelectItem value="10+">Table 10+</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={channelFilter} onValueChange={setChannelFilter}>
           <SelectTrigger id="kitchen-live-orders-channel-filter" name="channelFilter" aria-label="Filter by order channel" className="w-[150px]">
             <SelectValue />
@@ -507,7 +645,7 @@ function LiveOrdersPage() {
       {/* Responsive 6-Column KDS Queue */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 w-full items-start">
         {lanes.map((lane) => {
-          const laneOrders = displayOrders.filter((o) => o.status === lane.key);
+          const laneOrders = displayOrders.filter((o) => getEffectiveUiStatus(o) === lane.key);
 
           return (
             <div key={lane.key} className={`min-w-0 rounded-xl border-t-4 bg-card/80 p-2 shadow-xs border ${lane.tone} flex flex-col transition-all max-h-[calc(100vh-230px)]`}>
